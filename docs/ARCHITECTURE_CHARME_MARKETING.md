@@ -1,8 +1,8 @@
 # ARCHITECTURE.md
 ## Marketing IA Charme 2.0 — Módulo: Criação de Imagens
-**Versão:** 0.2 (Planejamento — sessão de consolidação)
+**Versão:** 0.4 (Render real M4 implementado · Tinos como fonte)
 **Data:** 13/05/2026
-**Status:** Pré-desenvolvimento — pendências reduzidas, M4 pronto para detalhamento
+**Status:** Em implementação — Base do Sistema + M4
 
 ---
 
@@ -42,6 +42,7 @@ Este projeto é o **Módulo de Criação de Imagens** do sistema **Marketing IA 
 | Linguagem | **TypeScript** | Padronização, manutenção, escalabilidade |
 | Hospedagem | **Vercel** (Hobby pode atender — ver seção 3) | |
 | Component Library | **Shadcn/UI** | Leve, acessível, padrão de mercado, sem overhead |
+| Fonte UI | **Geist Sans** | Fonte oficial da UI do sistema (telas internas — não afeta render dos templates) |
 | Auth | **NextAuth.js** ou similar (a definir na implementação) | Login + senha multi-user |
 | Compositing/imagem | **Sharp.js** | M2, M4 — overlay texto/imagem server-side, zero custo de API |
 | HTML → PNG | **Satori + resvg-js** | Render de templates HTML/CSS para PNG, roda em Vercel Edge |
@@ -118,38 +119,39 @@ marketing-ia-charme/
 │   ├── page.tsx                      # Home / Dashboard de módulos
 │   ├── login/                        # Tela de login
 │   │   └── page.tsx
-│   ├── m1-produto-vitrine/           # Módulo 1: Foto Produto
-│   │   └── page.tsx
-│   ├── m2-posts-insta/               # Módulo 2: Posts e Carrosséis Instagram
-│   │   └── page.tsx
-│   ├── m3-banners-site/              # Módulo 3: Banners Website
-│   │   └── page.tsx
-│   ├── m4-thumbnails-feed/           # Módulo 4: Thumbnails Vídeo Instagram
-│   │   └── page.tsx
-│   ├── m5-banners-email/             # Módulo 5: Banners Email (placeholder)
-│   │   └── page.tsx
-│   └── template-creator/             # Painel de criação de templates
-│       ├── m2-layouts/               # Sub 1: Templates para M2
-│       ├── m3-layouts/               # Sub 2: Templates para M3
-│       ├── m4-layouts/               # Sub 3: Templates para M4
-│       ├── m5-layouts/               # Sub 4: Templates para M5 (placeholder)
-│       └── m1-ambientes/             # Sub 5: Cenários de ambiente para M1
-│
-├── api/                              # API Routes Next.js
-│   ├── auth/                         # Endpoints de autenticação
-│   │   └── [...nextauth]/route.ts
-│   ├── m1/
-│   │   └── generate/route.ts
-│   ├── m2/
-│   │   └── render/route.ts
-│   ├── m3/
-│   │   └── render/route.ts
-│   ├── m4/
-│   │   └── render/route.ts
-│   ├── m5/                           # placeholder
-│   │   └── render/route.ts
-│   └── template-creator/
-│       └── analyze/route.ts
+│   ├── admin/
+│   │   └── usuarios/                 # CRUD usuários (admin only)
+│   │       └── page.tsx
+│   ├── imagens/                      # Módulo principal: Criação de Imagens
+│   │   ├── layout.tsx                # Layout com sidebar + breadcrumb
+│   │   ├── m1-vitrine/               # Submódulo 1: Foto Produto Vitrine
+│   │   │   └── page.tsx
+│   │   ├── m2-posts/                 # Submódulo 2: Posts Instagram
+│   │   │   └── page.tsx
+│   │   ├── m3-banners/               # Submódulo 3: Banners Website
+│   │   │   └── page.tsx
+│   │   ├── m4-thumbnails/            # Submódulo 4: Thumbnails Feed
+│   │   │   ├── page.tsx
+│   │   │   └── _components/
+│   │   ├── m5-email/                 # Submódulo 5: Banners Email (placeholder)
+│   │   │   └── page.tsx
+│   │   └── template-creator/
+│   │       ├── m1-ambientes/
+│   │       ├── m2-layouts/
+│   │       ├── m3-layouts/
+│   │       ├── m4-layouts/
+│   │       └── m5-layouts/
+│   └── api/                          # API Routes Next.js
+│       ├── auth/[...nextauth]/route.ts
+│       ├── admin/usuarios/route.ts
+│       ├── upload/route.ts           # Upload genérico Vercel Blob (client upload)
+│       └── imagens/
+│           ├── m1/generate/route.ts
+│           ├── m2/render/route.ts
+│           ├── m3/render/route.ts
+│           ├── m4/render/route.ts
+│           ├── m5/render/route.ts
+│           └── template-creator/analyze/route.ts
 │
 ├── lib/                              # Lógica compartilhada
 │   ├── auth/
@@ -311,7 +313,7 @@ import { brandBase } from './base.config'
 export const brandM4 = {
   ...brandBase,
   fonts: {
-    text: "Times New Roman MT",
+    text: 'Tinos, "Times New Roman", serif',
   },
   palette: {
     boxLine1: brandBase.colors.primaryDark,  // #553679
@@ -468,6 +470,19 @@ Dois componentes globais de texto (usados em M2, M3, M4, M5 — não em M1):
 ---
 
 ## 14. Changelog
+
+### v0.4 — 13/05/2026 (Tinos + render M4 implementado)
+- **Fonte M4:** Tinos (Google Fonts, Apache 2.0) substitui Times New Roman MT. Self-hosted em `public/fonts/Tinos-{Regular,Bold}.ttf` + `@font-face` em `app/globals.css` com fallback Google Fonts CDN.
+- **Render M4 real:** implementado em `lib/m4/render.tsx`. Pipeline: fetch frame → Sharp resize/cover + brightness/contrast condicional → Satori (overlay com caixas rotacionadas, florzinha, emoji) → Resvg → Sharp composite → upload Vercel Blob.
+- **Cache em memória:** emojis 3D cacheados como data URI em Map com TTL 1h (chave = URL).
+- **Stub removido** de `app/api/imagens/m4/render/route.ts`.
+
+### v0.3 — 13/05/2026 (estrutura consolidada para implementação)
+- **Rotas:** estrutura de rotas movida para `app/imagens/m{n}-*` (era `app/m{n}-*`) — agrupando todos os submódulos sob `/imagens`
+- **API routes:** movidas para `app/api/imagens/m{n}/*` (era `app/api/m{n}/*`)
+- **UI font:** Geist Sans confirmada como fonte oficial das telas internas (UI do sistema)
+- **Admin:** rota `/admin/usuarios` adicionada à estrutura (CRUD de usuários, admin only)
+- **Upload:** rota `/api/upload` genérica adicionada (Vercel Blob client-upload, reutilizável por todos os módulos)
 
 ### v0.2 — 13/05/2026 (sessão de consolidação)
 - **Brand:** paleta consolidada e padronizada com cores oficiais do site

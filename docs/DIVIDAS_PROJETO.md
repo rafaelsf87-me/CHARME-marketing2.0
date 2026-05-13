@@ -90,6 +90,7 @@ Pontos onde uma decisão de produto é necessária antes de avançar.
 - **Aguardando:** sessão de planejamento dedicada ao M5
 - **Identificado em:** sessão 0, 13/05/2026
 
+
 ### Template para entrada
 ```
 ### [DEC-NNN] Título curto
@@ -105,4 +106,6 @@ Pontos onde uma decisão de produto é necessária antes de avançar.
 
 Quando uma dívida é resolvida ou descartada, mover para cá com nota curta. Manter os últimos 20 itens, depois limpar.
 
-*(vazio)*
+### [DEC-003] Licença Times New Roman MT — RESOLVIDA em sessão 2 (13/05/2026)
+- **Decisão:** substituída por **Tinos** (Google Fonts, Apache License 2.0 — clone métrico open-source do Times, uso comercial livre).
+- **Implementação:** TTFs Regular e Bold self-hosted em `public/fonts/Tinos-{Regular,Bold}.ttf`, declaração `@font-face` em `app/globals.css` com fallback Google Fonts CDN, `brandM4.fonts.text = 'Tinos, "Times New Roman", serif'`.

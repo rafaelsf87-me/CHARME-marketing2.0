@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Tinos — self-hosted (Apache 2.0). Usada nos templates do M4. Fallback no Google Fonts CDN. */
+@font-face {
+  font-family: 'Tinos';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    url('/fonts/Tinos-Regular.ttf') format('truetype'),
+    url('https://fonts.gstatic.com/s/tinos/v25/buE4poGnedXvwgX8.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Tinos';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    url('/fonts/Tinos-Bold.ttf') format('truetype'),
+    url('https://fonts.gstatic.com/s/tinos/v25/buE1poGnedXvwj1AW0Fp.ttf') format('truetype');
+}
+
+:root {
+  --brand-primary-dark: #553679;
+  --brand-primary-light: #9569C8;
+  --brand-cta: #4CDDC3;
+  --brand-white: #FEFEFC;
+
+  --app-bg: #FAFAF9;
+  --surface: #FFFFFF;
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-default: rgba(0, 0, 0, 0.1);
+  --border-strong: rgba(0, 0, 0, 0.15);
+  --text-primary: rgba(0, 0, 0, 0.95);
+  --text-secondary: rgba(0, 0, 0, 0.55);
+  --text-tertiary: rgba(0, 0, 0, 0.4);
+
+  /* Shadcn tokens (Stone base) */
+  --background: 0 0% 100%;
+  --foreground: 20 14.3% 4.1%;
+  --card: 0 0% 100%;
+  --card-foreground: 20 14.3% 4.1%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 20 14.3% 4.1%;
+  --primary: 24 9.8% 10%;
+  --primary-foreground: 60 9.1% 97.8%;
+  --secondary: 60 4.8% 95.9%;
+  --secondary-foreground: 24 9.8% 10%;
+  --muted: 60 4.8% 95.9%;
+  --muted-foreground: 25 5.3% 44.7%;
+  --accent: 60 4.8% 95.9%;
+  --accent-foreground: 24 9.8% 10%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 60 9.1% 97.8%;
+  --border: 20 5.9% 90%;
+  --input: 20 5.9% 90%;
+  --ring: 20 14.3% 4.1%;
+  --radius: 0.5rem;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+html,
+body {
+  background: var(--app-bg);
+  color: var(--text-primary);
+  font-feature-settings: 'cv11', 'ss01', 'ss03';
+  letter-spacing: -0.005em;
+}
+
+input,
+textarea,
+button {
+  font-family: inherit;
+}
+
+@layer utilities {
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}

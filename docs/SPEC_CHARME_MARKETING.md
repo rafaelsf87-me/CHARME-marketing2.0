@@ -1,9 +1,9 @@
 # SPEC.md
 ## Marketing IA Charme 2.0 — Especificação Funcional
 ### Módulo: Criação de Imagens (5 Submódulos + Template Creator)
-**Versão:** 0.2 (Planejamento — sessão de consolidação)
+**Versão:** 0.4 (Tinos como fonte do M4 + Bloco C iniciado)
 **Data:** 13/05/2026
-**Status:** Pré-desenvolvimento — M4 pronto para detalhamento técnico
+**Status:** Em implementação — Base do Sistema + M4 (UI + API stub)
 
 ---
 
@@ -278,65 +278,80 @@ PASSO 5: [Gerar Desktop + Mobile]  (sempre gera os 2 formatos juntos)
 
 ---
 
-## Módulo 4 — Thumbnails Feed Instagram (`/m4-thumbnails-feed`)
+## Módulo 4 — Thumbnails Feed Instagram (`/imagens/m4-thumbnails`)
 
 ### Objetivo
-Gerar thumbnails padronizados para vídeos do feed/reels do Instagram. Processo simples: print do frame + tratamento básico + sobreposição de texto.
+Gerar thumbnails padronizados para vídeos do feed/reels do Instagram. Processo simples: print do frame + sobreposição de bloco de texto (2 ou 3 caixas coloridas) + emoji 3D + florzinha decorativa.
 
 ### Princípio técnico
-**Sem IA de geração.** Compositing puro via Sharp.js. Zero custo de API.
+**Sem IA de geração.** Compositing puro via Sharp.js + Satori (HTML/CSS → PNG). Zero custo de API.
 
 ### Fluxo de uso
 
 ```
 PASSO 1: Selecionar template
-  [Default V1 — Topo]  /  [Default V2 — Centro]  /  [Default V3 — Rodapé]  /  [Custom ...]
+  [V1 Topo]  /  [V2 Centro-alto]  /  [V3 Centro]  /  [V4 Centro-baixo]  /  [V5 Rodapé]  /  [Custom ...]
 
 PASSO 2: Upload do frame do vídeo
   Print/screenshot já escolhido pela equipe (não extrai do vídeo)
 
-PASSO 3: Preencher campos de texto
+PASSO 3: Preencher campos de texto (2 ou 3 linhas, conforme template)
 
-PASSO 4: [Gerar]
+PASSO 4: Escolher ícone (emoji 3D curado ou PNG próprio)
+
+PASSO 5: (Opcional) Campo Customização / Ideia
+
+PASSO 6: [Gerar]
 ```
 
 ### Campos de texto
 
-**Campo 1 — Customização / Ideia**
-- Tooltip: *"Ajustes de tratamento da imagem. Ex: 'aumentar brilho', 'mais contraste'. A IA aplica dentro das possibilidades de tratamento básico."*
+**Campo Customização / Ideia (opcional)**
+- Tooltip: *"Ajustes de tratamento da imagem. Ex: 'aumentar brilho', 'mais contraste'. Aplicado no frame antes do compositing."*
 
-**Campo 2 — Textos a Risca**
-| Sub-campo | Tooltip |
-|---|---|
-| Texto principal (linha 1 — caixa roxa) | *"Texto de destaque sobre o frame, linha 1. Exibido em caixa roxa. Ex: 'Perdi muito tempo'. Será exibido exatamente como digitado."* |
-| Texto principal (linha 2 — caixa verde) | *"Texto de destaque sobre o frame, linha 2. Exibido em caixa verde. Ex: 'lavando o chão antes de saber disso!'. Será exibido exatamente como digitado."* |
+**Campos Texto a Risca**
 
-### Templates disponíveis — 3 variações posicionais
+| Sub-campo | Limite | Tooltip |
+|---|---|---|
+| Linha 1 — caixa branca | 24 chars | *"Texto principal, exibido em caixa branca com letras escuras. Será exibido exatamente como digitado."* |
+| Linha 2 — caixa roxa | 22 chars | *"Texto secundário, exibido em caixa roxa com letras brancas. Será exibido exatamente como digitado."* |
+| Linha 3 — caixa verde *(só V2 e V4)* | 18 chars | *"Terceiro texto (só nos templates Centro-alto e Centro-baixo), exibido em caixa verde com letras escuras."* |
 
-| Variação | Posição do bloco de texto |
-|---|---|
-| **V1 — Topo** | Bloco de texto no terço superior do frame |
-| **V2 — Centro** | Bloco de texto centralizado verticalmente |
-| **V3 — Rodapé** | Bloco de texto no terço inferior do frame |
+**Campo Ícone final**
+- Tooltip: *"Emoji 3D que aparece ao final da última linha de texto. Escolha um da lista ou envie um PNG próprio (até 200KB, fundo transparente)."*
+- Curadoria: **30 emojis 3D** do Microsoft Fluent Emoji (CDN), agrupados em 6 categorias: urgência, casa/limpeza, emoções, destaque, decorativo, ação.
+- Alternativa: upload PNG próprio (transparência preferida, ≤200KB).
+
+### Templates disponíveis — 5 variações posicionais
+
+| Variação | Posição | Linhas |
+|---|---|---|
+| **V1 — Topo** | Terço superior | 2 |
+| **V2 — Centro-alto** | Acima do meio | 3 |
+| **V3 — Centro** | Meio exato | 2 |
+| **V4 — Centro-baixo** | Abaixo do meio | 3 |
+| **V5 — Rodapé** | Terço inferior | 2 |
 
 **Estilo visual fixo (todas as variações):**
-- Caixa roxa `#553679` para linha 1
-- Caixa verde `#4CDDC3` para linha 2
-- Texto `#FEFEFC` (branco)
-- Fonte: **Times New Roman MT** (com itálico para "antes")
-- Elementos decorativos: traços/setas verdes laterais + folhinha decorativa
+- Linha 1 — caixa **branca** `#FEFEFC` com texto escuro `#1A1A1A`
+- Linha 2 — caixa **roxa** `#553679` com texto branco `#FEFEFC`
+- Linha 3 — caixa **verde** `#4CDDC3` com texto escuro `#1A1A1A` *(só V2 e V4)*
+- **Rotação do bloco inteiro:** −2,5°
+- **Florzinha verde** decorativa no canto superior direito da Linha 1
+- **Emoji 3D** ao final da última caixa (Microsoft Fluent ou PNG próprio)
+- Fonte: **Tinos** (Google Fonts, Apache 2.0 — clone métrico open-source do Times). Self-hosted em `public/fonts/Tinos-{Regular,Bold}.ttf`.
 
-**Custom:** criados via Template Creator → M4 Layouts
+**Custom:** criados via Template Creator → M4 Layouts.
 
 ### Cores e fontes
-- **Fonte:** Times New Roman MT
-- **Paleta fixa:** `#553679` / `#4CDDC3` / `#FEFEFC`
+- **Fonte:** Tinos (Google Fonts, Apache 2.0)
+- **Paleta fixa:** `#FEFEFC` / `#553679` / `#4CDDC3` (+ texto escuro `#1A1A1A` sobre caixas claras)
 
 ### Dimensões
 - **1080×1920px** (formato vertical 9:16 — Reels/Stories)
 
 ### Inputs da equipe
-- A equipe entrega o **print do frame já selecionado** — o sistema não faz extração de vídeo
+- A equipe entrega o **print do frame já selecionado** — o sistema não faz extração de vídeo.
 
 ---
 
@@ -491,7 +506,7 @@ PASSO 5: Preview + [Salvar como Custom] ou [Refinar] ou [Descartar]
 | M1 | — | Sem texto |
 | M2 | Montserrat | Todos os pesos |
 | M3 | Montserrat | Todos os pesos |
-| M4 | Times New Roman MT | Inclui itálico |
+| M4 | Tinos | Apache 2.0 (Google Fonts); self-hosted |
 | M5 | TBD | A definir |
 
 ---
@@ -512,8 +527,9 @@ PASSO 5: Preview + [Salvar como Custom] ou [Refinar] ou [Descartar]
 - [ ] Especificação detalhada das 3 variações default
 
 **M4:**
-- [ ] Especificação JSON das 3 variações (topo / centro / rodapé) — próxima sessão
-- [ ] Definição final dos elementos decorativos (traços, setas, folhinha)
+- [ ] SVG definitivo da florzinha decorativa (placeholder atual em `public/brand/florzinha.svg`)
+- [x] Resolução DEC-003 — substituída por Tinos (Apache 2.0)
+- [x] Especificação pixel-perfect das 5 variações — Bloco C definido e implementado
 
 **M5:**
 - [ ] 100% a definir em sessão futura
@@ -535,6 +551,22 @@ PASSO 5: Preview + [Salvar como Custom] ou [Refinar] ou [Descartar]
 ---
 
 ## Changelog
+
+### v0.4 — 13/05/2026 (Tinos + Bloco C)
+- **Fonte M4:** trocada de Times New Roman MT (Monotype, licenciada) para **Tinos** (Google Fonts, Apache 2.0, clone métrico open-source). DEC-003 resolvida.
+- **Implementação M4:** render real pixel-perfect implementado em `lib/m4/render.tsx` (Sharp + Satori). Stub removido.
+- **Especificação pixel-perfect M4:** canvas 1080×1920, margens 80px, caixas 112px altura (padding 32×16), radius 8px, gap 8px, fonte Tinos Bold 80px, rotação −2,5°, florzinha 80×80 (canto sup direito L1, offset −15/−15), emoji 110px ao final da última caixa com gap 12px.
+
+### v0.3 — 13/05/2026 (M4 detalhado)
+- **M4:** templates default redefinidos — agora **5 variações posicionais** (topo / centro-alto / centro / centro-baixo / rodapé) em vez de 3
+- **M4:** V2 (Centro-alto) e V4 (Centro-baixo) suportam **3 linhas de texto**; V1, V3, V5 suportam 2 linhas
+- **M4:** paleta de caixas redefinida — L1 branca, L2 roxa, L3 verde (era L1 roxa + L2 verde)
+- **M4:** adicionado **emoji 3D** ao final da última caixa (30 emojis curados do Microsoft Fluent Emoji + opção PNG próprio)
+- **M4:** adicionada **florzinha decorativa verde** no canto superior direito da Linha 1
+- **M4:** rotação do bloco inteiro: **−2,5°**
+- **M4:** limites de caracteres por linha definidos: 24 / 22 / 18
+- **M4:** rota atualizada de `/m4-thumbnails-feed` para `/imagens/m4-thumbnails`
+- **Fonte M4:** `serif` como fallback temporário enquanto DEC-003 (licença Times New Roman MT) não é resolvida
 
 ### v0.2 — 13/05/2026 (sessão de consolidação)
 - **Brand:** paleta consolidada e padronizada com cores oficiais do site (`#553679`, `#9569C8`, `#4CDDC3`, `#FEFEFC`)
