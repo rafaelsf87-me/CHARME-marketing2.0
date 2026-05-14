@@ -84,11 +84,6 @@ Código que funciona mas precisa ser melhorado antes da próxima feature relacio
 
 Pontos onde uma decisão de produto é necessária antes de avançar.
 
-### [DEC-001] Dimensões exatas M3 (desktop e mobile)
-- **Bloqueia:** implementação do M3
-- **Aguardando:** Rafael confirmar com equipe
-- **Identificado em:** sessão 0, 13/05/2026
-
 ### [DEC-002] Especificação completa do M5 (Banners Email)
 - **Bloqueia:** implementação do M5
 - **Contexto registrado:** ferramenta de email = Edrone; resto 100% TBD
@@ -126,6 +121,11 @@ Pontos onde uma decisão de produto é necessária antes de avançar.
 ## 🗑️ Resolvidas / Descartadas
 
 Quando uma dívida é resolvida ou descartada, mover para cá com nota curta. Manter os últimos 20 itens, depois limpar.
+
+### [DEC-001] Dimensões exatas M3 (desktop e mobile) — RESOLVIDA em sessão 4 (15/05/2026)
+- **Decisão:** Desktop 1920×550 WEBP, Mobile 800×600 WEBP
+- **Implementação:** `lib/brand/m3.brand.ts`
+- **Validado:** time/design do Rafael confirmou as duas proporções
 
 ### [MEL-001] Limpeza periódica do Vercel Blob — RESOLVIDA em Sessão 1 de Infra (14/05/2026)
 - **Solução:** cron implementado em `app/api/cron/cleanup-blob/route.ts` com schedule diário `0 3 * * *` (03h UTC) declarado em `vercel.json`.

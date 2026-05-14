@@ -273,8 +273,11 @@ PASSO 5: [Gerar Desktop + Mobile]  (sempre gera os 2 formatos juntos)
 - **Cores:** definidas no template / cor-tema da campanha (sem paleta fixa de marca)
 
 ### Dimensões
-- **Desktop:** TBD — Rafael confirmando com equipe
-- **Mobile:** TBD — Rafael confirmando com equipe
+
+| Variação | Width | Height | Aspect | Formato |
+|---|---|---|---|---|
+| Desktop | 1920 | 550 | ~3.49:1 | WEBP |
+| Mobile | 800 | 600 | 4:3 | WEBP |
 
 ---
 

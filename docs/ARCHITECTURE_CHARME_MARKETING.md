@@ -298,13 +298,13 @@ import { brandBase } from './base.config'
 export const brandM3 = {
   ...brandBase,
   fonts: {
-    title: "Montserrat",
-    body:  "Montserrat",
+    text: 'Montserrat, system-ui, sans-serif',
+    family: 'Montserrat',
   },
   // Cores: definidas no template ou pela cor-tema da campanha (sem paleta fixa)
   dimensions: {
-    desktop: { width: 0, height: 0 },   // TBD — aguardando time
-    mobile:  { width: 0, height: 0 },   // TBD — aguardando time
+    desktop: { width: 1920, height: 550 },  // ~3.49:1 — DEC-001
+    mobile:  { width: 800,  height: 600 },  // 4:3     — DEC-001
   }
 }
 
@@ -448,7 +448,6 @@ Dois componentes globais de texto (usados em M2, M3, M4, M5 — não em M1):
 - Nenhum para iniciar detalhamento do M4
 
 ### Pendências por implementação
-- [ ] **M3:** dimensões exatas desktop e mobile — aguardando time
 - [ ] **M1:** confirmação visual das 6 fotos-template (ajuste do Sofá 2)
 - [ ] **M1:** refinamento dos prompts base (fase de treinamento)
 - [ ] **M5:** 100% a definir (placeholder)
@@ -470,6 +469,10 @@ Dois componentes globais de texto (usados em M2, M3, M4, M5 — não em M1):
 ---
 
 ## 14. Changelog
+
+### v0.5 — 15/05/2026 (M3 dimensions)
+- **M3 dimensões fechadas:** Desktop 1920×550 WEBP, Mobile 800×600 WEBP (DEC-001 resolvida)
+- `lib/brand/m3.brand.ts` atualizado
 
 ### v0.4 — 13/05/2026 (Tinos + render M4 implementado)
 - **Fonte M4:** Tinos (Google Fonts, Apache 2.0) substitui Times New Roman MT. Self-hosted em `public/fonts/Tinos-{Regular,Bold}.ttf` + `@font-face` em `app/globals.css` com fallback Google Fonts CDN.
