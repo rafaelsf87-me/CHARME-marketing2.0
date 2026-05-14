@@ -73,19 +73,20 @@ Não é geração de cena nova. É substituição de padrão têxtil sobre super
 | **Lisa** | Cor HEX (sem foto) — subfluxo pula Step 1 |
 | **Alto Relevo** | Foto-referência da estampa quiltada |
 
-### Fluxo de uso — passo a passo (v1.2)
+### Fluxo de uso — passo a passo (v1.3)
 
 ```
 PASSO 1: Selecionar tipo de móvel
   [Sofá]  /  [Cadeira]
 
-PASSO 2: Selecionar tipo de capa
+PASSO 2: Selecionar Set
+  [Set 1]  /  [Set 2]   ← uma escolha vale para todos os 4 tipos de foto
+
+PASSO 3: Selecionar tipo de capa
   [Estampada]  /  [Lisa]  /  [Alto Relevo]
 
-PASSO 3: Selecionar tipo de foto a gerar
+PASSO 4: Selecionar tipo de foto a gerar
   [Foto Capa]  /  [Foto Ambiente]  /  [Foto Elástico]  /  [Detalhe do Tecido]
-
-PASSO 4: Selecionar cenário (sempre, 1–2 opções por móvel+tipo)
 
 PASSO 5: Input da capa
   - Estampada / Alto Relevo: upload da foto-referência
@@ -93,6 +94,8 @@ PASSO 5: Input da capa
 
 PASSO 6: [Gerar]
 ```
+
+**Lógica de Sets:** cada móvel tem 2 Sets (estéticas/cenários distintos). O sistema resolve o template real via `(movel, tipoFoto, set)`. **Fallback documentado:** Sofá Detalhe Tecido só existe no Set 1 — pedir Sofá+Detalhe em Set 2 retorna silenciosamente o template do Set 1.
 
 ### Inputs por combinação (v1.2)
 

@@ -2,9 +2,9 @@
 
 import * as React from 'react'
 import { TabTipoMovel } from './tab-tipo-movel'
+import { StepSet } from './step-set'
 import { StepTipoCapa } from './step-tipo-capa'
 import { StepTipoFoto } from './step-tipo-foto'
-import { StepCenario } from './step-cenario'
 import { StepUploadReferencia } from './step-upload-referencia'
 import { StepCorLisa } from './step-cor-lisa'
 import { StepCustomizacao } from './step-customizacao'
@@ -17,14 +17,15 @@ import {
   type M1TipoFoto,
   type M1RenderInput,
 } from '@/lib/m1/schema'
+import type { M1Set } from '@/lib/m1/templates'
 
 type PreviewState = 'empty' | 'loading' | 'ready' | 'error'
 
 export function M1Form() {
   const [movel, setMovel] = React.useState<M1Movel>('sofa')
+  const [set, setSet] = React.useState<M1Set | null>(null)
   const [tipoCapa, setTipoCapa] = React.useState<M1TipoCapa | null>(null)
   const [tipoFoto, setTipoFoto] = React.useState<M1TipoFoto | null>(null)
-  const [cenarioId, setCenarioId] = React.useState<string | null>(null)
   const [referenciaBlobUrl, setReferenciaBlobUrl] = React.useState<string | null>(null)
   const [corHex, setCorHex] = React.useState<string | null>(null)
   const [customization, setCustomization] = React.useState('')
@@ -33,18 +34,6 @@ export function M1Form() {
   const [resultUrl, setResultUrl] = React.useState<string | null>(null)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
   const [tookMs, setTookMs] = React.useState<number | null>(null)
-
-  // Trocar móvel zera cenário (cenários são por móvel).
-  function onChangeMovel(novo: M1Movel) {
-    setMovel(novo)
-    setCenarioId(null)
-  }
-
-  // Trocar tipo de foto zera cenário (cenários filtrados por tipoFoto).
-  function onChangeTipoFoto(novo: M1TipoFoto) {
-    setTipoFoto(novo)
-    setCenarioId(null)
-  }
 
   // Capa Lisa troca upload por cor; alternar zera o outro lado.
   function onChangeTipoCapa(novo: M1TipoCapa) {
@@ -59,13 +48,13 @@ export function M1Form() {
   const isCapaLisa = tipoCapa === 'lisa'
 
   const isValid = React.useMemo(() => {
-    if (!tipoCapa || !tipoFoto || !cenarioId) return false
+    if (!set || !tipoCapa || !tipoFoto) return false
     if (isCapaLisa) return corHex !== null
     return referenciaBlobUrl !== null
-  }, [tipoCapa, tipoFoto, cenarioId, referenciaBlobUrl, corHex, isCapaLisa])
+  }, [set, tipoCapa, tipoFoto, referenciaBlobUrl, corHex, isCapaLisa])
 
   async function onGenerate() {
-    if (!isValid || !tipoCapa || !tipoFoto || !cenarioId) return
+    if (!isValid || !set || !tipoCapa || !tipoFoto) return
 
     setPreviewState('loading')
     setErrorMsg(null)
@@ -74,9 +63,9 @@ export function M1Form() {
 
     const payload: M1RenderInput = {
       movel,
+      set,
       tipoCapa,
       tipoFoto,
-      cenarioId,
       referenciaBlobUrl: isCapaLisa ? undefined : referenciaBlobUrl ?? undefined,
       corHex: isCapaLisa ? corHex ?? undefined : undefined,
       customization: customization.trim() || undefined,
@@ -113,21 +102,19 @@ export function M1Form() {
   return (
     <div className="grid grid-cols-1 gap-7 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="flex flex-col gap-6">
-        <TabTipoMovel value={movel} onChange={onChangeMovel} />
+        {/* 1. Tipo móvel */}
+        <TabTipoMovel value={movel} onChange={setMovel} />
 
+        {/* 2. Set */}
+        <StepSet movel={movel} value={set} onChange={setSet} />
+
+        {/* 3. Tipo capa */}
         <StepTipoCapa value={tipoCapa} onChange={onChangeTipoCapa} />
 
-        <StepTipoFoto value={tipoFoto} onChange={onChangeTipoFoto} />
+        {/* 4. Tipo foto */}
+        <StepTipoFoto value={tipoFoto} onChange={setTipoFoto} />
 
-        {tipoFoto && (
-          <StepCenario
-            movel={movel}
-            tipoFoto={tipoFoto}
-            value={cenarioId}
-            onChange={setCenarioId}
-          />
-        )}
-
+        {/* 5. Upload referência ou color picker */}
         {isCapaLisa ? (
           <StepCorLisa value={corHex} onChange={setCorHex} />
         ) : (

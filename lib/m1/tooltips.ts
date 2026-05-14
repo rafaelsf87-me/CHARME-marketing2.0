@@ -14,8 +14,8 @@ export const M1_TOOLTIPS = {
     'Close da mão esticando a capa vestida no móvel — cena pré-aprovada. Demonstra a elasticidade do tecido.',
   tipoFotoDetalheTecido:
     'Split-screen: mão puxando a capa + macro da textura/costura. Comunica qualidade e facilidade de vestir.',
-  cenario:
-    'Escolha o cenário pré-aprovado onde a capa será aplicada. O ambiente, o ângulo e a iluminação são mantidos.',
+  set:
+    'Set é a estética dos 4 cenários do produto (capa, ambiente, elástico, detalhe). O Set escolhido vale para todos os tipos de foto deste móvel — mantém coerência visual entre as fotos.',
   uploadCapa:
     'Foto pronta da capa, usada apenas para ajuste e padronização da estampa/cor. PNG ou JPEG, até 10MB. Quanto melhor a foto, mais fiel o resultado.',
   corLisa:

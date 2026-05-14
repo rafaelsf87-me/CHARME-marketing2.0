@@ -3,27 +3,29 @@ import { put } from '@vercel/blob'
 import { nanoid } from 'nanoid'
 import { brandM1 } from '@/lib/brand/m1.brand'
 import type { M1RenderInput } from './schema'
-import { getTemplateById } from './templates'
+import { getTemplate } from './templates'
 import { renderPipelineA } from './render-pipeline-a'
 
-// Orquestrador Detalhe Tecido:
-// 1. Roda Pipeline A 2× (close + zoom) — Step 1 (swatch) é único graças ao cache LRU.
+// Orquestrador Detalhe Tecido SPLIT (sofá):
+// 1. Roda Pipeline A 2× (close + zoom) — Step 1 (swatch) único graças ao cache LRU.
 // 2. Cada metade renderiza em 1080×1080, é cortada para 540×1080 (centro).
 // 3. Sharp compõe lado a lado em canvas 1080×1080 (sem divisor visual).
 // 4. Output: WEBP 1080×1080.
+//
+// IMPORTANTE: Detalhe Tecido cadeira (variant=simple) NÃO passa por aqui —
+// é renderizado direto via renderPipelineA pelo orquestrador render.ts.
 
 export async function renderPipelineDetalhe(input: M1RenderInput): Promise<string> {
-  const template = getTemplateById(input.cenarioId)
-  if (!template) throw new Error(`Template não encontrado: ${input.cenarioId}`)
+  const template = getTemplate(input.movel, input.tipoFoto, input.set)
   if (template.variant !== 'split') {
-    throw new Error(`Detalhe Tecido requer template variant=split (recebido: ${template.variant})`)
+    throw new Error(
+      `renderPipelineDetalhe requer template variant=split (recebido: ${template.variant} para ${template.id})`
+    )
   }
 
   const halfDims = brandM1.dimensions.detalheHalf
   const fullDims = brandM1.dimensions.final
 
-  // Pipeline A para cada metade. Resize já 1080×1080; corte centro 540×1080
-  // acontece após cada chamada. Step 1 cacheado entre as duas chamadas.
   const [closeResult, zoomResult] = await Promise.all([
     renderPipelineA(input, {
       overrideTemplate: {

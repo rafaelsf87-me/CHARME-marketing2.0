@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     const url = await renderM1(parsed.data)
     const tookMs = Date.now() - startedAt
     console.log(
-      `[M1] render OK em ${tookMs}ms · ${parsed.data.tipoFoto}/${parsed.data.tipoCapa}/${parsed.data.cenarioId}`
+      `[M1] render OK em ${tookMs}ms · ${parsed.data.movel}/${parsed.data.tipoFoto}/${parsed.data.tipoCapa}/set${parsed.data.set}`
     )
     return NextResponse.json({ url, tookMs })
   } catch (err) {

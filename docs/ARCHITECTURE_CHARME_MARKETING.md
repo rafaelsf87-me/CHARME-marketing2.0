@@ -470,6 +470,13 @@ Dois componentes globais de texto (usados em M2, M3, M4, M5 — não em M1):
 
 ## 14. Changelog
 
+### v0.7 — 15/05/2026 (M1 lógica de Sets)
+- **Usuário escolhe Set 1 ou Set 2 uma vez.** Sistema resolve template via `getTemplate(movel, tipoFoto, set)`.
+- Schema migrado: `cenarioId` → `set: 1 | 2`.
+- UI: `step-cenario.tsx` removido, `step-set.tsx` novo. Cards de Set usam thumbnail da capa do Set.
+- Fallback documentado: Sofá Detalhe Tecido Set 2 retorna silenciosamente `sofa-detalhe-1`.
+- Ordem dos steps: Móvel → Set → Tipo Capa → Tipo Foto → Upload/Cor → Gerar.
+
 ### v0.6.1 — 15/05/2026 (M1 ajuste cadeira-detalhe)
 - **Cadeira Detalhe Tecido vira simple** (foto única) com 2 cenários: `cadeira-detalhe-1`, `cadeira-detalhe-2`.
 - **Sofá Detalhe Tecido mantém split** (`sofa-detalhe-1`).

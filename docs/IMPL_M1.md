@@ -1,12 +1,24 @@
 # IMPL_M1.md
 ## Documento de Implementação — Submódulo M1 (Foto Produto Vitrine)
 
-**Versão:** 1.2.1 (cadeira-detalhe vira simple com 2 variações; sofa-detalhe mantém split)
-**Data:** 15/05/2026 (v1.0 14/05, v1.1 14/05 DEC-006, v1.2 15/05, v1.2.1 15/05)
+**Versão:** 1.3 (lógica de Sets — usuário escolhe Set 1 ou 2, sistema resolve template)
+**Data:** 15/05/2026 (v1.0 14/05, v1.1 14/05 DEC-006, v1.2 15/05, v1.2.1 15/05, v1.3 15/05)
 **Tipo:** Doc temporário — apagar após implementação concluída
 **Destinatário:** Claude Code (Sonnet)
 **Pré-requisito:** Base do sistema + M4 já implementados e funcionais
 
+> **Changelog v1.2.1 → v1.3 (15/05/2026):** lógica de Sets.
+> - **Cada (móvel, tipoFoto) tem até 2 templates**, indexados por `set: 1 | 2`. Distribuição:
+>   Set 1 = todos `-1`; Set 2 = todos `-2`.
+> - **Usuário escolhe Set uma vez** (cards `Set 1` e `Set 2` com preview = thumbnail da capa do Set).
+>   Sistema resolve o template real via `getTemplate(movel, tipoFoto, set)`.
+> - **Fallback documentado:** Sofá Detalhe Tecido só existe no Set 1 (split). Pedir
+>   `(sofa, detalhe-tecido, 2)` retorna silenciosamente `sofa-detalhe-1`.
+> - **Schema migra `cenarioId` → `set`**. Cenário deixa de ser input explícito; passa
+>   a ser derivado de `(movel, tipoFoto, set)` via helper.
+> - **UI:** `step-cenario.tsx` removido; `step-set.tsx` novo. Ordem dos steps:
+>   Móvel → Set → Tipo Capa → Tipo Foto → Upload/Cor → Gerar.
+>
 > **Changelog v1.2 → v1.2.1 (15/05/2026):** ajuste pós-reescrita.
 > - Split-screen só em **Sofá Detalhe Tecido** (`sofa-detalhe-1` mantém variant=split).
 > - **Cadeira Detalhe Tecido** vira foto única (variant=simple) com **2 variações de cenário**:
@@ -37,6 +49,32 @@
 
 ---
 
+## 0.1. Lógica de Sets (v1.3)
+
+Cada móvel tem **2 Sets** (estéticas/cenários distintos). O usuário escolhe Set 1 ou Set 2 **uma única vez** e o sistema resolve automaticamente o template correto via:
+
+```
+getTemplate(movel, tipoFoto, set) → M1Template
+```
+
+**Distribuição:**
+- **Set 1:** todos os IDs terminados em `-1` (`sofa-capa-1`, `sofa-ambiente-1`, `sofa-elastico-1`, `sofa-detalhe-1`, `cadeira-*-1`)
+- **Set 2:** todos os IDs terminados em `-2` (`sofa-capa-2`, `sofa-ambiente-2`, `sofa-elastico-2`, `cadeira-*-2`)
+
+**Fallback documentado:** Sofá Detalhe Tecido só existe no Set 1 (split close+zoom). Quando o usuário pede `(sofa, detalhe-tecido, 2)`, `getTemplate` retorna silenciosamente `sofa-detalhe-1`. Razão: fotografar duas variações de split-screen seria caro; a coerência do Set 2 já está garantida pelos outros 3 tipos de foto.
+
+**Fluxo de UI:**
+```
+1. Tipo móvel (Sofá / Cadeira)
+2. Set (1 / 2) — cards com preview = thumbnail da capa do Set
+3. Tipo capa (Estampada / Lisa / Alto Relevo)
+4. Tipo foto (Capa / Ambiente / Elástico / Detalhe)
+5. Upload referência (ou color picker se Lisa)
+6. Gerar
+```
+
+---
+
 ## 0. Visão Geral e Escopo
 
 Este documento contém todas as instruções para implementar o submódulo **M1 — Foto Produto Vitrine** dentro do módulo Geração de Imagens.
@@ -54,6 +92,7 @@ Gera fotos profissionais de produto (sofá/cadeira com capa) substituindo apenas
 - Brand config M1
 - Estrutura completa do submódulo (UI + API + lib)
 - Schema Zod, definição dos 15 templates default (v1.2.1) — 14 simple + 1 split
+- Lógica de Sets (v1.3): helper `getTemplate(movel, tipoFoto, set)` com fallback documentado
 - Pipeline 2-step com cache de capa neutra
 - Script de geração de masks (utility)
 - Prompts em EN com comentários PT-BR (10 prompts ativos)

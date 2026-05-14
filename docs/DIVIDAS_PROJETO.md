@@ -104,6 +104,7 @@ Pontos onde uma decisão de produto é necessária antes de avançar.
 - **Status:** APROVADO em planejamento. Será marcada **RESOLVIDA** quando implementação for testada com render real (depende de FAL_KEY + Vercel Pro + PNGs dos templates).
 - **Escopo ampliado (15/05/2026, v1.2):** Pipeline A agora cobre os 4 tipos de foto (capa, ambiente, elástico, detalhe-tecido) — Pipeline B eliminado. Detalhe Tecido orquestra 2× Pipeline A (close+zoom) + compositing Sharp side-by-side. Capa Lisa pula Step 1 (Step 2 só com prompt de cor HEX, sem reference_image_url).
 - **Ajuste v1.2.1 (15/05/2026):** split-screen só em Sofá Detalhe Tecido. Cadeira Detalhe Tecido vira foto única (variant=simple) com 2 cenários (`cadeira-detalhe-1`, `cadeira-detalhe-2`). Roteamento agora considera `template.variant`. Total: 15 templates lógicos, 16 imagens físicas.
+- **Ajuste v1.3 (15/05/2026):** lógica de Sets. Usuário escolhe Set 1 ou 2 uma vez (cards com preview da capa do Set); sistema resolve template via `getTemplate(movel, tipoFoto, set)`. Schema migrado de `cenarioId` para `set`. Fallback aceito como decisão (não dívida): Sofá Detalhe Tecido Set 2 retorna silenciosamente `sofa-detalhe-1` (split). Não há ROI em fotografar segunda variação de split.
 - **Custo extra:** ~$1–2/mês (desprezível no volume da equipe de 4)
 - **Justificativa:** evita retrabalho, garante qualidade em estampas complexas (Boho, alto-relevo), permite reutilizar Step 1 entre cenários e mantém prompts independentes.
 - **Identificado em:** Implementação M1, 14/05/2026 — ampliado em 15/05/2026 (v1.2)

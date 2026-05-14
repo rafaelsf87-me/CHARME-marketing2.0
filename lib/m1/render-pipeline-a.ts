@@ -5,18 +5,18 @@ import { put } from '@vercel/blob'
 import { nanoid } from 'nanoid'
 import { brandM1 } from '@/lib/brand/m1.brand'
 import type { M1RenderInput, M1TipoCapa, M1TipoFoto } from './schema'
-import { getTemplateById, type M1TemplateSimple } from './templates'
+import { getTemplate, type M1TemplateSimple } from './templates'
 import { buildStep1Prompt, buildStep2Prompt } from './prompts'
 import { callFluxKontext, callFluxKontextInpaint } from './fal-client'
 import { buildCacheKey, getCachedSwatch, setCachedSwatch } from './cache'
 
 // Pipeline A único — aplica capa no template via inpainting.
 // Subfluxo Capa Lisa: pula Step 1 (sem swatch), Step 2 só com prompt de cor.
-// Detalhe Tecido é orquestrado em render-pipeline-detalhe.ts (chama esta função 2×).
+// Detalhe Tecido sofá é orquestrado em render-pipeline-detalhe.ts (split close+zoom);
+// Detalhe Tecido cadeira (simple) usa este pipeline direto.
 
 export type PipelineAOptions = {
-  // Para Detalhe Tecido: força uso de imagem/mask específicas do split
-  // (close ou zoom) ao invés do par padrão (image.png/mask.png).
+  // Para Detalhe Tecido split: força uso de imagem/mask específicas (close ou zoom).
   overrideTemplate?: {
     imagePath: string
     maskPath: string
@@ -37,9 +37,7 @@ export async function renderPipelineA(
   input: M1RenderInput,
   options: PipelineAOptions = {}
 ): Promise<PipelineAResult> {
-  const template = getTemplateById(input.cenarioId)
-  if (!template) throw new Error(`Template não encontrado: ${input.cenarioId}`)
-
+  const template = getTemplate(input.movel, input.tipoFoto, input.set)
   const { imageAbs, maskAbs } = resolveTemplatePaths(template, options)
 
   const [templateBuffer, maskBuffer] = await Promise.all([
@@ -89,7 +87,7 @@ export async function renderPipelineA(
 }
 
 function resolveTemplatePaths(
-  template: ReturnType<typeof getTemplateById>,
+  template: ReturnType<typeof getTemplate>,
   options: PipelineAOptions
 ): { imageAbs: string; maskAbs: string } {
   if (options.overrideTemplate) {
@@ -98,7 +96,7 @@ function resolveTemplatePaths(
       maskAbs: path.join(process.cwd(), 'public', options.overrideTemplate.maskPath),
     }
   }
-  if (!template || template.variant !== 'simple') {
+  if (template.variant !== 'simple') {
     throw new Error(
       'Pipeline A requer template variant=simple ou overrideTemplate explícito'
     )
@@ -135,7 +133,8 @@ async function getOrGenerateSwatch(
 }
 
 // Wrapper conveniente: Pipeline A produzindo URL final (uso direto pra
-// capa/ambiente/elastico). Detalhe Tecido usa renderPipelineA com options.
+// capa/ambiente/elastico/cadeira-detalhe). Detalhe Tecido sofá usa
+// renderPipelineA com options.
 export async function renderPipelineAToUrl(
   input: M1RenderInput,
   options: PipelineAOptions = {}
@@ -147,5 +146,4 @@ export async function renderPipelineAToUrl(
   return result.url
 }
 
-// Re-export de tipos para consumidores externos sem import direto do schema.
 export type { M1TipoFoto }
