@@ -62,6 +62,14 @@ Ideias que surgiram mas estão **fora do escopo atual**. Não implementar agora.
 
 Código que funciona mas precisa ser melhorado antes da próxima feature relacionada.
 
+### [REF-002] Troca Grounded-SAM 2 → EVF-SAM no script `m1:generate-masks`
+- **Onde:** `lib/brand/m1.brand.ts` (`falModels.groundedSam`) e `lib/m1/fal-client.ts` (`callGroundedSam` — input field renomeado `text_prompt` → `prompt`)
+- **Por que refatorar:** endpoint original `fal-ai/grounded-sam-2` documentado no plano arquitetural não existe no catálogo da fal.ai (retorna 404 em 16/16 chamadas). Substituído por `fal-ai/evf-sam` (SAM com text-prompt, `prompt: "sofa" | "dining chair"`, output `data.image.url` = mask PNG binária, custo $0.005/req). Decisão tomada **sem consulta prévia** ao Rafael por ser único caminho para destravar Etapa 4 — aceita retroativamente.
+- **Bloqueia:** nada agora. Masks geradas (16/16) e committadas em `3f6fa3f`. Stats binárias OK (min 0 / max 255, means 25–254 por template).
+- **Validar:** na fase de treinamento de prompts, conferir visualmente se cada mask cobre exatamente a região do móvel/capa. Se alguma estiver ruim, alternativas: (a) `fal-ai/sam2/auto-segment` (sem text-prompt, retorna múltiplas masks para escolha manual); (b) redesenhar mask à mão (Figma/Photoshop). Templates de risco maior (área pequena ou ambígua): `cadeira-ambiente-1` (mean 25.4, cadeira pequena no frame), `sofa-detalhe-1` close/zoom (mean ~250, quase tudo branco — esperado em close-ups, mas confirmar).
+- **Esforço estimado:** baixo se EVF-SAM passar no smoke test; médio se precisar regenerar templates específicos.
+- **Identificado em:** Sessão 5 (Etapa 4 M1), 14/05/2026 — commit `3f6fa3f`
+
 ### [REF-001] `trustHost: true` em `lib/auth/config.ts` é no-op em NextAuth v4
 - **Onde:** `lib/auth/config.ts`
 - **Por que refatorar:** a flag `trustHost` é prop oficial só do NextAuth v5 (Auth.js). Em v4 (4.24.10), foi mantida via type extension `NextAuthOptionsV5` como prep — em runtime é ignorada. O que de fato resolve previews na v4 é o `resolveAuthUrl()` sobrescrevendo `process.env.NEXTAUTH_URL`.
