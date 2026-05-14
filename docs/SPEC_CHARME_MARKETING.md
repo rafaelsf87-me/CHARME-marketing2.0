@@ -61,48 +61,58 @@ Não é geração de cena nova. É substituição de padrão têxtil sobre super
 | Tipo | Descrição |
 |---|---|
 | **Foto Capa** | Foto principal do produto — móvel com capa aplicada, fundo/ambiente da foto-template selecionada |
-| **Foto Outra 1 — Ambiente** | Foto ampla do ambiente com 2 sofás (2+3 lugares) ou mesa com 6 cadeiras, todos com a capa |
-| **Foto Outra 2 — Elástico** | Close da mão esticando a capa no móvel, demonstrando elasticidade |
+| **Foto Ambiente** | Foto ampla do ambiente com 2 sofás (2+3 lugares) ou mesa com 6 cadeiras, todos com a capa |
+| **Foto Elástico** | Close da mão esticando a capa no móvel, demonstrando elasticidade — cenário pré-aprovado |
+| **Detalhe do Tecido** | Split-screen: mão puxando a capa + macro da textura/costura — cenário pré-aprovado |
 
-### Fluxo de uso — passo a passo
+### Tipos de capa
+
+| Capa | Input do usuário |
+|---|---|
+| **Estampada** | Foto-referência da estampa |
+| **Lisa** | Cor HEX (sem foto) — subfluxo pula Step 1 |
+| **Alto Relevo** | Foto-referência da estampa quiltada |
+
+### Fluxo de uso — passo a passo (v1.2)
 
 ```
 PASSO 1: Selecionar tipo de móvel
   [Sofá]  /  [Cadeira]
 
 PASSO 2: Selecionar tipo de capa
-  [Estampada]  /  [Lisa]
+  [Estampada]  /  [Lisa]  /  [Alto Relevo]
 
 PASSO 3: Selecionar tipo de foto a gerar
-  [Foto Capa]  /  [Foto Ambiente]  /  [Foto Elástico]
+  [Foto Capa]  /  [Foto Ambiente]  /  [Foto Elástico]  /  [Detalhe do Tecido]
 
-PASSO 4: Uploads e configurações (variam conforme seleção acima)
+PASSO 4: Selecionar cenário (sempre, 1–2 opções por móvel+tipo)
 
-PASSO 5: [Gerar]
+PASSO 5: Input da capa
+  - Estampada / Alto Relevo: upload da foto-referência
+  - Lisa: seletor de cor + campo hex
+
+PASSO 6: [Gerar]
 ```
 
-### Inputs por combinação
+### Inputs por combinação (v1.2)
 
-#### → Foto Capa (qualquer móvel/capa)
+#### → Capa Estampada ou Alto Relevo (qualquer tipo de foto)
 | Campo | Obrigatório | Tooltip |
 |---|---|---|
-| Foto de referência da capa | Sim | "Foto real da capa JÁ VESTIDA em qualquer móvel padrão. A IA usa essa imagem para entender a estampa/cor em 3D. É mais preciso que enviar só o PNG da estampa." |
-| Selecionar cenário (foto-template) | Sim | "Escolha o cenário pré-aprovado. Cada cenário define ambiente + ângulo do móvel. A IA mantém tudo e substitui apenas a estampa pela sua referência." |
+| Foto de referência da capa | Sim | "Foto pronta da capa, usada apenas para ajuste e padronização da estampa/cor." |
+| Cenário (foto-template) | Sim | "Cenário pré-aprovado. Define ambiente, ângulo e iluminação. A IA mantém tudo e substitui apenas a estampa/cor." |
 
-**REMOVIDO da v0.1:** input "Foto do móvel (celular) sem capa" — não faz mais sentido. O móvel vem da foto-template.
-
-#### → Foto Ambiente
+#### → Capa Lisa (qualquer tipo de foto)
 | Campo | Obrigatório | Tooltip |
 |---|---|---|
-| Foto de referência da capa | Sim | "Mesma referência da capa que você usou na Foto Capa deste produto." |
-| Selecionar cenário de ambiente | Sim | "Escolha o cenário para a foto de ambiente. O sistema posicionará os móveis automaticamente." |
-
-**Nota técnica — Cadeiras:** alguns cenários de cadeira têm variações de ângulo (cadeira de frente, de costas, parcialmente atrás da mesa). Cada cenário deixa claro no preview qual ângulo exibe. Detalhes de ângulo são resolvidos no treinamento dos templates.
+| Cor (hex) | Sim | "Cor exata da capa em hex (#RRGGBB). Use o seletor ou digite o código direto." |
+| Cenário (foto-template) | Sim | "Cenário pré-aprovado." |
 
 #### → Foto Elástico
-| Campo | Obrigatório | Tooltip |
-|---|---|---|
-| Foto real da ação (celular) | Sim | "Foto tirada com celular de uma mão esticando a capa vestida no móvel. A IA só vai tratar luz, cor e padrão — não recria a cena. Quanto mais real a foto, mais realista o resultado final." |
+Mesmo input das opções acima. **Não há mais upload de foto bruta de celular.** A cena é o template pré-aprovado.
+
+#### → Detalhe do Tecido
+Mesmo input das opções acima. Sistema gera duas metades (close + zoom) e compõe lado a lado. **Não há mais upload de foto bruta.**
 
 ### Prompts base por combinação (a refinar no treinamento)
 
@@ -139,7 +149,8 @@ PASSO 5: [Gerar]
 - Custom: excluíveis, criados via Template Creator
 
 ### Dimensões
-- **Foto Capa / Foto Ambiente / Foto Elástico:** 1080×1080px
+- **Todos os 4 tipos de foto:** 1080×1080 WEBP
+- **Detalhe do Tecido:** composição final 1080×1080 com duas metades 540×1080 (close à esquerda + zoom à direita, sem divisor visual)
 
 ### Cores e fontes
 - **Sem texto** — não aplicar paleta de marca neste módulo

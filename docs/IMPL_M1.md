@@ -1,18 +1,31 @@
 # IMPL_M1.md
 ## Documento de Implementação — Submódulo M1 (Foto Produto Vitrine)
 
-**Versão:** 1.1 (Step 2 do Pipeline A agora usa `fal-ai/flux-kontext-lora/inpaint`)
-**Data:** 14/05/2026 (v1.0 em 15/05/2026, revisado 14/05/2026 — DEC-006)
+**Versão:** 1.2 (reescrita arquitetural — Pipeline A único, 14 templates, sem foto bruta)
+**Data:** 15/05/2026 (v1.0 em 14/05/2026, v1.1 em 14/05/2026 — DEC-006, v1.2 em 15/05/2026)
 **Tipo:** Doc temporário — apagar após implementação concluída
 **Destinatário:** Claude Code (Sonnet)
 **Pré-requisito:** Base do sistema + M4 já implementados e funcionais
 
+> **Changelog v1.1 → v1.2 (15/05/2026):** reescrita arquitetural após sessão com Rafael.
+> - **Pipeline B eliminado.** Todos os 4 tipos (capa, ambiente, elástico, detalhe-tecido)
+>   usam o Pipeline A com template + cenário pré-aprovado.
+> - **Templates: 11 → 14.** Reduzido capa (3→2) e cadeira-ambiente (3→2); adicionado
+>   elástico (2 por móvel) e detalhe-tecido (1 split por móvel).
+> - **Sem upload de foto bruta.** Elástico e detalhe usam template (não cleanup).
+> - **Capa Lisa:** novo subfluxo pula Step 1 — Step 2 só com prompt de cor HEX.
+> - **Detalhe Tecido:** novo orquestrador `render-pipeline-detalhe.ts` roda Pipeline A 2×
+>   (close + zoom) e compõe side-by-side via Sharp em canvas 1080×1080.
+> - **brandM1.dimensions:** consolidado em `final: 1080×1080` + `detalheHalf: 540×1080`.
+> - **NOTA:** os blocos de código nas seções 5–13 deste doc refletem v1.0/v1.1.
+>   O código fonte em `lib/m1/` e `app/imagens/m1-vitrine/` é a fonte de verdade
+>   pós-v1.2. Atualizações pontuais ao texto narrativo abaixo refletem v1.2.
+>
 > **Changelog v1.0 → v1.1:** descoberto durante migração para `@fal-ai/client@1.x`
 > que `fal-ai/flux-pro/kontext` aceita apenas `image_url + prompt` (sem `mask_url`/
 > `reference_image_url`). Step 2 do Pipeline A migrado para
 > `fal-ai/flux-kontext-lora/inpaint`, que aceita `image+mask+reference+prompt` no
-> tipo oficial `BaseKontextInpaintInput`. Step 1 e Pipeline B inalterados.
-> Resolve DEC-006.
+> tipo oficial `BaseKontextInpaintInput`. Resolve DEC-006.
 
 ---
 
@@ -21,17 +34,18 @@
 Este documento contém todas as instruções para implementar o submódulo **M1 — Foto Produto Vitrine** dentro do módulo Geração de Imagens.
 
 ### O que o M1 faz
-Gera fotos profissionais de produto (sofá/cadeira com capa) substituindo apenas a estampa/cor da capa em cenários pré-aprovados, ou tratando fotos brutas de celular para virarem fotos de catálogo (Elástico, Detalhe do Tecido).
+Gera fotos profissionais de produto (sofá/cadeira com capa) substituindo apenas a estampa/cor da capa em cenários pré-aprovados. **Sem foto bruta de celular** — todos os 4 tipos partem de templates pré-aprovados (DEC-005, v1.2).
 
-### Pipeline técnico
-- **Foto Capa / Foto Ambiente:** Grounded-SAM (masks pré-geradas) + Flux Kontext em **2-step com cache** + Sharp WEBP
-- **Foto Elástico / Foto Detalhe do Tecido:** Flux Kontext cleanup (single-step) + Sharp WEBP
+### Pipeline técnico (v1.2)
+- **Foto Capa / Foto Ambiente / Foto Elástico:** Grounded-SAM (masks pré-geradas) + Flux Kontext em **2-step com cache** + Sharp WEBP (Pipeline A).
+- **Foto Detalhe do Tecido:** orquestrador `render-pipeline-detalhe.ts` chama Pipeline A 2× (close + zoom), Step 1 (swatch) reaproveitado via cache LRU, depois Sharp compõe side-by-side em canvas 1080×1080.
+- **Capa Lisa:** subfluxo que pula o Step 1 e chama o Step 2 só com prompt de cor HEX (sem `reference_image_url`).
 
 ### O que ESTÁ neste doc
 - Setup de dependências e env vars
 - Brand config M1
 - Estrutura completa do submódulo (UI + API + lib)
-- Schema Zod, definição dos 11 templates default
+- Schema Zod, definição dos 14 templates default (v1.2)
 - Pipeline 2-step com cache de capa neutra
 - Script de geração de masks (utility)
 - Prompts em EN com comentários PT-BR (10 prompts ativos)

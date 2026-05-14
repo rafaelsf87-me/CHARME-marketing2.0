@@ -5,10 +5,10 @@ import { brandBase } from './base.config'
 export const brandM1 = {
   ...brandBase,
   dimensions: {
-    fotoCapa: { width: 1080, height: 1080 },
-    fotoAmbiente: { width: 1080, height: 1080 },
-    fotoElastico: { width: 1080, height: 1080 },
-    fotoDetalheTecido: { width: 1080, height: 1080 },
+    // Saída final dos 4 tipos de foto.
+    final: { width: 1080, height: 1080 },
+    // Metade da composição split-screen do Detalhe Tecido (close + zoom).
+    detalheHalf: { width: 540, height: 1080 },
   },
   cache: {
     capaNeutra: {
@@ -21,7 +21,7 @@ export const brandM1 = {
     falModels: {
       // Mask pré-gerada por template (offline, via script).
       groundedSam: 'fal-ai/grounded-sam-2',
-      // Step 1 (capa neutra/swatch) + Pipeline B (Elástico + Detalhe Tecido).
+      // Step 1 do Pipeline A (capa neutra/swatch).
       fluxKontext: 'fal-ai/flux-pro/kontext',
       // Step 2 (aplicar swatch no template via inpainting). Aceita
       // image_url + mask_url + reference_image_url + prompt. Resolve DEC-006.

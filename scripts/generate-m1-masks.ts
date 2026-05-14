@@ -1,13 +1,16 @@
 /**
- * Gera as masks de segmentação para os 11 templates do M1 (Foto Capa e
- * Foto Ambiente). Rodar 1x antes do M1 entrar em produção, e novamente
- * sempre que um template for adicionado ou substituído.
+ * Gera as masks de segmentação para os 14 templates do M1.
+ *
+ * 12 templates "simple" (1 imagem): capa, ambiente, elastico (sofa+cadeira × 2 cada)
+ *  2 templates "split"  (2 imagens internas: close + zoom): detalhe-tecido (sofa+cadeira × 1 cada)
+ * Total: 16 PNGs de entrada, 16 masks de saída.
  *
  * Uso: pnpm m1:generate-masks
  *
  * Pré-requisitos:
  *  - FAL_KEY configurada em .env.local
- *  - 11 PNGs presentes em public/templates/m1/{id}/image.png
+ *  - PNGs presentes em public/templates/m1/{id}/{image|image-close|image-zoom}.png
+ *  - PNGs ausentes são puramente pulados (Rafael ainda está reunindo) — sem falha.
  */
 
 import { readFile, writeFile, access, mkdir } from 'node:fs/promises'
@@ -24,30 +27,42 @@ async function fileExists(p: string): Promise<boolean> {
   }
 }
 
-async function generateMaskForTemplate(template: M1Template) {
-  const imageAbsPath = path.join(process.cwd(), 'public', template.imagePath)
-  const maskAbsPath = path.join(process.cwd(), 'public', template.maskPath)
+async function generateMask(
+  templateId: string,
+  movel: M1Template['movel'],
+  imageRelPath: string,
+  maskRelPath: string
+) {
+  const imageAbs = path.join(process.cwd(), 'public', imageRelPath)
+  const maskAbs = path.join(process.cwd(), 'public', maskRelPath)
 
-  if (!(await fileExists(imageAbsPath))) {
-    console.warn(`⚠ ${template.id} — image.png ausente (${template.imagePath}). Pulando.`)
+  if (!(await fileExists(imageAbs))) {
+    console.warn(`⚠ ${templateId} — ${imageRelPath} ausente. Pulando.`)
+    return
+  }
+  if (await fileExists(maskAbs)) {
+    console.log(`✓ ${templateId} — ${path.basename(maskRelPath)} já existe, pulando.`)
     return
   }
 
-  if (await fileExists(maskAbsPath)) {
-    console.log(`✓ ${template.id} — mask já existe, pulando.`)
-    return
-  }
-
-  console.log(`→ Gerando mask para ${template.id}...`)
-
-  const imageBuffer = await readFile(imageAbsPath)
-  const textPrompt = template.movel === 'sofa' ? 'sofa' : 'dining chair'
-
+  console.log(`→ Gerando ${path.basename(maskRelPath)} para ${templateId}...`)
+  const imageBuffer = await readFile(imageAbs)
+  const textPrompt = movel === 'sofa' ? 'sofa' : 'dining chair'
   const maskBuffer = await callGroundedSam({ imageBuffer, textPrompt })
 
-  await mkdir(path.dirname(maskAbsPath), { recursive: true })
-  await writeFile(maskAbsPath, maskBuffer)
-  console.log(`✓ ${template.id} — mask salva em ${template.maskPath}`)
+  await mkdir(path.dirname(maskAbs), { recursive: true })
+  await writeFile(maskAbs, maskBuffer)
+  console.log(`✓ ${templateId} — mask salva em ${maskRelPath}`)
+}
+
+async function processTemplate(template: M1Template) {
+  if (template.variant === 'simple') {
+    await generateMask(template.id, template.movel, template.imagePath, template.maskPath)
+    return
+  }
+  // split: 2 imagens internas
+  await generateMask(template.id, template.movel, template.imageClosePath, template.maskClosePath)
+  await generateMask(template.id, template.movel, template.imageZoomPath, template.maskZoomPath)
 }
 
 async function main() {
@@ -56,10 +71,16 @@ async function main() {
     process.exit(1)
   }
 
-  console.log(`Gerando masks para ${M1_TEMPLATES.length} templates...\n`)
+  const simpleCount = M1_TEMPLATES.filter((t) => t.variant === 'simple').length
+  const splitCount = M1_TEMPLATES.filter((t) => t.variant === 'split').length
+  const totalImages = simpleCount + splitCount * 2
+  console.log(
+    `Gerando masks para ${M1_TEMPLATES.length} templates (${totalImages} imagens: ${simpleCount} simple + ${splitCount}×2 split)...\n`
+  )
+
   for (const template of M1_TEMPLATES) {
     try {
-      await generateMaskForTemplate(template)
+      await processTemplate(template)
     } catch (err) {
       console.error(`✗ ${template.id} falhou:`, err instanceof Error ? err.message : err)
     }

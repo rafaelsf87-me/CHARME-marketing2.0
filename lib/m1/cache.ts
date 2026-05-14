@@ -18,7 +18,10 @@ const capaNeutraCache = new LRUCache<CacheKey, CachedSwatch>({
   ttl: brandM1.cache.capaNeutra.ttlMinutes * 60 * 1000,
 })
 
-export function buildCacheKey(referenciaBlobUrl: string, tipoCapa: M1TipoCapa): CacheKey {
+export function buildCacheKey(
+  referenciaBlobUrl: string,
+  tipoCapa: Exclude<M1TipoCapa, 'lisa'>
+): CacheKey {
   // Hash da URL + tipoCapa garante cache key único e estável.
   return crypto
     .createHash('sha256')

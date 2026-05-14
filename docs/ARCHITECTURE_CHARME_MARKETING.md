@@ -264,10 +264,10 @@ import { brandBase } from './base.config'
 export const brandM1 = {
   ...brandBase,
   dimensions: {
-    fotoCapa:     { width: 1080, height: 1080 },
-    fotoAmbiente: { width: 1080, height: 1080 },
-    fotoElastico: { width: 1080, height: 1080 },
-  }
+    final:        { width: 1080, height: 1080 },  // saída final dos 4 tipos
+    detalheHalf:  { width: 540,  height: 1080 },  // metade do split do Detalhe Tecido
+  },
+  // ... cache + pipeline.falModels (groundedSam, fluxKontext, fluxKontextInpaint)
 }
 
 // lib/brand/m2.brand.ts
@@ -469,6 +469,15 @@ Dois componentes globais de texto (usados em M2, M3, M4, M5 — não em M1):
 ---
 
 ## 14. Changelog
+
+### v0.6 — 15/05/2026 (M1 reescrita arquitetural)
+- **Pipeline B eliminado.** Os 4 tipos de foto (capa, ambiente, elástico, detalhe-tecido) agora usam Pipeline A com template + cenário pré-aprovado.
+- **Templates: 11 → 14.** Reduzido capa (3→2 por móvel) e cadeira-ambiente (3→2); adicionado elástico (2 por móvel) e detalhe-tecido (1 split por móvel).
+- **Sem upload de foto bruta.** Elástico e Detalhe não usam mais foto de celular do usuário.
+- **Capa Lisa:** novo subfluxo pula Step 1 — Step 2 só com prompt de cor HEX (sem `reference_image_url`).
+- **Detalhe Tecido:** novo orquestrador `lib/m1/render-pipeline-detalhe.ts` chama Pipeline A 2× (close + zoom) e compõe side-by-side via Sharp em canvas 1080×1080.
+- **brandM1.dimensions:** consolidado em `final: 1080×1080` + `detalheHalf: 540×1080`.
+- DEC-005 com nota ampliada cobrindo o novo escopo.
 
 ### v0.5 — 15/05/2026 (M3 dimensions)
 - **M3 dimensões fechadas:** Desktop 1920×550 WEBP, Mobile 800×600 WEBP (DEC-001 resolvida)

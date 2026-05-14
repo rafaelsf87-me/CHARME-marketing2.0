@@ -1,9 +1,12 @@
 import type { M1RenderInput } from './schema'
-import { M1_TIPOS_COM_CENARIO } from './schema'
-import { renderPipelineA } from './render-pipeline-a'
-import { renderPipelineB } from './render-pipeline-b'
+import { renderPipelineAToUrl } from './render-pipeline-a'
+import { renderPipelineDetalhe } from './render-pipeline-detalhe'
 
+// Orquestrador único: Pipeline A para 3 dos 4 tipos; Detalhe Tecido
+// usa o orquestrador split-screen que internamente chama Pipeline A 2×.
 export async function renderM1(input: M1RenderInput): Promise<string> {
-  const usaPipelineA = M1_TIPOS_COM_CENARIO.includes(input.tipoFoto)
-  return usaPipelineA ? renderPipelineA(input) : renderPipelineB(input)
+  if (input.tipoFoto === 'detalhe-tecido') {
+    return renderPipelineDetalhe(input)
+  }
+  return renderPipelineAToUrl(input)
 }

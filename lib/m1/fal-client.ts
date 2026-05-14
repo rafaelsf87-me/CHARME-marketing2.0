@@ -9,7 +9,7 @@ fal.config({ credentials: process.env.FAL_KEY })
 
 // ─── Inputs locais (mirror das docs oficiais) ──────────────────
 
-// `fal-ai/flux-pro/kontext` (Step 1 + Pipeline B)
+// `fal-ai/flux-pro/kontext` (Step 1 do Pipeline A — capa neutra/swatch).
 // Aceita apenas image_url + prompt + ajustes básicos.
 type FluxKontextInput = {
   image_url: string
@@ -19,11 +19,13 @@ type FluxKontextInput = {
 }
 
 // `fal-ai/flux-kontext-lora/inpaint` (Step 2 do Pipeline A)
-// Mirror do `BaseKontextInpaintInput` (node_modules/@fal-ai/client/.../endpoints.d.ts)
+// Mirror do `BaseKontextInpaintInput` (node_modules/@fal-ai/client/.../endpoints.d.ts).
+// reference_image_url é opcional: Capa Lisa pula Step 1 e chama sem ref,
+// usando apenas prompt com cor HEX.
 type FluxKontextInpaintInput = {
   image_url: string
   mask_url: string
-  reference_image_url: string
+  reference_image_url?: string
   prompt: string
   guidance_scale?: number
   num_inference_steps?: number
@@ -57,7 +59,7 @@ async function downloadAsBuffer(url: string, label: string): Promise<Buffer> {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Step 1 (capa neutra) + Pipeline B (Elástico, Detalhe Tecido)
+// Step 1 — capa neutra (swatch) do Pipeline A
 // Endpoint: fal-ai/flux-pro/kontext
 // ═══════════════════════════════════════════════════════════════
 
@@ -103,7 +105,8 @@ export async function callFluxKontext(args: FluxKontextArgs): Promise<Buffer> {
 export type FluxKontextInpaintArgs = {
   imageBuffer: Buffer
   maskBuffer: Buffer
-  referenceBuffer: Buffer
+  // Opcional: ausente no subfluxo Capa Lisa (Step 2 só com prompt de cor).
+  referenceBuffer?: Buffer
   prompt: string
   numInferenceSteps?: number
   strength?: number
@@ -112,16 +115,17 @@ export type FluxKontextInpaintArgs = {
 export async function callFluxKontextInpaint(
   args: FluxKontextInpaintArgs
 ): Promise<Buffer> {
-  const [imageUrl, maskUrl, referenceUrl] = await Promise.all([
+  const uploads = await Promise.all([
     uploadBuffer(args.imageBuffer),
     uploadBuffer(args.maskBuffer),
-    uploadBuffer(args.referenceBuffer),
+    args.referenceBuffer ? uploadBuffer(args.referenceBuffer) : Promise.resolve(undefined),
   ])
+  const [imageUrl, maskUrl, referenceUrl] = uploads
 
   const input: FluxKontextInpaintInput = {
     image_url: imageUrl,
     mask_url: maskUrl,
-    reference_image_url: referenceUrl,
+    ...(referenceUrl ? { reference_image_url: referenceUrl } : {}),
     prompt: args.prompt,
     guidance_scale: 2.5,
     num_inference_steps: args.numInferenceSteps ?? 30,

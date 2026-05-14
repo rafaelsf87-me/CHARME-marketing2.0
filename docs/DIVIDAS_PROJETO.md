@@ -101,10 +101,11 @@ Pontos onde uma decisão de produto é necessária antes de avançar.
 ### [DEC-005] Pipeline 2-step + cache para todo M1 (Pipeline A)
 - **Onde:** `lib/m1/render-pipeline-a.ts` + `lib/m1/cache.ts`
 - **Descrição:** Step 1 gera capa neutra (swatch) com Flux Kontext a partir da foto-referência; Step 2 aplica esse swatch no template via inpainting (mask Grounded-SAM pré-gerada). Cache LRU 30min/50 entradas reutiliza Step 1 entre cenários (mesma capa, vários ambientes).
-- **Status:** APROVADO em planejamento (decisão de Rafael, registrada aqui). Será marcada **RESOLVIDA** quando implementação for testada com render real (depende de FAL_KEY + Vercel Pro + 11 PNGs).
+- **Status:** APROVADO em planejamento. Será marcada **RESOLVIDA** quando implementação for testada com render real (depende de FAL_KEY + Vercel Pro + PNGs dos templates).
+- **Escopo ampliado (15/05/2026, v1.2):** Pipeline A agora cobre os 4 tipos de foto (capa, ambiente, elástico, detalhe-tecido) — Pipeline B eliminado. Detalhe Tecido orquestra 2× Pipeline A (close+zoom) + compositing Sharp side-by-side. Capa Lisa pula Step 1 (Step 2 só com prompt de cor HEX, sem reference_image_url).
 - **Custo extra:** ~$1–2/mês (desprezível no volume da equipe de 4)
 - **Justificativa:** evita retrabalho, garante qualidade em estampas complexas (Boho, alto-relevo), permite reutilizar Step 1 entre cenários e mantém prompts independentes.
-- **Identificado em:** Implementação M1, 14/05/2026
+- **Identificado em:** Implementação M1, 14/05/2026 — ampliado em 15/05/2026 (v1.2)
 
 
 ### Template para entrada

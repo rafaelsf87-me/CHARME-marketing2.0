@@ -4,55 +4,63 @@ import path from 'node:path'
 import { put } from '@vercel/blob'
 import { nanoid } from 'nanoid'
 import { brandM1 } from '@/lib/brand/m1.brand'
-import type { M1RenderInput } from './schema'
-import { getTemplateById } from './templates'
+import type { M1RenderInput, M1TipoCapa, M1TipoFoto } from './schema'
+import { getTemplateById, type M1TemplateSimple } from './templates'
 import { buildStep1Prompt, buildStep2Prompt } from './prompts'
 import { callFluxKontext, callFluxKontextInpaint } from './fal-client'
 import { buildCacheKey, getCachedSwatch, setCachedSwatch } from './cache'
 
-// Pipeline A: Foto Capa + Foto Ambiente (DEC-005 — 2-step + cache).
-export async function renderPipelineA(input: M1RenderInput): Promise<string> {
-  if (!input.cenarioId) {
-    throw new Error('cenarioId obrigatório para Pipeline A')
-  }
+// Pipeline A único — aplica capa no template via inpainting.
+// Subfluxo Capa Lisa: pula Step 1 (sem swatch), Step 2 só com prompt de cor.
+// Detalhe Tecido é orquestrado em render-pipeline-detalhe.ts (chama esta função 2×).
 
+export type PipelineAOptions = {
+  // Para Detalhe Tecido: força uso de imagem/mask específicas do split
+  // (close ou zoom) ao invés do par padrão (image.png/mask.png).
+  overrideTemplate?: {
+    imagePath: string
+    maskPath: string
+  }
+  // Refina o prompt do Step 2 para a metade close ou zoom do Detalhe Tecido.
+  detalheVariant?: 'close' | 'zoom'
+  // Detalhe Tecido: resize final em 540×1080 ao invés de 1080×1080.
+  outputDimensions?: { width: number; height: number }
+  // Detalhe Tecido pula upload e devolve buffer direto (para compositing).
+  returnBufferOnly?: boolean
+}
+
+export type PipelineAResult =
+  | { kind: 'url'; url: string }
+  | { kind: 'buffer'; buffer: Buffer }
+
+export async function renderPipelineA(
+  input: M1RenderInput,
+  options: PipelineAOptions = {}
+): Promise<PipelineAResult> {
   const template = getTemplateById(input.cenarioId)
   if (!template) throw new Error(`Template não encontrado: ${input.cenarioId}`)
 
-  const templateAbsPath = path.join(process.cwd(), 'public', template.imagePath)
-  const maskAbsPath = path.join(process.cwd(), 'public', template.maskPath)
+  const { imageAbs, maskAbs } = resolveTemplatePaths(template, options)
 
   const [templateBuffer, maskBuffer] = await Promise.all([
-    readFile(templateAbsPath),
-    readFile(maskAbsPath),
+    readFile(imageAbs),
+    readFile(maskAbs),
   ])
 
-  const referenciaResp = await fetch(input.referenciaBlobUrl)
-  if (!referenciaResp.ok) throw new Error('Falha ao baixar referência da capa')
-  const referenciaBuffer = Buffer.from(await referenciaResp.arrayBuffer())
-
-  // STEP 1 — capa neutra (com cache)
-  const cacheKey = buildCacheKey(input.referenciaBlobUrl, input.tipoCapa)
-  let swatchBuffer = getCachedSwatch(cacheKey)
-
-  if (!swatchBuffer) {
-    console.log(`[M1] Cache miss — gerando capa neutra (${input.tipoCapa})`)
-    swatchBuffer = await callFluxKontext({
-      imageBuffer: referenciaBuffer,
-      prompt: buildStep1Prompt(input.tipoCapa),
-    })
-    setCachedSwatch(cacheKey, swatchBuffer)
-  } else {
-    console.log(`[M1] Cache hit — capa neutra reutilizada`)
+  // STEP 1 — capa neutra (swatch). Capa Lisa pula este passo.
+  let swatchBuffer: Buffer | undefined
+  if (input.tipoCapa !== 'lisa') {
+    swatchBuffer = await getOrGenerateSwatch(input.referenciaBlobUrl!, input.tipoCapa)
   }
 
-  // STEP 2 — aplicar capa neutra no template via inpainting
-  // Endpoint: fal-ai/flux-kontext-lora/inpaint (resolve DEC-006).
+  // STEP 2 — aplicar capa no template via inpainting.
   const step2Prompt = buildStep2Prompt({
     movel: input.movel,
     tipoCapa: input.tipoCapa,
-    tipoFoto: input.tipoFoto as 'capa' | 'ambiente',
+    tipoFoto: input.tipoFoto,
     customization: input.customization,
+    corHex: input.corHex,
+    detalheVariant: options.detalheVariant,
   })
 
   const finalBuffer = await callFluxKontextInpaint({
@@ -62,16 +70,82 @@ export async function renderPipelineA(input: M1RenderInput): Promise<string> {
     prompt: step2Prompt,
   })
 
-  const { width, height } = brandM1.dimensions.fotoCapa
-  const webpBuffer = await sharp(finalBuffer)
+  // Resize final.
+  const { width, height } = options.outputDimensions ?? brandM1.dimensions.final
+  const resized = await sharp(finalBuffer)
     .resize(width, height, { fit: 'cover', position: 'center' })
-    .webp({ quality: 90 })
     .toBuffer()
 
+  if (options.returnBufferOnly) {
+    return { kind: 'buffer', buffer: resized }
+  }
+
+  const webpBuffer = await sharp(resized).webp({ quality: 90 }).toBuffer()
   const blob = await put(`m1/${nanoid()}.webp`, webpBuffer, {
     access: 'public',
     contentType: 'image/webp',
   })
-
-  return blob.url
+  return { kind: 'url', url: blob.url }
 }
+
+function resolveTemplatePaths(
+  template: ReturnType<typeof getTemplateById>,
+  options: PipelineAOptions
+): { imageAbs: string; maskAbs: string } {
+  if (options.overrideTemplate) {
+    return {
+      imageAbs: path.join(process.cwd(), 'public', options.overrideTemplate.imagePath),
+      maskAbs: path.join(process.cwd(), 'public', options.overrideTemplate.maskPath),
+    }
+  }
+  if (!template || template.variant !== 'simple') {
+    throw new Error(
+      'Pipeline A requer template variant=simple ou overrideTemplate explícito'
+    )
+  }
+  const simple: M1TemplateSimple = template
+  return {
+    imageAbs: path.join(process.cwd(), 'public', simple.imagePath),
+    maskAbs: path.join(process.cwd(), 'public', simple.maskPath),
+  }
+}
+
+async function getOrGenerateSwatch(
+  referenciaBlobUrl: string,
+  tipoCapa: Exclude<M1TipoCapa, 'lisa'>
+): Promise<Buffer> {
+  const cacheKey = buildCacheKey(referenciaBlobUrl, tipoCapa)
+  const cached = getCachedSwatch(cacheKey)
+  if (cached) {
+    console.log(`[M1] Cache hit — capa neutra reutilizada`)
+    return cached
+  }
+  console.log(`[M1] Cache miss — gerando capa neutra (${tipoCapa})`)
+
+  const referenciaResp = await fetch(referenciaBlobUrl)
+  if (!referenciaResp.ok) throw new Error('Falha ao baixar referência da capa')
+  const referenciaBuffer = Buffer.from(await referenciaResp.arrayBuffer())
+
+  const swatchBuffer = await callFluxKontext({
+    imageBuffer: referenciaBuffer,
+    prompt: buildStep1Prompt(tipoCapa),
+  })
+  setCachedSwatch(cacheKey, swatchBuffer)
+  return swatchBuffer
+}
+
+// Wrapper conveniente: Pipeline A produzindo URL final (uso direto pra
+// capa/ambiente/elastico). Detalhe Tecido usa renderPipelineA com options.
+export async function renderPipelineAToUrl(
+  input: M1RenderInput,
+  options: PipelineAOptions = {}
+): Promise<string> {
+  const result = await renderPipelineA(input, { ...options, returnBufferOnly: false })
+  if (result.kind !== 'url') {
+    throw new Error('Pipeline A não retornou URL')
+  }
+  return result.url
+}
+
+// Re-export de tipos para consumidores externos sem import direto do schema.
+export type { M1TipoFoto }

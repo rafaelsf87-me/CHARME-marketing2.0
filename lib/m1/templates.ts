@@ -1,153 +1,115 @@
-import type { M1Movel } from './schema'
+import type { M1Movel, M1TipoFoto } from './schema'
 
-export type M1TipoFotoComCenario = 'capa' | 'ambiente'
+// Templates Detalhe Tecido têm 2 imagens internas (close + zoom) que são
+// renderizadas separadamente e compostas side-by-side via Sharp.
+// Os demais templates têm 1 imagem só. Discriminated union evita any.
 
-export type M1Template = {
+type M1TemplateBase = {
   id: string
   movel: M1Movel
-  tipoFoto: M1TipoFotoComCenario
+  tipoFoto: M1TipoFoto
   ordem: number
   nome: string
   descricao: string
-  imagePath: string
-  maskPath: string
   thumbnailPath: string
 }
 
+export type M1TemplateSimple = M1TemplateBase & {
+  variant: 'simple'
+  imagePath: string
+  maskPath: string
+}
+
+export type M1TemplateSplit = M1TemplateBase & {
+  variant: 'split'
+  imageClosePath: string
+  maskClosePath: string
+  imageZoomPath: string
+  maskZoomPath: string
+}
+
+export type M1Template = M1TemplateSimple | M1TemplateSplit
+
+function simple(
+  id: string,
+  movel: M1Movel,
+  tipoFoto: M1TipoFoto,
+  ordem: number,
+  nome: string,
+  descricao: string
+): M1TemplateSimple {
+  return {
+    variant: 'simple',
+    id,
+    movel,
+    tipoFoto,
+    ordem,
+    nome,
+    descricao,
+    imagePath: `/templates/m1/${id}/image.png`,
+    maskPath: `/templates/m1/${id}/mask.png`,
+    thumbnailPath: `/templates/m1/${id}/thumbnail.webp`,
+  }
+}
+
+function split(
+  id: string,
+  movel: M1Movel,
+  ordem: number,
+  nome: string,
+  descricao: string
+): M1TemplateSplit {
+  return {
+    variant: 'split',
+    id,
+    movel,
+    tipoFoto: 'detalhe-tecido',
+    ordem,
+    nome,
+    descricao,
+    imageClosePath: `/templates/m1/${id}/image-close.png`,
+    maskClosePath: `/templates/m1/${id}/mask-close.png`,
+    imageZoomPath: `/templates/m1/${id}/image-zoom.png`,
+    maskZoomPath: `/templates/m1/${id}/mask-zoom.png`,
+    thumbnailPath: `/templates/m1/${id}/thumbnail.webp`,
+  }
+}
+
 export const M1_TEMPLATES: M1Template[] = [
-  // ─── Foto Capa · Sofá ─────────────────────────
-  {
-    id: 'sofa-capa-1',
-    movel: 'sofa',
-    tipoFoto: 'capa',
-    ordem: 1,
-    nome: 'Sofá 1',
-    descricao: 'Sala moderna minimalista — quadro geométrico, planta, prateleira',
-    imagePath: '/templates/m1/sofa-capa-1/image.png',
-    maskPath: '/templates/m1/sofa-capa-1/mask.png',
-    thumbnailPath: '/templates/m1/sofa-capa-1/thumbnail.webp',
-  },
-  {
-    id: 'sofa-capa-2',
-    movel: 'sofa',
-    tipoFoto: 'capa',
-    ordem: 2,
-    nome: 'Sofá 2',
-    descricao: 'Sala boho contemporânea — quadro abstrato, abajur dourado',
-    imagePath: '/templates/m1/sofa-capa-2/image.png',
-    maskPath: '/templates/m1/sofa-capa-2/mask.png',
-    thumbnailPath: '/templates/m1/sofa-capa-2/thumbnail.webp',
-  },
-  {
-    id: 'sofa-capa-3',
-    movel: 'sofa',
-    tipoFoto: 'capa',
-    ordem: 3,
-    nome: 'Sofá 3',
-    descricao: 'Sala clean orgânica — quadro Matisse, mesa redonda madeira',
-    imagePath: '/templates/m1/sofa-capa-3/image.png',
-    maskPath: '/templates/m1/sofa-capa-3/mask.png',
-    thumbnailPath: '/templates/m1/sofa-capa-3/thumbnail.webp',
-  },
+  // ─── Sofá · Capa (2) ─────────────────────────
+  simple('sofa-capa-1', 'sofa', 'capa', 1, 'Sofá 1', 'Sala moderna minimalista — quadro geométrico, planta, prateleira'),
+  simple('sofa-capa-2', 'sofa', 'capa', 2, 'Sofá 2', 'Sala boho contemporânea — quadro abstrato, abajur dourado'),
 
-  // ─── Foto Capa · Cadeira ──────────────────────
-  {
-    id: 'cadeira-capa-1',
-    movel: 'cadeira',
-    tipoFoto: 'capa',
-    ordem: 1,
-    nome: 'Cadeira 1',
-    descricao: 'Sala de leitura — cortina bege, planta, banco dourado',
-    imagePath: '/templates/m1/cadeira-capa-1/image.png',
-    maskPath: '/templates/m1/cadeira-capa-1/mask.png',
-    thumbnailPath: '/templates/m1/cadeira-capa-1/thumbnail.webp',
-  },
-  {
-    id: 'cadeira-capa-2',
-    movel: 'cadeira',
-    tipoFoto: 'capa',
-    ordem: 2,
-    nome: 'Cadeira 2',
-    descricao: 'Sala de jantar light — cortina branca, mesa lateral com flores',
-    imagePath: '/templates/m1/cadeira-capa-2/image.png',
-    maskPath: '/templates/m1/cadeira-capa-2/mask.png',
-    thumbnailPath: '/templates/m1/cadeira-capa-2/thumbnail.webp',
-  },
-  {
-    id: 'cadeira-capa-3',
-    movel: 'cadeira',
-    tipoFoto: 'capa',
-    ordem: 3,
-    nome: 'Cadeira 3',
-    descricao: 'Sala estar clássica — sofá branco capitonê, lanterna, piso madeira',
-    imagePath: '/templates/m1/cadeira-capa-3/image.png',
-    maskPath: '/templates/m1/cadeira-capa-3/mask.png',
-    thumbnailPath: '/templates/m1/cadeira-capa-3/thumbnail.webp',
-  },
+  // ─── Sofá · Ambiente (2) ─────────────────────
+  simple('sofa-ambiente-1', 'sofa', 'ambiente', 1, 'Sofá 1', '2 sofás (2+3 lugares) — sala contemporânea com espelho e planta'),
+  simple('sofa-ambiente-2', 'sofa', 'ambiente', 2, 'Sofá 2', '2 sofás (2+3 lugares) — sala clean moderna com cortina padronizada'),
 
-  // ─── Foto Ambiente · Sofá (2 templates) ───────
-  {
-    id: 'sofa-ambiente-1',
-    movel: 'sofa',
-    tipoFoto: 'ambiente',
-    ordem: 1,
-    nome: 'Sofá 1',
-    descricao: '2 sofás (2+3 lugares) — sala contemporânea com espelho e planta',
-    imagePath: '/templates/m1/sofa-ambiente-1/image.png',
-    maskPath: '/templates/m1/sofa-ambiente-1/mask.png',
-    thumbnailPath: '/templates/m1/sofa-ambiente-1/thumbnail.webp',
-  },
-  {
-    id: 'sofa-ambiente-2',
-    movel: 'sofa',
-    tipoFoto: 'ambiente',
-    ordem: 2,
-    nome: 'Sofá 2',
-    descricao: '2 sofás (2+3 lugares) — sala clean moderna com cortina padronizada',
-    imagePath: '/templates/m1/sofa-ambiente-2/image.png',
-    maskPath: '/templates/m1/sofa-ambiente-2/mask.png',
-    thumbnailPath: '/templates/m1/sofa-ambiente-2/thumbnail.webp',
-  },
+  // ─── Sofá · Elástico (2) ─────────────────────
+  simple('sofa-elastico-1', 'sofa', 'elastico', 1, 'Sofá 1', 'Close de mão esticando a capa no braço do sofá'),
+  simple('sofa-elastico-2', 'sofa', 'elastico', 2, 'Sofá 2', 'Close de mão esticando a capa no encosto do sofá'),
 
-  // ─── Foto Ambiente · Cadeira (3 templates) ────
-  {
-    id: 'cadeira-ambiente-1',
-    movel: 'cadeira',
-    tipoFoto: 'ambiente',
-    ordem: 1,
-    nome: 'Cadeira 1',
-    descricao: 'Mesa com 6 cadeiras — sala elegante com abajur e cortina branca',
-    imagePath: '/templates/m1/cadeira-ambiente-1/image.png',
-    maskPath: '/templates/m1/cadeira-ambiente-1/mask.png',
-    thumbnailPath: '/templates/m1/cadeira-ambiente-1/thumbnail.webp',
-  },
-  {
-    id: 'cadeira-ambiente-2',
-    movel: 'cadeira',
-    tipoFoto: 'ambiente',
-    ordem: 2,
-    nome: 'Cadeira 2',
-    descricao: 'Mesa com 6 cadeiras — sala sofisticada com painel decorativo',
-    imagePath: '/templates/m1/cadeira-ambiente-2/image.png',
-    maskPath: '/templates/m1/cadeira-ambiente-2/mask.png',
-    thumbnailPath: '/templates/m1/cadeira-ambiente-2/thumbnail.webp',
-  },
-  {
-    id: 'cadeira-ambiente-3',
-    movel: 'cadeira',
-    tipoFoto: 'ambiente',
-    ordem: 3,
-    nome: 'Cadeira 3',
-    descricao: 'Mesa com 4 cadeiras — ambiente clean com piso laminado',
-    imagePath: '/templates/m1/cadeira-ambiente-3/image.png',
-    maskPath: '/templates/m1/cadeira-ambiente-3/mask.png',
-    thumbnailPath: '/templates/m1/cadeira-ambiente-3/thumbnail.webp',
-  },
+  // ─── Sofá · Detalhe Tecido (1, split close+zoom) ─
+  split('sofa-detalhe-1', 'sofa', 1, 'Sofá 1', 'Split close+zoom — mãos puxando a capa e macro da costura'),
+
+  // ─── Cadeira · Capa (2) ──────────────────────
+  simple('cadeira-capa-1', 'cadeira', 'capa', 1, 'Cadeira 1', 'Sala de leitura — cortina bege, planta, banco dourado'),
+  simple('cadeira-capa-2', 'cadeira', 'capa', 2, 'Cadeira 2', 'Sala de jantar light — cortina branca, mesa lateral com flores'),
+
+  // ─── Cadeira · Ambiente (2) ──────────────────
+  simple('cadeira-ambiente-1', 'cadeira', 'ambiente', 1, 'Cadeira 1', 'Mesa com 6 cadeiras — sala elegante com abajur e cortina branca'),
+  simple('cadeira-ambiente-2', 'cadeira', 'ambiente', 2, 'Cadeira 2', 'Mesa com 6 cadeiras — sala sofisticada com painel decorativo'),
+
+  // ─── Cadeira · Elástico (2) ──────────────────
+  simple('cadeira-elastico-1', 'cadeira', 'elastico', 1, 'Cadeira 1', 'Close de mão esticando a capa no encosto da cadeira'),
+  simple('cadeira-elastico-2', 'cadeira', 'elastico', 2, 'Cadeira 2', 'Close de mão esticando a capa no assento da cadeira'),
+
+  // ─── Cadeira · Detalhe Tecido (1, split close+zoom) ─
+  split('cadeira-detalhe-1', 'cadeira', 1, 'Cadeira 1', 'Split close+zoom — mãos puxando a capa e macro da costura'),
 ]
 
 export function getTemplatesPorMovelETipo(
   movel: M1Movel,
-  tipoFoto: M1TipoFotoComCenario
+  tipoFoto: M1TipoFoto
 ): M1Template[] {
   return M1_TEMPLATES.filter((t) => t.movel === movel && t.tipoFoto === tipoFoto)
 }

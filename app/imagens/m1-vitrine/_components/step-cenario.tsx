@@ -3,12 +3,12 @@
 import { TooltipInfo } from '@/components/tooltip-info'
 import { M1_TOOLTIPS } from '@/lib/m1/tooltips'
 import { getTemplatesPorMovelETipo } from '@/lib/m1/templates'
-import type { M1Movel } from '@/lib/m1/schema'
+import type { M1Movel, M1TipoFoto } from '@/lib/m1/schema'
 import { cn } from '@/lib/utils'
 
 interface StepCenarioProps {
   movel: M1Movel
-  tipoFoto: 'capa' | 'ambiente'
+  tipoFoto: M1TipoFoto
   value: string | null
   onChange: (id: string) => void
 }
@@ -39,8 +39,6 @@ export function StepCenario({ movel, tipoFoto, value, onChange }: StepCenarioPro
               )}
             >
               <div className="relative aspect-square overflow-hidden rounded-md bg-[#F4F4F2]">
-                {/* Thumbnail vem de /public/templates/m1/{id}/thumbnail.webp.
-                    Quando ainda não existir, mostra fallback cinza. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={t.thumbnailPath}

@@ -6,12 +6,12 @@ import { StepTipoCapa } from './step-tipo-capa'
 import { StepTipoFoto } from './step-tipo-foto'
 import { StepCenario } from './step-cenario'
 import { StepUploadReferencia } from './step-upload-referencia'
+import { StepCorLisa } from './step-cor-lisa'
 import { StepCustomizacao } from './step-customizacao'
 import { GenerateButton } from './generate-button'
 import { PreviewArea } from './preview-area'
 import {
   M1RenderSchema,
-  M1_TIPOS_COM_CENARIO,
   type M1Movel,
   type M1TipoCapa,
   type M1TipoFoto,
@@ -20,16 +20,13 @@ import {
 
 type PreviewState = 'empty' | 'loading' | 'ready' | 'error'
 
-function tipoUsaCenario(tipo: M1TipoFoto | null): boolean {
-  return tipo !== null && M1_TIPOS_COM_CENARIO.includes(tipo)
-}
-
 export function M1Form() {
   const [movel, setMovel] = React.useState<M1Movel>('sofa')
   const [tipoCapa, setTipoCapa] = React.useState<M1TipoCapa | null>(null)
   const [tipoFoto, setTipoFoto] = React.useState<M1TipoFoto | null>(null)
   const [cenarioId, setCenarioId] = React.useState<string | null>(null)
   const [referenciaBlobUrl, setReferenciaBlobUrl] = React.useState<string | null>(null)
+  const [corHex, setCorHex] = React.useState<string | null>(null)
   const [customization, setCustomization] = React.useState('')
 
   const [previewState, setPreviewState] = React.useState<PreviewState>('empty')
@@ -43,30 +40,32 @@ export function M1Form() {
     setCenarioId(null)
   }
 
-  // Trocar tipo de foto: zera cenário se mudou entre A↔B,
-  // e zera upload (significado muda).
+  // Trocar tipo de foto zera cenário (cenários filtrados por tipoFoto).
   function onChangeTipoFoto(novo: M1TipoFoto) {
-    const antesUsavaCenario = tipoUsaCenario(tipoFoto)
-    const depoisUsaCenario = tipoUsaCenario(novo)
-    if (antesUsavaCenario !== depoisUsaCenario) {
-      setReferenciaBlobUrl(null)
-    }
-    if (!depoisUsaCenario) {
-      setCenarioId(null)
-    }
     setTipoFoto(novo)
+    setCenarioId(null)
   }
 
-  const mostraCenario = tipoUsaCenario(tipoFoto)
+  // Capa Lisa troca upload por cor; alternar zera o outro lado.
+  function onChangeTipoCapa(novo: M1TipoCapa) {
+    setTipoCapa(novo)
+    if (novo === 'lisa') {
+      setReferenciaBlobUrl(null)
+    } else {
+      setCorHex(null)
+    }
+  }
+
+  const isCapaLisa = tipoCapa === 'lisa'
 
   const isValid = React.useMemo(() => {
-    if (!tipoCapa || !tipoFoto || !referenciaBlobUrl) return false
-    if (mostraCenario && !cenarioId) return false
-    return true
-  }, [tipoCapa, tipoFoto, cenarioId, referenciaBlobUrl, mostraCenario])
+    if (!tipoCapa || !tipoFoto || !cenarioId) return false
+    if (isCapaLisa) return corHex !== null
+    return referenciaBlobUrl !== null
+  }, [tipoCapa, tipoFoto, cenarioId, referenciaBlobUrl, corHex, isCapaLisa])
 
   async function onGenerate() {
-    if (!isValid || !tipoCapa || !tipoFoto || !referenciaBlobUrl) return
+    if (!isValid || !tipoCapa || !tipoFoto || !cenarioId) return
 
     setPreviewState('loading')
     setErrorMsg(null)
@@ -77,8 +76,9 @@ export function M1Form() {
       movel,
       tipoCapa,
       tipoFoto,
-      cenarioId: mostraCenario ? cenarioId ?? undefined : undefined,
-      referenciaBlobUrl,
+      cenarioId,
+      referenciaBlobUrl: isCapaLisa ? undefined : referenciaBlobUrl ?? undefined,
+      corHex: isCapaLisa ? corHex ?? undefined : undefined,
       customization: customization.trim() || undefined,
     }
 
@@ -115,24 +115,24 @@ export function M1Form() {
       <div className="flex flex-col gap-6">
         <TabTipoMovel value={movel} onChange={onChangeMovel} />
 
-        <StepTipoCapa value={tipoCapa} onChange={setTipoCapa} />
+        <StepTipoCapa value={tipoCapa} onChange={onChangeTipoCapa} />
 
         <StepTipoFoto value={tipoFoto} onChange={onChangeTipoFoto} />
 
-        {mostraCenario && tipoFoto && (
+        {tipoFoto && (
           <StepCenario
             movel={movel}
-            tipoFoto={tipoFoto as 'capa' | 'ambiente'}
+            tipoFoto={tipoFoto}
             value={cenarioId}
             onChange={setCenarioId}
           />
         )}
 
-        <StepUploadReferencia
-          tipoFoto={tipoFoto}
-          value={referenciaBlobUrl}
-          onChange={setReferenciaBlobUrl}
-        />
+        {isCapaLisa ? (
+          <StepCorLisa value={corHex} onChange={setCorHex} />
+        ) : (
+          <StepUploadReferencia value={referenciaBlobUrl} onChange={setReferenciaBlobUrl} />
+        )}
 
         <StepCustomizacao value={customization} onChange={setCustomization} />
 
