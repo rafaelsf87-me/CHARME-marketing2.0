@@ -366,6 +366,29 @@ export const brandM5 = {
 - Vercel Blob usado apenas como buffer temporário durante a geração
 - Reduz complexidade e custo de storage
 
+### Upload de Arquivos — regra arquitetural obrigatória
+
+**Nunca usar `@vercel/blob/client.upload()` direto do browser.**
+
+Vercel Blob não retorna `Access-Control-Allow-Origin` em produção, então uploads client-side falham com erro CORS opaco (o request vira "Enviando..." infinito sem erro claro no log do servidor).
+
+**Padrão obrigatório:**
+
+```typescript
+// Client
+const formData = new FormData()
+formData.append('file', file)
+await fetch('/api/upload', { method: 'POST', body: formData })
+
+// Server (/api/upload)
+import { put } from '@vercel/blob'
+const blob = await put(filename, file, { access: 'public' })
+```
+
+**Aplicável a:** M1 (corrigido em `4e6e52c`), M2, M3, M4 (corrigido junto), M5 e qualquer feature futura que aceite upload de imagem/arquivo.
+
+**Histórico:** introduzido no fix da Sessão 6 (16/05/2026) após smoke test M1 falhar com CORS em `blob.vercel-storage.com`.
+
 ---
 
 ## 9. Frontend — Diretrizes Técnicas
@@ -469,6 +492,10 @@ Dois componentes globais de texto (usados em M2, M3, M4, M5 — não em M1):
 ---
 
 ## 14. Changelog
+
+### v0.7.1 — 16/05/2026 (post-mortem CORS M1)
+- **Regra arquitetural nova (§8):** uploads sempre via `/api/upload` server-side com `FormData`. Proibido `@vercel/blob/client.upload()` no browser — Vercel Blob não devolve `Access-Control-Allow-Origin` em prod, então o flow client-direct falha com CORS opaco.
+- Aplicada a M1 e M4 no commit `4e6e52c`. Vale pros próximos módulos (M2, M3, M5).
 
 ### v0.7 — 15/05/2026 (M1 lógica de Sets)
 - **Usuário escolhe Set 1 ou Set 2 uma vez.** Sistema resolve template via `getTemplate(movel, tipoFoto, set)`.
