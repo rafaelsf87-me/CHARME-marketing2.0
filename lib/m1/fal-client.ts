@@ -161,7 +161,7 @@ export async function callGroundedSam(args: GroundedSamArgs): Promise<Buffer> {
   const { data } = await fal.subscribe(brandM1.pipeline.falModels.groundedSam, {
     input: {
       image_url: imageInput,
-      text_prompt: args.textPrompt,
+      prompt: args.textPrompt,
     },
     logs: false,
   })

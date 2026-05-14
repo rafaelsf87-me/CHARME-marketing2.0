@@ -20,7 +20,8 @@ export const brandM1 = {
     timeoutMs: 60_000,
     falModels: {
       // Mask pré-gerada por template (offline, via script).
-      groundedSam: 'fal-ai/grounded-sam-2',
+      // EVF-SAM: SAM com text-prompt (substitui grounded-sam-2, que não existe na fal).
+      groundedSam: 'fal-ai/evf-sam',
       // Step 1 do Pipeline A (capa neutra/swatch).
       fluxKontext: 'fal-ai/flux-pro/kontext',
       // Step 2 (aplicar swatch no template via inpainting). Aceita
