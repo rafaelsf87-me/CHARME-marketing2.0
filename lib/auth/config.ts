@@ -5,7 +5,28 @@ import { users } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { verifyPassword } from './password'
 
-export const authOptions: NextAuthOptions = {
+function resolveAuthUrl(): string {
+  if (process.env.VERCEL_ENV === 'production') {
+    return process.env.NEXTAUTH_URL!
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`
+  }
+  return 'http://localhost:3000'
+}
+
+// NextAuth v4 lê NEXTAUTH_URL de process.env; em previews/dev sobrescrevemos
+// com a URL real do deploy pra callbacks/cookies funcionarem.
+if (process.env.VERCEL_ENV && process.env.VERCEL_ENV !== 'production') {
+  process.env.NEXTAUTH_URL = resolveAuthUrl()
+}
+
+// trustHost é prop oficial só no NextAuth v5; em v4 é no-op mas mantemos
+// pra quando subirmos a versão.
+type NextAuthOptionsV5 = NextAuthOptions & { trustHost?: boolean }
+
+export const authOptions: NextAuthOptionsV5 = {
+  trustHost: true,
   providers: [
     CredentialsProvider({
       name: 'credentials',
