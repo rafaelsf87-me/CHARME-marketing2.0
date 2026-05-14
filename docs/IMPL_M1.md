@@ -1,12 +1,20 @@
 # IMPL_M1.md
 ## Documento de Implementação — Submódulo M1 (Foto Produto Vitrine)
 
-**Versão:** 1.2 (reescrita arquitetural — Pipeline A único, 14 templates, sem foto bruta)
-**Data:** 15/05/2026 (v1.0 em 14/05/2026, v1.1 em 14/05/2026 — DEC-006, v1.2 em 15/05/2026)
+**Versão:** 1.2.1 (cadeira-detalhe vira simple com 2 variações; sofa-detalhe mantém split)
+**Data:** 15/05/2026 (v1.0 14/05, v1.1 14/05 DEC-006, v1.2 15/05, v1.2.1 15/05)
 **Tipo:** Doc temporário — apagar após implementação concluída
 **Destinatário:** Claude Code (Sonnet)
 **Pré-requisito:** Base do sistema + M4 já implementados e funcionais
 
+> **Changelog v1.2 → v1.2.1 (15/05/2026):** ajuste pós-reescrita.
+> - Split-screen só em **Sofá Detalhe Tecido** (`sofa-detalhe-1` mantém variant=split).
+> - **Cadeira Detalhe Tecido** vira foto única (variant=simple) com **2 variações de cenário**:
+>   `cadeira-detalhe-1` e `cadeira-detalhe-2` — ambos simples.
+> - Roteamento em `lib/m1/render.ts` agora considera `template.variant`: só roda
+>   `renderPipelineDetalhe` quando tipoFoto=detalhe-tecido E variant=split.
+> - Total: **14 → 15 templates lógicos** (16 imagens físicas, mesmo número).
+>
 > **Changelog v1.1 → v1.2 (15/05/2026):** reescrita arquitetural após sessão com Rafael.
 > - **Pipeline B eliminado.** Todos os 4 tipos (capa, ambiente, elástico, detalhe-tecido)
 >   usam o Pipeline A com template + cenário pré-aprovado.
@@ -45,7 +53,7 @@ Gera fotos profissionais de produto (sofá/cadeira com capa) substituindo apenas
 - Setup de dependências e env vars
 - Brand config M1
 - Estrutura completa do submódulo (UI + API + lib)
-- Schema Zod, definição dos 14 templates default (v1.2)
+- Schema Zod, definição dos 15 templates default (v1.2.1) — 14 simple + 1 split
 - Pipeline 2-step com cache de capa neutra
 - Script de geração de masks (utility)
 - Prompts em EN com comentários PT-BR (10 prompts ativos)

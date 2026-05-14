@@ -103,8 +103,9 @@ export const M1_TEMPLATES: M1Template[] = [
   simple('cadeira-elastico-1', 'cadeira', 'elastico', 1, 'Cadeira 1', 'Close de mão esticando a capa no encosto da cadeira'),
   simple('cadeira-elastico-2', 'cadeira', 'elastico', 2, 'Cadeira 2', 'Close de mão esticando a capa no assento da cadeira'),
 
-  // ─── Cadeira · Detalhe Tecido (1, split close+zoom) ─
-  split('cadeira-detalhe-1', 'cadeira', 1, 'Cadeira 1', 'Split close+zoom — mãos puxando a capa e macro da costura'),
+  // ─── Cadeira · Detalhe Tecido (2 simples, foto única) ─
+  simple('cadeira-detalhe-1', 'cadeira', 'detalhe-tecido', 1, 'Cadeira 1', 'Mãos puxando capa em cadeira, mostrando costura e assento original'),
+  simple('cadeira-detalhe-2', 'cadeira', 'detalhe-tecido', 2, 'Cadeira 2', 'Cadeira com capa em ângulo alternativo, foco em encaixe e textura'),
 ]
 
 export function getTemplatesPorMovelETipo(

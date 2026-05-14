@@ -63,7 +63,7 @@ Não é geração de cena nova. É substituição de padrão têxtil sobre super
 | **Foto Capa** | Foto principal do produto — móvel com capa aplicada, fundo/ambiente da foto-template selecionada |
 | **Foto Ambiente** | Foto ampla do ambiente com 2 sofás (2+3 lugares) ou mesa com 6 cadeiras, todos com a capa |
 | **Foto Elástico** | Close da mão esticando a capa no móvel, demonstrando elasticidade — cenário pré-aprovado |
-| **Detalhe do Tecido** | Split-screen: mão puxando a capa + macro da textura/costura — cenário pré-aprovado |
+| **Detalhe do Tecido** | Sofá: split-screen (mão puxando + macro da costura). Cadeira: foto única (2 variações de ângulo) |
 
 ### Tipos de capa
 
@@ -112,7 +112,9 @@ PASSO 6: [Gerar]
 Mesmo input das opções acima. **Não há mais upload de foto bruta de celular.** A cena é o template pré-aprovado.
 
 #### → Detalhe do Tecido
-Mesmo input das opções acima. Sistema gera duas metades (close + zoom) e compõe lado a lado. **Não há mais upload de foto bruta.**
+Mesmo input das opções acima. **Não há upload de foto bruta.**
+- **Sofá:** 1 cenário (`sofa-detalhe-1`), split-screen — sistema gera close + zoom e compõe lado a lado em 1080×1080 (540×1080 cada metade, sem divisor visual).
+- **Cadeira:** 2 cenários (`cadeira-detalhe-1`, `cadeira-detalhe-2`), foto única — render direto via Pipeline A em 1080×1080.
 
 ### Prompts base por combinação (a refinar no treinamento)
 
@@ -150,7 +152,8 @@ Mesmo input das opções acima. Sistema gera duas metades (close + zoom) e comp�
 
 ### Dimensões
 - **Todos os 4 tipos de foto:** 1080×1080 WEBP
-- **Detalhe do Tecido:** composição final 1080×1080 com duas metades 540×1080 (close à esquerda + zoom à direita, sem divisor visual)
+- **Detalhe do Tecido (sofá):** composição final 1080×1080 com duas metades 540×1080 (close à esquerda + zoom à direita, sem divisor visual)
+- **Detalhe do Tecido (cadeira):** 1080×1080 foto única (sem split)
 
 ### Cores e fontes
 - **Sem texto** — não aplicar paleta de marca neste módulo

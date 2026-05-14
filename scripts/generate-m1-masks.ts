@@ -1,8 +1,8 @@
 /**
- * Gera as masks de segmentação para os 14 templates do M1.
+ * Gera as masks de segmentação para os 15 templates do M1 (v1.2.1).
  *
- * 12 templates "simple" (1 imagem): capa, ambiente, elastico (sofa+cadeira × 2 cada)
- *  2 templates "split"  (2 imagens internas: close + zoom): detalhe-tecido (sofa+cadeira × 1 cada)
+ * 14 templates "simple" (1 imagem): capa (4) + ambiente (4) + elastico (4) + cadeira-detalhe (2)
+ *  1 template  "split"  (2 imagens internas: close + zoom): sofa-detalhe-1
  * Total: 16 PNGs de entrada, 16 masks de saída.
  *
  * Uso: pnpm m1:generate-masks

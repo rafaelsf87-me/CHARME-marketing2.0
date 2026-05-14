@@ -470,6 +470,12 @@ Dois componentes globais de texto (usados em M2, M3, M4, M5 — não em M1):
 
 ## 14. Changelog
 
+### v0.6.1 — 15/05/2026 (M1 ajuste cadeira-detalhe)
+- **Cadeira Detalhe Tecido vira simple** (foto única) com 2 cenários: `cadeira-detalhe-1`, `cadeira-detalhe-2`.
+- **Sofá Detalhe Tecido mantém split** (`sofa-detalhe-1`).
+- Roteamento em `lib/m1/render.ts` agora considera `template.variant`.
+- Total: 14 → 15 templates lógicos (16 imagens físicas, mesmo número).
+
 ### v0.6 — 15/05/2026 (M1 reescrita arquitetural)
 - **Pipeline B eliminado.** Os 4 tipos de foto (capa, ambiente, elástico, detalhe-tecido) agora usam Pipeline A com template + cenário pré-aprovado.
 - **Templates: 11 → 14.** Reduzido capa (3→2 por móvel) e cadeira-ambiente (3→2); adicionado elástico (2 por móvel) e detalhe-tecido (1 split por móvel).
