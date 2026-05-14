@@ -6,8 +6,9 @@ import { renderM1 } from '@/lib/m1/render'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-// Vercel Pro obrigatório: pipeline 2-step pode chegar perto de 60s.
-export const maxDuration = 60
+// Vercel Pro obrigatório. Step 1 (Flux Pro Kontext) + Step 2 (Inpaint) podem
+// somar 60–120s; limite Pro é 300s. Mantemos folga.
+export const maxDuration = 300
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)

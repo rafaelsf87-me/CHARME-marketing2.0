@@ -48,7 +48,9 @@ export async function renderPipelineA(
   // STEP 1 — capa neutra (swatch). Capa Lisa pula este passo.
   let swatchBuffer: Buffer | undefined
   if (input.tipoCapa !== 'lisa') {
+    const step1Start = Date.now()
     swatchBuffer = await getOrGenerateSwatch(input.referenciaBlobUrl!, input.tipoCapa)
+    console.log(`[M1] Step 1 (swatch) ${Date.now() - step1Start}ms`)
   }
 
   // STEP 2 — aplicar capa no template via inpainting.
@@ -61,12 +63,14 @@ export async function renderPipelineA(
     detalheVariant: options.detalheVariant,
   })
 
+  const step2Start = Date.now()
   const finalBuffer = await callFluxKontextInpaint({
     imageBuffer: templateBuffer,
     maskBuffer,
     referenceBuffer: swatchBuffer,
     prompt: step2Prompt,
   })
+  console.log(`[M1] Step 2 (inpaint) ${Date.now() - step2Start}ms`)
 
   // Resize final.
   const { width, height } = options.outputDimensions ?? brandM1.dimensions.final
