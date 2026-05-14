@@ -31,7 +31,7 @@ export function StepSet({ movel, value, onChange }: StepSetProps) {
         <TooltipInfo text={M1_TOOLTIPS.set} />
       </div>
 
-      <div className="grid max-w-[420px] grid-cols-2 gap-2.5">
+      <div className="grid max-w-[294px] grid-cols-2 gap-2.5">
         {OPCOES.map((opt) => {
           const selected = value === opt.id
           const preview = previewPath(movel, opt.id)

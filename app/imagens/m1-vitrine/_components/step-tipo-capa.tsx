@@ -48,7 +48,7 @@ export function StepTipoCapa({ value, onChange }: StepTipoCapaProps) {
                 className={cn(
                   'group flex w-full flex-col items-start gap-0.5 rounded-lg border bg-white px-3 py-2.5 text-left transition hover:border-[color:var(--border-strong)]',
                   selected
-                    ? 'border-[1.5px] border-[#553679] shadow-sm'
+                    ? 'border-2 border-[#553679] ring-2 ring-[#553679]/25 shadow-md'
                     : 'border-[color:var(--border-default)]'
                 )}
               >
