@@ -9,9 +9,9 @@
 
 ## 📍 Estado Atual
 
-**Fase:** Implementação — Base + M4 completo (UI + render real Sharp+Satori)
-**Última atualização:** 13/05/2026
-**Próxima tarefa:** Provisionar Vercel Postgres + Blob, validar visual do M4 end-to-end com auth, ajustar pixel-perfect se preciso.
+**Fase:** Implementação — Base + M4 + M1 (parcial, com arquitetura final definida) no ar; M1 aguarda assets/keys
+**Última atualização:** 14/05/2026
+**Próxima tarefa:** Rafael adiciona os 11 PNGs, `FAL_KEY` e confirma Vercel Pro pra rodar `pnpm m1:generate-masks` e testar end-to-end. DEC-006 resolvida (Step 2 em `fal-ai/flux-kontext-lora/inpaint`).
 
 ### Status por componente
 
@@ -41,26 +41,33 @@
 | Fonte Tinos (Apache 2.0) self-hosted | ✅ |
 | Florzinha placeholder SVG | ✅ |
 | Cache em memória de emojis (Map + TTL 1h) | ✅ |
-| M1 Foto Produto | ⚪ Placeholder |
+| M1 Foto Produto | 🟡 Implementação parcial (código + UI prontos; faltam assets, FAL_KEY, Vercel Pro) |
 | M2 Posts Instagram | ⚪ Placeholder |
 | M3 Banners Website | ⚪ Placeholder |
 | M5 Banners Email | ⚪ Placeholder |
 | Template Creator | ⚪ Placeholder |
 | Render real M4 (Sharp + Satori) | ✅ Bloco C concluído |
-| Build (`next build`) | ✅ 15 rotas geradas, 0 erros |
+| Build (`next build`) | ✅ 16 rotas geradas, 0 erros |
 | Typecheck (`tsc --noEmit`) | ✅ 0 erros |
+| Deploy Vercel (Hobby, region gru1) | ✅ `https://charme-marketing2-0.vercel.app` |
+| Vercel Postgres (Neon, region gru1) | ✅ schema aplicado via `pnpm db:push` |
+| Vercel Blob (private, region gru1) | ✅ `charme-marketing-blob` |
+| Seed admin (rafael@charmedodetalhe.com) | ✅ |
+| Cron limpeza Blob (03h UTC) | ✅ `/api/cron/cleanup-blob` (commit 83d7b6f) |
+| NextAuth `resolveAuthUrl()` para previews | ✅ |
 
 ---
 
 ## 🚧 Bloqueios Ativos
 
 ### Aguardando Rafael
-1. **Provisionar Vercel Postgres + Blob** — sem isso `pnpm db:push`, `pnpm seed:admin` e os fluxos de upload/render não rodam. Quando feito, passar credenciais para `.env.local`:
-   - `POSTGRES_URL` (e demais Postgres vars)
-   - `BLOB_READ_WRITE_TOKEN`
-   - `NEXTAUTH_SECRET` (gerar com `openssl rand -base64 32`)
-2. **SVG real do logo** — placeholder casinha em `public/brand/logo.svg`.
-3. **SVG definitivo da florzinha** — placeholder 3-pétalas em `public/brand/florzinha.svg`. Substituir pelo definitivo antes do go-live.
+1. **Validação M4 end-to-end em produção** — login + fluxo completo de geração (template → upload → textos → emoji → gerar → STUB). Não bloqueia M1; Rafael fará em paralelo.
+2. **Assets M1** — adicionar os 11 PNGs em `public/templates/m1/{id}/image.png`.
+3. **FAL_KEY** — no `.env.local` e no Vercel (Production + Preview).
+4. **Confirmar Vercel Pro** ativo (maxDuration=60s).
+5. **Substituição da `sofa-capa-2`** — remover overlay circular (template ainda inutilizável).
+6. **SVG real do logo** — placeholder casinha em `public/brand/logo.svg`.
+7. **SVG definitivo da florzinha** — placeholder 3-pétalas em `public/brand/florzinha.svg`. Substituir pelo definitivo antes do go-live.
 
 ### Pendências menores
 - Dimensões M3 desktop/mobile (Rafael confirmando com equipe — DEC-001)
@@ -97,6 +104,110 @@ Sanity check rápido:
 ---
 
 ## 📝 Histórico de Sessões
+
+### Sessão 3 — 14/05/2026 — M1 Implementação Parcial + Migração `@fal-ai/client`
+**O que foi feito:**
+- **DEC-004 e DEC-005** registradas em `DIVIDAS_PROJETO.md` antes do código (coerência multi-móveis em Foto Ambiente; pipeline 2-step + cache aprovado).
+- **`@fal-ai/client@1.10.1` instalado** (migração preventiva — o `@fal-ai/serverless-client@0.15.0` veio com aviso npm `deprecated: Package no longer supported`). Pacote deprecated em código novo não passa.
+- **Brand config M1** (`lib/brand/m1.brand.ts`) — fonte única de dimensões (1080×1080 em todos os tipos), cache (LRU 30min/50), modelos fal.
+- **Libs M1** completas:
+  - `schema.ts` — Zod com `superRefine` validando cenário ↔ tipoFoto ↔ móvel
+  - `templates.ts` — 11 templates default + helpers de filtragem
+  - `tooltips.ts` — 14 tooltips PT-BR exatos da spec + `getUploadLabel()` dinâmico
+  - `prompts.ts` — Step1, Step2 (com MULTI-FURNITURE COHERENCE), Elastico, DetalheTecido (todos EN com comentários PT)
+  - `cache.ts` — LRU com cache key `sha256(blobUrl|tipoCapa).slice(0,16)`
+  - `fal-client.ts` — wrappers Flux Kontext + Grounded-SAM, tipagem narrow local (`FluxImageRef`, `FluxKontextOutput`, `GroundedSamOutput`) — sem `any`
+  - `render-pipeline-a.ts` — Pipeline A (2-step com cache, dimensões via brand config)
+  - `render-pipeline-b.ts` — Pipeline B (cleanup single-step)
+  - `render.ts` — orquestrador
+- **API route** `/api/imagens/m1/render` — auth, Zod, `maxDuration=60`, `runtime=nodejs`, log de duração.
+- **UI completa** em `app/imagens/m1-vitrine/`:
+  - `page.tsx` (substitui placeholder)
+  - 8 componentes em `_components/`: tab móvel, step capa, step foto, step cenário (condicional, fade-in), step upload (label dinâmico), step customização, generate-button, preview-area
+  - Orquestrador `m1-form.tsx` que zera `cenarioId` ao trocar móvel/tipo e zera upload ao alternar Pipeline A↔B
+- **Script `pnpm m1:generate-masks`** (`scripts/generate-m1-masks.ts`) — gera 11 masks via Grounded-SAM, skip se já existe, warn se PNG ausente, fail-fast sem FAL_KEY.
+- **`next.config.mjs`** atualizado: `outputFileTracingIncludes['/api/imagens/m1/render'] = ['./public/templates/m1/**/*']` (pra empacotar templates + masks na função serverless).
+- **`.env.example`** já tinha `FAL_KEY=` — sem mudança necessária.
+- **Validações:** `tsc --noEmit` → 0 erros · `next lint` → 0 warnings · `next build` → ✓ 17 rotas (16 antes + `/api/imagens/m1/render`).
+
+**DEC-006 — descoberta e resolução na mesma sessão:**
+Ao tipar `fal.subscribe()` percebemos que o `FluxKontextInput` oficial do `@fal-ai/client@1.10` **não aceita** `mask_url` nem `reference_image_url`. O endpoint `fal-ai/flux-pro/kontext` aceita apenas `{ image_url, prompt, aspect_ratio, guidance_scale, output_format, ... }`. O `IMPL_M1.md` foi escrito presumindo esses campos.
+
+**Resolução (Rafael · Opção A):** Step 2 do Pipeline A migrado para `fal-ai/flux-kontext-lora/inpaint`, que aceita `image_url + mask_url + reference_image_url + prompt` no tipo oficial `BaseKontextInpaintInput` (linhas 1864-1924 de `node_modules/@fal-ai/client/src/types/endpoints.d.ts`). Step 1 (capa neutra) e Pipeline B continuam em `fal-ai/flux-pro/kontext`. Arquitetura 2-step + cache **preservada**.
+
+**Mudanças aplicadas:**
+- `lib/brand/m1.brand.ts`: 3 endpoints em `pipeline.falModels` (`groundedSam`, `fluxKontext`, `fluxKontextInpaint`)
+- `lib/m1/fal-client.ts`: nova função `callFluxKontextInpaint()` com tipo local `FluxKontextInpaintInput`; `callFluxKontext()` simplificado (só `image_url + prompt`); `callGroundedSam()` inalterado
+- `lib/m1/render-pipeline-a.ts`: Step 2 agora chama `callFluxKontextInpaint`; Step 1 segue em `callFluxKontext`
+- `docs/IMPL_M1.md` bump pra v1.1
+- DEC-006 movida pra "Resolvidas" em `docs/DIVIDAS_PROJETO.md`
+
+**Custo Pipeline A:** ~$0.10/img total (Step 1 + Step 2). Endpoint usado no Step 2 é `dev`+LoRA — validar qualidade real na fase de treinamento; se insuficiente, Opção B (re-arquitetar sem mask) fica como alternativa documentada.
+
+**O que está em progresso:**
+- Aguardando Rafael adicionar 11 PNGs, configurar FAL_KEY e confirmar Vercel Pro.
+
+**Próximos passos:**
+1. Rafael adiciona 11 PNGs em `public/templates/m1/{id}/image.png`
+2. Rafael configura `FAL_KEY` em `.env.local` e Vercel
+3. Confirma Vercel Pro
+4. Rodar `pnpm m1:generate-masks` (gera as 11 masks)
+5. Commitar `public/templates/m1/`
+6. Validar end-to-end com Rafael (5–10 outputs reais; testar qualidade do `flux-kontext-lora/inpaint`)
+7. Refinar prompts na fase de treinamento (estampas simples → complexas)
+8. Marcar DEC-005 como RESOLVIDA quando 2-step funcionar no real
+
+**Bloqueios encontrados:** nenhum (DEC-006 resolvida na mesma sessão).
+
+**Decisões durante implementação:**
+- **`@fal-ai/client` 1.0+** instalado (migração feita preventivamente — pacote `serverless-client` removido). Não criada REF-002 (resolvida antes de virar dívida).
+- **Tipagem narrow local** dos outputs fal (sem `any`) usando `FalImageRef`, `FluxKontextOutput`, `GroundedSamOutput`.
+- **Storage upload** via `fal.storage.upload(new Blob([new Uint8Array(buf)], {...}))` — Buffer → Uint8Array → Blob.
+- **Sem mock** — STUB explícito não cabe aqui, código real está pronto e quebra se chamado sem FAL_KEY/assets (visível no log).
+- **`nanoid@5`** (ESM-only) passou no build do Next 14 sem ajuste.
+- **`outputFileTracingIncludes`** glob `public/templates/m1/**/*` cobre image, mask e thumbnail dos 11 templates.
+
+**Dívidas registradas:** [DEC-004], [DEC-005] em `DIVIDAS_PROJETO.md`. DEC-006 criada e resolvida na mesma sessão (movida para Resolvidas).
+
+---
+
+### Sessão 1 de Infra — 14/05/2026 — Deploy Vercel + Cron Blob + NextAuth previews
+**O que foi feito:**
+- **Deploy Vercel funcional** em `https://charme-marketing2-0.vercel.app` (scope `lojamaniadelar-8505's projects`, plano Hobby).
+- **Vercel Postgres (Neon)** provisionado — `charme-marketing-db`, region São Paulo (gru1), prefixo `POSTGRES_*` em Production/Preview/Development.
+- **Vercel Blob** provisionado — `charme-marketing-blob`, region gru1, acesso Private.
+- **Setup local:** `vercel link`, `vercel env pull`, `pnpm approve-builds` (sharp/esbuild/bufferutil/unrs-resolver), `pnpm db:push` (schema aplicado via Drizzle), `pnpm seed:admin` (admin `rafael@charmedodetalhe.com` criado).
+- **Cron de limpeza de Blob** (commit `83d7b6f`):
+  - `app/api/cron/cleanup-blob/route.ts` — deleta blobs com mais de 7 dias; preserva prefixo `templates/`; autenticado via `Bearer ${CRON_SECRET}`.
+  - `vercel.json` — schedule diário `0 3 * * *` (03h UTC).
+  - `middleware.ts` — matcher exclui `/api/cron` do auth do NextAuth.
+- **NextAuth resolveAuthUrl()** em `lib/auth/config.ts` — sobrescreve `process.env.NEXTAUTH_URL` em previews/dev (Vercel previews têm URL dinâmica). `trustHost: true` mantido como prep para futuro upgrade NextAuth v5 (no-op em v4; ver REF-001 em DIVIDAS_PROJETO.md).
+- **`.env.example` saneado** — senha admin trocada por `CHANGEME`, adicionado `CRON_SECRET` como placeholder.
+- **`pnpm-workspace.yaml`** — aprova builds nativos (sharp, esbuild, bufferutil, unrs-resolver) pra evitar `ERR_PNPM_IGNORED_BUILDS` em CI.
+- **Envs configuradas no Vercel** (Production + Preview): `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `CRON_SECRET` + envs auto-injetadas pelos integrations Neon e Blob.
+- **Validação:** `next build` → 16 rotas geradas, 0 erros (rota `/api/cron/cleanup-blob` registrada como ƒ).
+
+**O que está em progresso:**
+- Validação M4 end-to-end na URL de produção (Rafael fará em paralelo, não bloqueia avanço).
+
+**Próximos passos:**
+1. Aguardar entrega do `IMPL_M1.md` para iniciar implementação do **M1 Foto Produto**.
+2. Rafael valida M4 em produção e reporta resultado.
+3. Adicionar `FAL_KEY` e `OPENAI_API_KEY` no Vercel quando M1/M3 entrarem em desenvolvimento.
+
+**Bloqueios encontrados:**
+- Drizzle-kit não carrega `.env.local` automaticamente → workaround `npx -y dotenv-cli -e .env.local -- pnpm db:push`.
+- `pnpm 11` bloqueia build scripts por default → resolvido com `pnpm approve-builds` e commit do `pnpm-workspace.yaml`.
+
+**Decisões durante implementação:**
+- **Neon Postgres** com prefixo `POSTGRES` (não `STORAGE`) pra `@vercel/postgres` consumir sem alteração de código.
+- **`trustHost: true`** mantido como prep mesmo sendo no-op em NextAuth v4 (ver REF-001).
+- **Senha admin** mantida fraca temporariamente (`ChangeMe2026!CharmeIA`); Rafael troca via `/admin/usuarios` após validar acesso.
+- **Cron schedule 03h UTC** (00h BRT) — janela de menor uso, sem risco de conflito com geração ativa.
+
+**Dívidas registradas:** [REF-001] em `DIVIDAS_PROJETO.md`. [MEL-001] resolvida e movida.
+
+---
 
 ### Sessão 2 — 13/05/2026 — Tinos + Bloco C (render real M4)
 **O que foi feito:**
