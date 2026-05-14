@@ -18,9 +18,9 @@ function previewPath(movel: M1Movel, set: M1Set): string {
   return `/templates/m1/${movel}-capa-${set}/thumbnail.webp`
 }
 
-const OPCOES: { id: M1Set; label: string; descricao: string }[] = [
-  { id: 1, label: 'Set 1', descricao: 'Estética 1 — coerente em capa, ambiente, elástico e detalhe' },
-  { id: 2, label: 'Set 2', descricao: 'Estética 2 — alternativa com decoração e ângulos diferentes' },
+const OPCOES: { id: M1Set; label: string }[] = [
+  { id: 1, label: 'Modelo Fotos 1' },
+  { id: 2, label: 'Modelo Fotos 2' },
 ]
 
 export function StepSet({ movel, value, onChange }: StepSetProps) {
@@ -31,7 +31,7 @@ export function StepSet({ movel, value, onChange }: StepSetProps) {
         <TooltipInfo text={M1_TOOLTIPS.set} />
       </div>
 
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="grid max-w-[420px] grid-cols-2 gap-2.5">
         {OPCOES.map((opt) => {
           const selected = value === opt.id
           const preview = previewPath(movel, opt.id)
@@ -43,7 +43,7 @@ export function StepSet({ movel, value, onChange }: StepSetProps) {
               className={cn(
                 'group relative flex w-full flex-col items-stretch gap-2 rounded-lg border bg-white p-2 text-left transition hover:border-[color:var(--border-strong)]',
                 selected
-                  ? 'border-[1.5px] border-[#553679] shadow-sm'
+                  ? 'border-2 border-[#553679] ring-2 ring-[#553679]/25 shadow-md'
                   : 'border-[color:var(--border-default)]'
               )}
             >
@@ -51,19 +51,14 @@ export function StepSet({ movel, value, onChange }: StepSetProps) {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={preview}
-                  alt={`${opt.label} ${movel}`}
+                  alt={opt.label}
                   className="h-full w-full object-cover"
                   onError={(e) => {
                     e.currentTarget.style.display = 'none'
                   }}
                 />
               </div>
-              <div>
-                <div className="text-[12.5px] font-medium leading-tight">{opt.label}</div>
-                <div className="mt-0.5 line-clamp-2 text-[10.5px] leading-snug text-[color:var(--text-secondary)]">
-                  {opt.descricao}
-                </div>
-              </div>
+              <div className="text-[12.5px] font-medium leading-tight">{opt.label}</div>
             </button>
           )
         })}

@@ -1,7 +1,6 @@
 'use client'
 
 import * as React from 'react'
-import { upload } from '@vercel/blob/client'
 import { Upload, ImageIcon, X, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -46,11 +45,14 @@ export function UploadField({
     }
     setState('uploading')
     try {
-      const blob = await upload(file.name, file, {
-        access: 'public',
-        handleUploadUrl: '/api/upload',
-      })
-      onChange(blob.url)
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch('/api/upload', { method: 'POST', body: form })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.url) {
+        throw new Error(json.error || `Upload falhou (${res.status})`)
+      }
+      onChange(json.url)
       setState('uploaded')
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Falha no upload')

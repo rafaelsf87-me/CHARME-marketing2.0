@@ -9,112 +9,152 @@ import { StepUploadReferencia } from './step-upload-referencia'
 import { StepCorLisa } from './step-cor-lisa'
 import { StepCustomizacao } from './step-customizacao'
 import { GenerateButton } from './generate-button'
-import { PreviewArea } from './preview-area'
-import {
-  M1RenderSchema,
-  type M1Movel,
-  type M1TipoCapa,
-  type M1TipoFoto,
-  type M1RenderInput,
-} from '@/lib/m1/schema'
+import { CostConfirmDialog } from './cost-confirm-dialog'
+import { ResultsGrid, type ResultSlot } from './results-grid'
+import type { M1Movel, M1TipoCapa, M1TipoFoto, M1RenderInput } from '@/lib/m1/schema'
 import type { M1Set } from '@/lib/m1/templates'
 
-type PreviewState = 'empty' | 'loading' | 'ready' | 'error'
+// Custo por render do Pipeline A (fal.ai Flux Kontext Pro).
+const CUSTO_POR_FOTO_USD = 0.1
+// A partir desse total, mostra modal de confirmação.
+const LIMIAR_CUSTO_USD = 0.3
+// Worker pool: 2 renders em paralelo, fila pra >2 fotos.
+const POOL_SIZE = 2
 
 export function M1Form() {
   const [movel, setMovel] = React.useState<M1Movel>('sofa')
   const [set, setSet] = React.useState<M1Set | null>(null)
   const [tipoCapa, setTipoCapa] = React.useState<M1TipoCapa | null>(null)
-  const [tipoFoto, setTipoFoto] = React.useState<M1TipoFoto | null>(null)
+  const [tiposFoto, setTiposFoto] = React.useState<M1TipoFoto[]>([])
   const [referenciaBlobUrl, setReferenciaBlobUrl] = React.useState<string | null>(null)
   const [corHex, setCorHex] = React.useState<string | null>(null)
   const [customization, setCustomization] = React.useState('')
 
-  const [previewState, setPreviewState] = React.useState<PreviewState>('empty')
-  const [resultUrl, setResultUrl] = React.useState<string | null>(null)
-  const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
-  const [tookMs, setTookMs] = React.useState<number | null>(null)
+  const [slots, setSlots] = React.useState<ResultSlot[]>([])
+  const [generating, setGenerating] = React.useState(false)
+  const [costDialogOpen, setCostDialogOpen] = React.useState(false)
 
-  // Capa Lisa troca upload por cor; alternar zera o outro lado.
   function onChangeTipoCapa(novo: M1TipoCapa) {
     setTipoCapa(novo)
-    if (novo === 'lisa') {
-      setReferenciaBlobUrl(null)
-    } else {
-      setCorHex(null)
-    }
+    if (novo === 'lisa') setReferenciaBlobUrl(null)
+    else setCorHex(null)
   }
 
   const isCapaLisa = tipoCapa === 'lisa'
 
   const isValid = React.useMemo(() => {
-    if (!set || !tipoCapa || !tipoFoto) return false
+    if (!set || !tipoCapa || tiposFoto.length === 0) return false
     if (isCapaLisa) return corHex !== null
     return referenciaBlobUrl !== null
-  }, [set, tipoCapa, tipoFoto, referenciaBlobUrl, corHex, isCapaLisa])
+  }, [set, tipoCapa, tiposFoto, referenciaBlobUrl, corHex, isCapaLisa])
 
-  async function onGenerate() {
-    if (!isValid || !set || !tipoCapa || !tipoFoto) return
+  const custoTotalUsd = tiposFoto.length * CUSTO_POR_FOTO_USD
 
-    setPreviewState('loading')
-    setErrorMsg(null)
-    setResultUrl(null)
-    setTookMs(null)
-
-    const payload: M1RenderInput = {
+  function buildPayload(tipo: M1TipoFoto): M1RenderInput {
+    return {
       movel,
-      set,
-      tipoCapa,
-      tipoFoto,
+      set: set!,
+      tipoCapa: tipoCapa!,
+      tipoFoto: tipo,
       referenciaBlobUrl: isCapaLisa ? undefined : referenciaBlobUrl ?? undefined,
       corHex: isCapaLisa ? corHex ?? undefined : undefined,
       customization: customization.trim() || undefined,
     }
+  }
 
-    const localCheck = M1RenderSchema.safeParse(payload)
-    if (!localCheck.success) {
-      setPreviewState('error')
-      setErrorMsg(localCheck.error.issues[0]?.message ?? 'Dados inválidos')
+  async function renderOne(tipo: M1TipoFoto): Promise<{ url: string; tookMs: number }> {
+    const payload = buildPayload(tipo)
+    const startedAt = Date.now()
+    const res = await fetch('/api/imagens/m1/render', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok || !json.url) {
+      throw new Error(json.error || `Falha (${res.status})`)
+    }
+    const tookMs = typeof json.tookMs === 'number' ? json.tookMs : Date.now() - startedAt
+    return { url: json.url, tookMs }
+  }
+
+  function updateSlot(index: number, status: ResultSlot['status']) {
+    setSlots((prev) => {
+      const next = [...prev]
+      if (next[index]) next[index] = { ...next[index], status }
+      return next
+    })
+  }
+
+  async function runWithPool(indices: number[], tipos: M1TipoFoto[]) {
+    let cursor = 0
+    async function worker() {
+      while (cursor < indices.length) {
+        const i = cursor++
+        const slotIdx = indices[i]
+        const tipo = tipos[i]
+        updateSlot(slotIdx, { state: 'loading' })
+        try {
+          const { url, tookMs } = await renderOne(tipo)
+          updateSlot(slotIdx, { state: 'ready', url, tookMs })
+        } catch (err) {
+          updateSlot(slotIdx, {
+            state: 'error',
+            message: err instanceof Error ? err.message : 'Falha ao gerar',
+          })
+        }
+      }
+    }
+    const workers = Array.from({ length: Math.min(POOL_SIZE, indices.length) }, worker)
+    await Promise.all(workers)
+  }
+
+  async function startGeneration() {
+    if (!isValid) return
+    setGenerating(true)
+    const initialSlots: ResultSlot[] = tiposFoto.map((t) => ({
+      tipoFoto: t,
+      status: { state: 'loading' },
+    }))
+    setSlots(initialSlots)
+    try {
+      await runWithPool(
+        tiposFoto.map((_, i) => i),
+        tiposFoto
+      )
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  function onGenerate() {
+    if (!isValid) return
+    if (custoTotalUsd >= LIMIAR_CUSTO_USD) {
+      setCostDialogOpen(true)
       return
     }
+    void startGeneration()
+  }
 
+  async function onRetry(index: number) {
+    const slot = slots[index]
+    if (!slot) return
+    setGenerating(true)
     try {
-      const res = await fetch('/api/imagens/m1/render', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      const json = await res.json()
-      if (!res.ok) {
-        setPreviewState('error')
-        setErrorMsg(json.error || 'Falha ao gerar foto')
-        return
-      }
-      setResultUrl(json.url)
-      setTookMs(typeof json.tookMs === 'number' ? json.tookMs : null)
-      setPreviewState('ready')
-    } catch (err) {
-      setPreviewState('error')
-      setErrorMsg(err instanceof Error ? err.message : 'Erro de rede')
+      await runWithPool([index], [slot.tipoFoto])
+    } finally {
+      setGenerating(false)
     }
   }
 
   return (
-    <div className="grid grid-cols-1 gap-7 lg:grid-cols-[minmax(0,1fr)_360px]">
+    <>
       <div className="flex flex-col gap-6">
-        {/* 1. Tipo móvel */}
         <TabTipoMovel value={movel} onChange={setMovel} />
-
-        {/* 2. Set */}
         <StepSet movel={movel} value={set} onChange={setSet} />
-
-        {/* 3. Tipo capa */}
         <StepTipoCapa value={tipoCapa} onChange={onChangeTipoCapa} />
+        <StepTipoFoto value={tiposFoto} onChange={setTiposFoto} />
 
-        {/* 4. Tipo foto */}
-        <StepTipoFoto value={tipoFoto} onChange={setTipoFoto} />
-
-        {/* 5. Upload referência ou color picker */}
         {isCapaLisa ? (
           <StepCorLisa value={corHex} onChange={setCorHex} />
         ) : (
@@ -125,19 +165,21 @@ export function M1Form() {
 
         <GenerateButton
           isValid={isValid}
-          loading={previewState === 'loading'}
+          loading={generating}
+          qtdFotos={tiposFoto.length}
           onClick={onGenerate}
         />
+
+        <ResultsGrid slots={slots} onRetry={onRetry} />
       </div>
 
-      <div className="lg:sticky lg:top-6 lg:self-start">
-        <PreviewArea
-          state={previewState}
-          url={resultUrl}
-          errorMsg={errorMsg}
-          tookMs={tookMs}
-        />
-      </div>
-    </div>
+      <CostConfirmDialog
+        open={costDialogOpen}
+        onOpenChange={setCostDialogOpen}
+        qtdFotos={tiposFoto.length}
+        custoTotalUsd={custoTotalUsd}
+        onConfirm={() => void startGeneration()}
+      />
+    </>
   )
 }
