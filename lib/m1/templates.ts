@@ -22,6 +22,27 @@ type M1TemplateBase = {
   nome: string
   descricao: string
   thumbnailPath: string
+  // Dimensões físicas REAIS do móvel mostrado no template (cm).
+  // Usadas no prompt do nano-banana pra calcular o ratio de repetições
+  // do padrão entre REF-2 (foto-sofá usuário) e REF-1 (template).
+  // Valores reais fornecidos por Rafael em 17/05/2026 — não estimar.
+  physicalWidthCm: number
+  // Largura ÚTIL entre os braços (zona onde aparece padrão). Usada pelo
+  // bloco HORIZONTAL PATTERN COLUMNS do prompt — mais preditiva que a
+  // largura total porque os braços não contam pra contagem de colunas.
+  physicalInnerWidthCm: number
+  physicalHeightCm: number
+}
+
+// Dimensões físicas reais fornecidas por Rafael em 17/05/2026 — não estimar.
+// Sofá 3-lugares: total 220 / interno 180 / altura 100.
+// Cadeira de jantar: total 55 / interno 45 / altura 100.
+const PHYSICAL_DEFAULTS: Record<
+  M1Movel,
+  { widthCm: number; innerWidthCm: number; heightCm: number }
+> = {
+  sofa: { widthCm: 220, innerWidthCm: 180, heightCm: 100 },
+  cadeira: { widthCm: 55, innerWidthCm: 45, heightCm: 100 },
 }
 
 export type M1TemplateSimple = M1TemplateBase & {
@@ -49,6 +70,7 @@ function simple(
   nome: string,
   descricao: string
 ): M1TemplateSimple {
+  const dims = PHYSICAL_DEFAULTS[movel]
   return {
     variant: 'simple',
     id,
@@ -61,6 +83,9 @@ function simple(
     imagePath: `/templates/m1/${id}/image.png`,
     maskPath: `/templates/m1/${id}/mask.png`,
     thumbnailPath: `/templates/m1/${id}/thumbnail.webp`,
+    physicalWidthCm: dims.widthCm,
+    physicalInnerWidthCm: dims.innerWidthCm,
+    physicalHeightCm: dims.heightCm,
   }
 }
 
@@ -72,6 +97,7 @@ function split(
   nome: string,
   descricao: string
 ): M1TemplateSplit {
+  const dims = PHYSICAL_DEFAULTS[movel]
   return {
     variant: 'split',
     id,
@@ -86,6 +112,9 @@ function split(
     imageZoomPath: `/templates/m1/${id}/image-zoom.png`,
     maskZoomPath: `/templates/m1/${id}/mask-zoom.png`,
     thumbnailPath: `/templates/m1/${id}/thumbnail.webp`,
+    physicalWidthCm: dims.widthCm,
+    physicalInnerWidthCm: dims.innerWidthCm,
+    physicalHeightCm: dims.heightCm,
   }
 }
 

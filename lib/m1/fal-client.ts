@@ -112,23 +112,28 @@ export async function callFluxKontext(args: FluxKontextArgs): Promise<FluxKontex
 // ═══════════════════════════════════════════════════════════════
 // Step 2 — aplicar capa no template via nano-banana-2 (Gemini 2.5)
 // Endpoint: fal-ai/nano-banana-2/edit
-// Black-box: só prompt + image_urls[] (REF-1 = template, REF-2 = foto do tecido).
+// Black-box: só prompt + image_urls[].
+// REF-1 = template, REF-2 = foto do sofá-padrão (escala), REF-3 = foto do rolo (opcional).
 // ═══════════════════════════════════════════════════════════════
 
 export type NanoBananaEditArgs = {
   templateBuffer: Buffer
-  // REF-2: foto do rolo de tecido (estampa plana em fundo neutro).
-  // Define padrão, cor, textura e escala física. Capa Lisa: ausente.
-  referenceUrl?: string
+  // REF-2: foto do sofá-padrão com a estampa aplicada (escala física).
+  // Capa Lisa: ausente.
+  sofaUrl?: string
+  // REF-3: foto plana do rolo de tecido (clean source de cores/textura).
+  // Opcional — quando ausente, modelo extrai padrão da REF-2.
+  rolloUrl?: string
   prompt: string
 }
 
 export async function callNanoBananaEdit(args: NanoBananaEditArgs): Promise<Buffer> {
   const templateUrl = await uploadBuffer(args.templateBuffer)
 
-  // Ordem importa: REF-1 (template), REF-2 (foto do tecido).
+  // Ordem importa: REF-1 (template), REF-2 (sofá-padrão), REF-3 (rolo).
   const imageUrls: string[] = [templateUrl]
-  if (args.referenceUrl) imageUrls.push(args.referenceUrl)
+  if (args.sofaUrl) imageUrls.push(args.sofaUrl)
+  if (args.rolloUrl) imageUrls.push(args.rolloUrl)
 
   const input: NanoBananaEditInput = {
     prompt: args.prompt,
@@ -137,6 +142,10 @@ export async function callNanoBananaEdit(args: NanoBananaEditArgs): Promise<Buff
     aspect_ratio: '1:1',
     output_format: 'png',
     resolution: brandM1.pipeline.step2Resolution,
+    // 'high' aumenta latência (+10–30s) mas dá melhor aderência a regras
+    // numéricas do prompt (contagem de colunas, escala). Mantido enquanto
+    // estabilizamos densidade do padrão.
+    thinking_level: 'high',
   }
 
   const { data } = await fal.subscribe(brandM1.pipeline.falModels.nanoBanana, {

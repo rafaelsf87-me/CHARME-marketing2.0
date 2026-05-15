@@ -16,8 +16,10 @@ export const M1_TOOLTIPS = {
     'Split-screen: mão puxando a capa + macro da textura/costura. Comunica qualidade e facilidade de vestir.',
   set:
     'Set é a estética dos 4 cenários do produto (capa, ambiente, elástico, detalhe). O Set escolhido vale para todos os tipos de foto deste móvel — mantém coerência visual entre as fotos.',
-  uploadCapa:
-    'Foto plana do rolo de tecido (estampa esticada em fundo neutro). Mostre 10–20 repetições do padrão. Câmera perpendicular, sem flash, iluminação difusa.',
+  uploadSofa:
+    'Foto do sofá padrão da empresa com esta estampa aplicada. Use SEMPRE o mesmo sofá padrão para consistência entre estampas. Esta foto define a escala real do padrão.',
+  uploadRolo:
+    'Foto plana do rolo de tecido em fundo neutro, ~10–20 repetições do padrão. Câmera perpendicular, sem flash, luz difusa. Recomendada para máxima fidelidade do padrão.',
   corLisa:
     'Cor exata da capa em hex (#RRGGBB). Use o seletor ou digite o código direto.',
   customization:

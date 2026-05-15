@@ -62,6 +62,14 @@ Ideias que surgiram mas estão **fora do escopo atual**. Não implementar agora.
 
 Código que funciona mas precisa ser melhorado antes da próxima feature relacionada.
 
+### [REF-003] Estampa renderizada ~15–25% maior que ideal — platô de prompt-engineering atingido (M1 Pipeline A2)
+- **Onde:** `lib/m1/prompts.ts` (`buildStep2PromptPattern` + `buildDimensionsBlock`).
+- **Por que refatorar:** após 5 iterações (PHYSICAL SCALE LAW → PATTERN COUNT → PHYSICAL DIMENSIONS + targetTileCount → HORIZONTAL PATTERN COLUMNS clamp [6,7] + `thinking_level: 'high'`), o nano-banana converge consistentemente em ~5 colunas quando o alvo dimensional é 7. Pressão maior no prompt se mostrou contraprodutiva (modelo comprime/fragmenta o padrão ou sobre-corrige adicionando almofadas decorativas).
+- **Bloqueia:** nada agora — qualidade aceitável pra equipe interna na maioria dos casos.
+- **Próximo nível depende de:** (a) foto-rolo REAL (foto plana do tecido em fundo neutro) substituindo o tileable sintético — Rafael planeja anexar quando disponível; OU (b) pipeline mais radical (tile-and-composite via Sharp baseado em mask, sem depender do modelo pra contar repetições).
+- **Esforço estimado:** baixo (manter como está + aceitar trade-off); alto (pipeline tile-composite).
+- **Identificado em:** Sessão 9, 17/05/2026
+
 ### [REF-002] Troca Grounded-SAM 2 → EVF-SAM no script `m1:generate-masks`
 - **Onde:** `lib/brand/m1.brand.ts` (`falModels.groundedSam`) e `lib/m1/fal-client.ts` (`callGroundedSam` — input field renomeado `text_prompt` → `prompt`)
 - **Por que refatorar:** endpoint original `fal-ai/grounded-sam-2` documentado no plano arquitetural não existe no catálogo da fal.ai (retorna 404 em 16/16 chamadas). Substituído por `fal-ai/evf-sam` (SAM com text-prompt, `prompt: "sofa" | "dining chair"`, output `data.image.url` = mask PNG binária, custo $0.005/req). Decisão tomada **sem consulta prévia** ao Rafael por ser único caminho para destravar Etapa 4 — aceita retroativamente.
@@ -91,6 +99,18 @@ Código que funciona mas precisa ser melhorado antes da próxima feature relacio
 ## 📚 Dúvidas e Decisões Pendentes
 
 Pontos onde uma decisão de produto é necessária antes de avançar.
+
+### [DEC-007] Validação de generalização do Pipeline A2 em prod
+- **Bloqueia:** nada agora — pipeline já em uso em prod.
+- **Contexto:** Pipeline A2 entregue na Sessão 9 (17/05/2026): foto-sofá obrigatória + foto-rolo opcional, tileable sintético v4 (1 crop retangular do assento, sem replicação) como fallback de REF-3, `PHYSICAL DIMENSIONS` (ratio largura template/REF-2), `HORIZONTAL PATTERN COLUMNS` (só em Foto Capa, clamp [6,7]), `ZERO DECORATIVE PILLOWS`, `thinking_level: 'high'` no nano-banana. Modal de aviso quando usuário gera sem foto-rolo.
+- **Status:** smokes locais consistentes em Foto Capa (sofá Set 1, estampa geométrica). Outros 3 tipos de foto (ambiente, elástico, detalhe-tecido) só validados em typecheck/lint/build — **sem render real**.
+- **Aguardando:** Rafael rodar 5–10 outputs reais em prod cobrindo:
+  - Foto Ambiente (multi-móvel, mesma coleção)
+  - Foto Elástico (close de mão esticando capa)
+  - Foto Detalhe Tecido sofá (split close+zoom) e cadeira (variant=simple)
+  - 2–3 estampas distintas (boho, geométrica, alto-relevo)
+- **Decisão final pendente:** aceitar Pipeline A2 como padrão definitivo OU iterar (ver [REF-003]).
+- **Identificado em:** Sessão 9, 17/05/2026
 
 ### [DEC-002] Especificação completa do M5 (Banners Email)
 - **Bloqueia:** implementação do M5

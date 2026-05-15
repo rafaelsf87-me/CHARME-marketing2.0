@@ -15,21 +15,25 @@ export type M1TipoFoto = (typeof M1_TIPOS_FOTO)[number]
 // Regex hex #RGB ou #RRGGBB (case-insensitive).
 const HEX_REGEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 
-// v1.3 — usuário escolhe Set; template é resolvido via getTemplate.
+// v1.4 — Pipeline A2: foto-sofá (obrigatória) + foto-rolo (opcional/recomendada).
+// fotoSofa = sofá-padrão da empresa com a estampa aplicada (define escala física).
+// fotoRolo = foto plana do rolo de tecido (clean source de cores/textura).
 export const M1RenderSchema = z
   .object({
     movel: z.enum(M1_MOVEIS),
     tipoCapa: z.enum(M1_TIPOS_CAPA),
     tipoFoto: z.enum(M1_TIPOS_FOTO),
     set: z.union([z.literal(1), z.literal(2)]),
-    // Estampada/Alto-relevo: foto-referência da estampa.
-    referenciaBlobUrl: z.string().url().optional(),
-    // Lisa: cor em hex (substitui foto-referência).
+    // Estampada/Alto-relevo: foto do sofá-padrão com a estampa (obrigatória).
+    fotoSofa: z.string().url().optional(),
+    // Estampada/Alto-relevo: foto plana do rolo de tecido (opcional, recomendada).
+    fotoRolo: z.string().url().optional(),
+    // Lisa: cor em hex (substitui as fotos).
     corHex: z.string().regex(HEX_REGEX, 'Cor deve ser hex #RGB ou #RRGGBB').optional(),
     customization: z.string().max(500).optional(),
   })
   .superRefine((data, ctx) => {
-    // Capa Lisa: corHex obrigatório, referência opcional/ignorada.
+    // Capa Lisa: corHex obrigatório, fotos opcionais/ignoradas.
     if (data.tipoCapa === 'lisa') {
       if (!data.corHex) {
         ctx.addIssue({
@@ -39,12 +43,12 @@ export const M1RenderSchema = z
         })
       }
     } else {
-      // Estampada e Alto Relevo: referência obrigatória.
-      if (!data.referenciaBlobUrl) {
+      // Estampada e Alto Relevo: fotoSofa obrigatória; fotoRolo opcional.
+      if (!data.fotoSofa) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ['referenciaBlobUrl'],
-          message: 'Foto-referência da estampa obrigatória',
+          path: ['fotoSofa'],
+          message: 'Foto do sofá-padrão com a estampa é obrigatória',
         })
       }
     }

@@ -5,11 +5,12 @@ import { TabTipoMovel } from './tab-tipo-movel'
 import { StepSet } from './step-set'
 import { StepTipoCapa } from './step-tipo-capa'
 import { StepTipoFoto } from './step-tipo-foto'
-import { StepUploadReferencia } from './step-upload-referencia'
+import { StepUploadsPattern } from './step-uploads-pattern'
 import { StepCorLisa } from './step-cor-lisa'
 import { StepCustomizacao } from './step-customizacao'
 import { GenerateButton } from './generate-button'
 import { CostConfirmDialog } from './cost-confirm-dialog'
+import { NoRoloWarningDialog } from './no-rolo-warning-dialog'
 import { ResultsGrid, type ResultSlot } from './results-grid'
 import type { M1Movel, M1TipoCapa, M1TipoFoto, M1RenderInput } from '@/lib/m1/schema'
 import type { M1Set } from '@/lib/m1/templates'
@@ -26,18 +27,24 @@ export function M1Form() {
   const [set, setSet] = React.useState<M1Set | null>(null)
   const [tipoCapa, setTipoCapa] = React.useState<M1TipoCapa | null>(null)
   const [tiposFoto, setTiposFoto] = React.useState<M1TipoFoto[]>([])
-  const [referenciaBlobUrl, setReferenciaBlobUrl] = React.useState<string | null>(null)
+  const [fotoSofa, setFotoSofa] = React.useState<string | null>(null)
+  const [fotoRolo, setFotoRolo] = React.useState<string | null>(null)
   const [corHex, setCorHex] = React.useState<string | null>(null)
   const [customization, setCustomization] = React.useState('')
 
   const [slots, setSlots] = React.useState<ResultSlot[]>([])
   const [generating, setGenerating] = React.useState(false)
   const [costDialogOpen, setCostDialogOpen] = React.useState(false)
+  const [noRoloDialogOpen, setNoRoloDialogOpen] = React.useState(false)
 
   function onChangeTipoCapa(novo: M1TipoCapa) {
     setTipoCapa(novo)
-    if (novo === 'lisa') setReferenciaBlobUrl(null)
-    else setCorHex(null)
+    if (novo === 'lisa') {
+      setFotoSofa(null)
+      setFotoRolo(null)
+    } else {
+      setCorHex(null)
+    }
   }
 
   const isCapaLisa = tipoCapa === 'lisa'
@@ -45,8 +52,8 @@ export function M1Form() {
   const isValid = React.useMemo(() => {
     if (!set || !tipoCapa || tiposFoto.length === 0) return false
     if (isCapaLisa) return corHex !== null
-    return referenciaBlobUrl !== null
-  }, [set, tipoCapa, tiposFoto, referenciaBlobUrl, corHex, isCapaLisa])
+    return fotoSofa !== null
+  }, [set, tipoCapa, tiposFoto, fotoSofa, corHex, isCapaLisa])
 
   const custoTotalUsd = tiposFoto.length * CUSTO_POR_FOTO_USD
 
@@ -56,7 +63,8 @@ export function M1Form() {
       set: set!,
       tipoCapa: tipoCapa!,
       tipoFoto: tipo,
-      referenciaBlobUrl: isCapaLisa ? undefined : referenciaBlobUrl ?? undefined,
+      fotoSofa: isCapaLisa ? undefined : fotoSofa ?? undefined,
+      fotoRolo: isCapaLisa ? undefined : fotoRolo ?? undefined,
       corHex: isCapaLisa ? corHex ?? undefined : undefined,
       customization: customization.trim() || undefined,
     }
@@ -127,13 +135,23 @@ export function M1Form() {
     }
   }
 
-  function onGenerate() {
-    if (!isValid) return
+  // Pulou direto pro fluxo de custo: usuário aceitou aviso ou não há fotoRolo a alertar.
+  function proceedAfterRoloCheck() {
     if (custoTotalUsd >= LIMIAR_CUSTO_USD) {
       setCostDialogOpen(true)
       return
     }
     void startGeneration()
+  }
+
+  function onGenerate() {
+    if (!isValid) return
+    // Estampada/Alto Relevo sem fotoRolo → alerta antes do custo.
+    if (!isCapaLisa && !fotoRolo) {
+      setNoRoloDialogOpen(true)
+      return
+    }
+    proceedAfterRoloCheck()
   }
 
   async function onRetry(index: number) {
@@ -158,7 +176,12 @@ export function M1Form() {
         {isCapaLisa ? (
           <StepCorLisa value={corHex} onChange={setCorHex} />
         ) : (
-          <StepUploadReferencia value={referenciaBlobUrl} onChange={setReferenciaBlobUrl} />
+          <StepUploadsPattern
+            fotoSofa={fotoSofa}
+            fotoRolo={fotoRolo}
+            onChangeSofa={setFotoSofa}
+            onChangeRolo={setFotoRolo}
+          />
         )}
 
         <StepCustomizacao value={customization} onChange={setCustomization} />
@@ -179,6 +202,12 @@ export function M1Form() {
         qtdFotos={tiposFoto.length}
         custoTotalUsd={custoTotalUsd}
         onConfirm={() => void startGeneration()}
+      />
+
+      <NoRoloWarningDialog
+        open={noRoloDialogOpen}
+        onOpenChange={setNoRoloDialogOpen}
+        onConfirm={proceedAfterRoloCheck}
       />
     </>
   )
