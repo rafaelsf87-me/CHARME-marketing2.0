@@ -209,14 +209,9 @@ SINGLE FURNITURE ONLY (CRITICAL):
 - No phantom furniture parts. No partial sofa surfaces. No additional cushions on separate furniture.`
   }
 
-  // Foto Capa (default): realismo extra por tipo de capa.
-  if (tipoCapa === 'alto-relevo') {
-    return `REALISM (embossed cover):
-- The quilted 3D relief is visible across the cover, with shadows in the stitched grooves.
-- The base color is uniform; the design is purely textural.
-- Natural fabric drape; the relief follows the furniture geometry over edges and folds.`
-  }
-
+  // Foto Capa (default): realismo. Alto Relevo nasce como cópia idêntica de
+  // Estampada nesta versão (V1 M1, 18/05/2026) — sem bloco embossed separado.
+  // Para reintroduzir vocabulário de relevo no futuro, criar bloco próprio.
   return `REALISM:
 - Natural fabric drape on the existing cover shape from REF-1.
 - Folds and tucking follow the same wrinkles already visible in REF-1.
@@ -270,11 +265,110 @@ STRICT PROHIBITIONS:
     .join('\n\n')
 }
 
-// ──────────── Estampada / Alto Relevo: REF-2 = sofá-padrão, REF-3 = rolo (opcional) ────────────
-function buildStep2PromptPattern(p: Step2Params): string {
+// ──────────── Estampada: REF-2 = sofá-padrão, REF-3 = rolo (opcional) ────────────
+// Estampada e Alto Relevo nascem com prompts IDÊNTICOS — funções separadas
+// permitem iteração independente sem regressão cruzada. Conteúdo inicial do
+// Alto Relevo é cópia exata da Estampada (decisão V1 M1, 18/05/2026).
+function buildStep2PromptEstampada(p: Step2Params): string {
   const furniture = furnitureNames(p.movel, p.tipoFoto)
-  const isEmbossed = p.tipoCapa === 'alto-relevo'
-  const patternNoun = isEmbossed ? 'quilted/textured 3D fabric pattern' : 'fabric pattern'
+  const patternNoun = 'fabric pattern'
+  const temRolo = p.temRolo === true
+
+  const header = `SUBSTITUTE THE FABRIC PATTERN OF THE COVER ON THE ${furniture.plural.toUpperCase()} IN REF-1.`
+
+  const ref3Line = temRolo
+    ? `\n- REF-3 (third image): flat photo of the fabric roll showing the ${patternNoun} undistorted.
+  Defines: pattern shapes, exact colors, and clean texture.`
+    : ''
+
+  const inputsBlock = `INPUTS:
+- REF-1 (first image): base scene with the ${furniture.single} wearing a plain gray cover.
+  Defines: scene, geometry, lighting, camera, decoration — EVERYTHING except cover fabric.
+- REF-2 (second image): photo of the SAME ${patternNoun} applied to a real furniture surface.
+  Defines: TRUE PHYSICAL SCALE of the pattern (how big each unit appears on real fabric).${ref3Line}`
+
+  const scaleBlock = `PHYSICAL SCALE LAW (HIGHEST PRIORITY):
+- Each pattern unit represents a FIXED PHYSICAL SIZE (cm), seen in REF-2.
+- Think of the pattern as tiles of constant size glued onto fabric. Tile size NEVER changes.
+- A larger piece of furniture fits MORE tiles. A smaller fits FEWER. Tile size is constant.
+- If REF-1's furniture is LARGER than REF-2's furniture, output MUST contain MORE pattern repetitions.
+- If REF-1's furniture is SMALLER than REF-2's furniture, output MUST contain FEWER pattern repetitions.
+
+SIZE-AWARENESS RULES (CRITICAL):
+- If REF-1 appears WIDER than REF-2 → output MUST show MORE units across the width.
+- If REF-1 appears TALLER than REF-2 → output MUST show MORE units across the height.
+- DO NOT preserve the visual COUNT of units between REF-2 and output.
+- DO NOT scale or stretch the pattern to fit REF-1's furniture.
+- DO NOT use REF-2's furniture as a sizing reference — use it ONLY to learn the physical size of one pattern unit.
+
+STRICT PROHIBITIONS FOR REF-2:
+- DO NOT copy lighting, shadows, color temperature, or background from REF-2.
+- DO NOT copy any furniture geometry, dimensions or pose from REF-2.
+- DO NOT bring any scene element from REF-2 into the output.`
+
+  const dimensionsBlock = buildDimensionsBlock(
+    p.tipoFoto,
+    p.templateWidthCm,
+    p.refSofaWidthCm,
+    p.templateInnerWidthCm,
+    p.refSofaInnerWidthCm
+  )
+
+  const sourceBlock = temRolo
+    ? `PATTERN SOURCE PRIORITY:
+- REF-3 (flat fabric roll) is the CLEAN SOURCE for pattern shapes, exact colors, and texture details.
+- REF-2 (applied to furniture) is the SCALE REFERENCE only.
+- Combine: shapes/colors/texture from REF-3, physical scale from REF-2.`
+    : ''
+
+  const cushionLine = p.tipoFoto === 'detalhe-tecido'
+    ? ''
+    : `- Cushion count, position, shape\n`
+
+  const preserveBlock = `PRESERVE STRICTLY (from REF-1):
+- Furniture geometry, dimensions, pose
+${cushionLine}- Frame, legs, armrests
+- Background scene (walls, floor, decoration, lighting, shadows)
+- Camera angle and perspective
+
+REPLACE ONLY:
+- The visible cover fabric on the furniture
+
+ZERO DECORATIVE PILLOWS (CRITICAL):
+- The output MUST NOT contain any decorative pillows, throw pillows, accent cushions, blankets or throws placed on top of the cover.
+- The cover is ONE continuous piece of fabric draped over the furniture frame and its built-in cushions.
+- Render the cover as a single continuous patterned surface. NO separate pillow objects on top.
+- DO NOT add accessories, blankets, throws or any decorative items on the furniture.
+
+STRICT PROHIBITIONS:
+- DO NOT add cushions, throws, pillows not present in REF-1
+- DO NOT modify furniture proportions or pose
+- DO NOT reinterpret or stylize the pattern
+- DO NOT alter pattern colors
+
+REALISM:
+- Natural fabric drape following REF-1's existing wrinkles
+- Match lighting and shadows from REF-1
+- Subtle fabric tucking and natural cover folds`
+
+  const scenarioBlock = buildScenarioBlock(p.tipoCapa, p.tipoFoto, p.detalheVariant)
+  const customBlock = p.customization
+    ? `USER CUSTOMIZATION (apply within the constraints above):\n${p.customization}`
+    : ''
+  const footer = `OUTPUT: photorealistic, e-commerce catalog quality, sharp focus.`
+
+  return [header, inputsBlock, scaleBlock, dimensionsBlock, sourceBlock, preserveBlock, scenarioBlock, customBlock, footer]
+    .filter(Boolean)
+    .join('\n\n')
+}
+
+// ──────────── Alto Relevo: cópia idêntica do Estampada (V1 M1, 18/05/2026) ────────────
+// Função separada para permitir iteração independente do prompt no futuro
+// (ex: reintroduzir vocabulário "quilted/embossed" sem afetar Estampada).
+// Mantém output BIT-A-BIT igual ao Estampada nesta versão.
+function buildStep2PromptAltoRelevo(p: Step2Params): string {
+  const furniture = furnitureNames(p.movel, p.tipoFoto)
+  const patternNoun = 'fabric pattern'
   const temRolo = p.temRolo === true
 
   const header = `SUBSTITUTE THE FABRIC PATTERN OF THE COVER ON THE ${furniture.plural.toUpperCase()} IN REF-1.`
@@ -424,5 +518,6 @@ HORIZONTAL PATTERN COLUMNS (CRITICAL):
 
 export function buildStep2Prompt(p: Step2Params): string {
   if (p.tipoCapa === 'lisa') return buildStep2PromptLisa(p)
-  return buildStep2PromptPattern(p)
+  if (p.tipoCapa === 'alto-relevo') return buildStep2PromptAltoRelevo(p)
+  return buildStep2PromptEstampada(p)
 }

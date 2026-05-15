@@ -56,14 +56,15 @@ A foto-template **já contém o móvel com capa atual**, com pose, ângulo, ilum
 
 Não é geração de cena nova. É substituição de padrão têxtil sobre superfície já posicionada.
 
-### Tipos de foto geradas (gerar 1 por vez — usuário escolhe)
+### Tipos de foto geradas (selecionar 1 a 4 — gera em paralelo)
 
-| Tipo | Descrição |
-|---|---|
-| **Foto Capa** | Foto principal do produto — móvel com capa aplicada, fundo/ambiente da foto-template selecionada |
-| **Foto Ambiente** | Foto ampla do ambiente com 2 sofás (2+3 lugares) ou mesa com 6 cadeiras, todos com a capa |
-| **Foto Elástico** | Close da mão esticando a capa no móvel, demonstrando elasticidade — cenário pré-aprovado |
-| **Detalhe do Tecido** | Sofá: split-screen (mão puxando + macro da costura). Cadeira: foto única (2 variações de ângulo) |
+| Tipo | Status | Descrição |
+|---|---|---|
+| **Foto Capa** | ✅ Ativo | Foto principal do produto — móvel com capa aplicada, fundo/ambiente da foto-template selecionada |
+| **Foto Ambiente** | ✅ Ativo | Foto ampla do ambiente com 2 sofás (2+3 lugares) ou mesa com 6 cadeiras, todos com a capa |
+| **Foto Elástico** | ✅ Ativo | Close da mão esticando a capa no móvel, demonstrando elasticidade — cenário pré-aprovado |
+| **Detalhe do Tecido** | ✅ Ativo | Sofá: split-screen (mão puxando + macro da costura). Cadeira: foto única (2 variações de ângulo) |
+| **Vestindo a Capa** | 🚧 Em construção | Sofá com capa parcialmente aplicada + mão estendendo. Backend implementado (schema, templates, prompts) mas UI oculta — modelo não converge consistentemente nesta versão (ver REF-005). Apenas para sofá. |
 
 ### Tipos de capa
 
@@ -73,43 +74,55 @@ Não é geração de cena nova. É substituição de padrão têxtil sobre super
 | **Lisa** | Cor HEX (sem foto) — subfluxo pula Step 1 |
 | **Alto Relevo** | Foto-referência da estampa quiltada |
 
-### Fluxo de uso — passo a passo (v1.3)
+### Fluxo de uso — passo a passo (v1.5)
 
 ```
 PASSO 1: Selecionar tipo de móvel
   [Sofá]  /  [Cadeira]
 
 PASSO 2: Selecionar Set
-  [Set 1]  /  [Set 2]   ← uma escolha vale para todos os 4 tipos de foto
+  [Set 1]  /  [Set 2]   ← uma escolha vale para todos os tipos de foto
 
 PASSO 3: Selecionar tipo de capa
   [Estampada]  /  [Lisa]  /  [Alto Relevo]
 
-PASSO 4: Selecionar tipo de foto a gerar
-  [Foto Capa]  /  [Foto Ambiente]  /  [Foto Elástico]  /  [Detalhe do Tecido]
+PASSO 4: Selecionar tipo(s) de foto a gerar (1 a 4)
+  [Foto Capa]  [Foto Ambiente]  [Foto Elástico]  [Detalhe do Tecido]
+  (Vestindo a Capa oculto nesta versão — ver REF-005)
 
-PASSO 5: Input da capa
-  - Estampada / Alto Relevo: upload da foto-referência
-  - Lisa: seletor de cor + campo hex
+PASSO 5: Inputs da capa
+  - Estampada / Alto Relevo:
+      (a) Foto do sofá-padrão com a estampa aplicada — OBRIGATÓRIA
+          (define escala física do padrão)
+      (b) Foto plana do rolo de tecido — OPCIONAL/RECOMENDADA
+          (clean source de cores e textura)
+  - Lisa: seletor de cor + campo hex (sem fotos)
 
 PASSO 6: [Gerar]
 ```
 
 **Lógica de Sets:** cada móvel tem 2 Sets (estéticas/cenários distintos). O sistema resolve o template real via `(movel, tipoFoto, set)`. **Fallback documentado:** Sofá Detalhe Tecido só existe no Set 1 — pedir Sofá+Detalhe em Set 2 retorna silenciosamente o template do Set 1.
 
-### Inputs por combinação (v1.2)
+**Pipeline A2 (v1.4):** Estampada/Alto Relevo usam 2 inputs do usuário:
+- **Foto-sofá** (obrigatória) = REF-2 do prompt; define a escala física real do padrão (tile size em cm).
+- **Foto-rolo** (opcional) = REF-3 do prompt; clean source de cores/textura. Quando ausente, o sistema avisa o usuário via modal e roda só com REF-2.
+
+### Inputs por combinação (v1.5)
 
 #### → Capa Estampada ou Alto Relevo (qualquer tipo de foto)
 | Campo | Obrigatório | Tooltip |
 |---|---|---|
-| Foto de referência da capa | Sim | "Foto pronta da capa, usada apenas para ajuste e padronização da estampa/cor." |
-| Cenário (foto-template) | Sim | "Cenário pré-aprovado. Define ambiente, ângulo e iluminação. A IA mantém tudo e substitui apenas a estampa/cor." |
+| Foto do sofá-padrão com a estampa | Sim | "Foto do sofá-padrão da empresa com a estampa aplicada. Define a escala física real do padrão." |
+| Foto plana do rolo de tecido | Não (recomendada) | "Foto plana do rolo de tecido em fundo neutro. Melhora a fidelidade de cores e textura. Sem ela, o sistema usa só a foto do sofá." |
+| Cenário (foto-template) | Sim (auto via Set) | "Cenário pré-aprovado. Define ambiente, ângulo e iluminação. A IA mantém tudo e substitui apenas a estampa/cor." |
 
 #### → Capa Lisa (qualquer tipo de foto)
 | Campo | Obrigatório | Tooltip |
 |---|---|---|
 | Cor (hex) | Sim | "Cor exata da capa em hex (#RRGGBB). Use o seletor ou digite o código direto." |
-| Cenário (foto-template) | Sim | "Cenário pré-aprovado." |
+| Cenário (foto-template) | Sim (auto via Set) | "Cenário pré-aprovado." |
+
+**Refactoring V1 M1 (18/05/2026):** os prompts Step 2 estão separados em 3 funções (`buildStep2PromptEstampada`, `buildStep2PromptAltoRelevo`, `buildStep2PromptLisa`) em `lib/m1/prompts.ts`, roteadas por `tipoCapa`. Alto Relevo nasce como cópia idêntica de Estampada (output bit-a-bit igual nesta versão) — funções separadas permitem iteração futura sem regressão cruzada.
 
 #### → Foto Elástico
 Mesmo input das opções acima. **Não há mais upload de foto bruta de celular.** A cena é o template pré-aprovado.
