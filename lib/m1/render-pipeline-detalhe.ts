@@ -28,18 +28,12 @@ export async function renderPipelineDetalhe(input: M1RenderInput): Promise<strin
 
   const [closeResult, zoomResult] = await Promise.all([
     renderPipelineA(input, {
-      overrideTemplate: {
-        imagePath: template.imageClosePath,
-        maskPath: template.maskClosePath,
-      },
+      overrideTemplate: { imagePath: template.imageClosePath },
       detalheVariant: 'close',
       returnBufferOnly: true,
     }),
     renderPipelineA(input, {
-      overrideTemplate: {
-        imagePath: template.imageZoomPath,
-        maskPath: template.maskZoomPath,
-      },
+      overrideTemplate: { imagePath: template.imageZoomPath },
       detalheVariant: 'zoom',
       returnBufferOnly: true,
     }),

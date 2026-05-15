@@ -15,12 +15,12 @@ export function StepUploadReferencia({ value, onChange }: StepUploadReferenciaPr
   return (
     <div className="flex flex-col gap-2 animate-fade-in">
       <div className="flex items-center gap-2">
-        <span className="text-xs font-medium">Foto de referência da capa</span>
+        <span className="text-xs font-medium">Foto do rolo de tecido</span>
         <TooltipInfo text={M1_TOOLTIPS.uploadCapa} />
       </div>
       <UploadField
         label=""
-        hint="Foto pronta da capa, usada apenas para ajuste e padronização da estampa/cor."
+        hint="Foto plana do rolo de tecido (estampa esticada em fundo neutro). Mostre 10–20 repetições do padrão. Câmera perpendicular, sem flash, iluminação difusa."
         value={value}
         onChange={onChange}
       />

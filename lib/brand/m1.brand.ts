@@ -18,15 +18,22 @@ export const brandM1 = {
   },
   pipeline: {
     timeoutMs: 60_000,
+    // Pipeline A (Estampada/Alto Relevo): $0.12/render (nano-banana 2K, sem Step 1).
+    // Capa Lisa: mesmo nano-banana, mesmo custo.
+    // Step 1 flux-pro/kontext desativado em 2026-05 (REF-2 = foto do rolo direto).
+    step2Resolution: '2K' as const,
     falModels: {
-      // Mask pré-gerada por template (offline, via script).
-      // EVF-SAM: SAM com text-prompt (substitui grounded-sam-2, que não existe na fal).
+      // Mask EVF-SAM permanece registrada por compatibilidade (geração offline
+      // foi descontinuada na migração nano-banana). Mantida até confirmar que
+      // o pipeline novo cobre todos os 16 templates.
       groundedSam: 'fal-ai/evf-sam',
-      // Step 1 do Pipeline A (capa neutra/swatch).
+      // Step 1 do Pipeline A (capa neutra/swatch) — DESATIVADO no pipeline,
+      // mantido como fallback. Helper callFluxKontext permanece em fal-client.ts.
       fluxKontext: 'fal-ai/flux-pro/kontext',
-      // Step 2 (aplicar swatch no template via inpainting). Aceita
-      // image_url + mask_url + reference_image_url + prompt. Resolve DEC-006.
-      fluxKontextInpaint: 'fal-ai/flux-kontext-lora/inpaint',
+      // Step 2 — Gemini 2.5 Image Edit (nano-banana-2) via fal.ai.
+      // Aceita image_urls[] + prompt. Sem mask, sem strength: modelo black-box.
+      // Substituiu flux-kontext-lora/inpaint (ignorava reference_image_url).
+      nanoBanana: 'fal-ai/nano-banana-2/edit',
     },
   },
 } as const

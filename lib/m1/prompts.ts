@@ -5,7 +5,6 @@ import type { M1Movel, M1TipoCapa, M1TipoFoto } from './schema'
 // PT: extrai estampa/cor/relevo da foto-referência e gera um
 // "swatch" limpo do tecido. Cacheado e reutilizado entre cenários.
 // Capa Lisa NÃO usa Step 1 (subfluxo pula direto pro Step 2 com cor HEX).
-// TODO(treinamento): refinar após primeiros testes com Rafael.
 // ═══════════════════════════════════════════════════════════════
 
 const STEP1_BASE = `
@@ -13,6 +12,21 @@ INSTRUCTION:
 Extract the textile pattern, color and texture from the reference image.
 Generate a clean, flat fabric swatch showing ONLY this pattern/color,
 isolated against a neutral light gray background.
+
+SCALE AND DENSITY (CRITICAL):
+- Preserve the EXACT scale of pattern units as seen in the reference.
+- Preserve the EXACT density and frequency of pattern repetition.
+- If the reference shows small, dense, repeating units → the swatch MUST show small, dense, repeating units.
+- If the reference shows large, sparse units → the swatch MUST show large, sparse units.
+- The number of pattern repetitions per visible area in the swatch must MATCH the reference.
+- Each individual pattern unit (motif, shape, geometric element) should occupy the SAME relative area in the swatch as in the reference.
+
+DO NOT:
+- DO NOT enlarge pattern elements compared to the reference
+- DO NOT reduce pattern density or repetition count
+- DO NOT regularize, simplify or stylize the pattern
+- DO NOT redesign the pattern with larger/cleaner shapes
+- DO NOT crop into a single large motif — show the pattern as a tileable surface
 
 OUTPUT REQUIREMENTS:
 - Flat fabric swatch, no furniture, no environment
@@ -65,9 +79,10 @@ export function buildStep1Prompt(tipoCapa: Exclude<M1TipoCapa, 'lisa'>): string 
 }
 
 // ═══════════════════════════════════════════════════════════════
-// PIPELINE A — Step 2: Aplicar capa no cenário (inpainting)
-// PT: aplica o swatch (Step 1) ou a cor HEX (Capa Lisa) no móvel
-// da foto-template, preservando 100% do ambiente, ângulo e iluminação.
+// PIPELINE A — Step 2: Aplicar capa no cenário (nano-banana-2)
+// REF-1 = template (cenário com móvel cinza).
+// Estampada/Alto Relevo: REF-2 = foto do rolo de tecido (escala física fixa).
+// Capa Lisa: sem REF-2; cor descrita no prompt.
 // ═══════════════════════════════════════════════════════════════
 
 type Step2Params = {
@@ -75,165 +90,189 @@ type Step2Params = {
   tipoCapa: M1TipoCapa
   tipoFoto: M1TipoFoto
   customization?: string
-  // Capa Lisa: HEX vai no prompt (Step 2 sem reference image).
+  // Capa Lisa: HEX vai no prompt (sem REF-2).
   corHex?: string
-  // Detalhe Tecido: indica se este Step 2 é o close (mão puxando) ou
-  // o zoom (macro da textura/costura). Refina o prompt sem mudar o swatch.
+  // Detalhe Tecido: indica se este Step 2 é o close ou o zoom.
   detalheVariant?: 'close' | 'zoom'
 }
 
-function describeObject(movel: M1Movel, tipoFoto: M1TipoFoto): { single: string; plural: string } {
+type FurnitureNames = { single: string; plural: string }
+
+function furnitureNames(movel: M1Movel, tipoFoto: M1TipoFoto): FurnitureNames {
   const single = movel === 'sofa' ? 'sofa' : 'dining chair'
   if (tipoFoto === 'ambiente') {
     return {
       single,
       plural: movel === 'sofa'
-        ? 'sofas (one 2-seater + one 3-seater)'
+        ? 'sofas (one 2-seater and one 3-seater)'
         : 'dining chairs (6 chairs around the table)',
     }
   }
   return { single, plural: single }
 }
 
-export function buildStep2Prompt(p: Step2Params): string {
-  const { single: object, plural: objectPlural } = describeObject(p.movel, p.tipoFoto)
+// Bloco específico por (tipoFoto, tipoCapa). Reforça variações multi-móvel,
+// elasticidade, close/zoom do Detalhe Tecido, e realismo para foto-capa.
+function buildScenarioBlock(
+  tipoCapa: M1TipoCapa,
+  tipoFoto: M1TipoFoto,
+  detalheVariant?: 'close' | 'zoom'
+): string {
+  if (tipoFoto === 'ambiente') {
+    return `MULTI-FURNITURE COHERENCE:
+- The scene contains multiple matching pieces from the same collection.
+- Apply the SAME pattern/color/texture on ALL pieces consistently.
+- Maintain the SAME pattern scale and orientation across every piece, even at different angles.
+- No variation in hue, saturation, pattern density or scale between pieces.`
+  }
 
-  const headerCapa = p.tipoCapa === 'lisa' && p.corHex
-    ? `# Lisa — solid color ${p.corHex.toUpperCase()}`
-    : `# ${p.tipoCapa}`
+  if (tipoFoto === 'elastico') {
+    return `ELASTICITY DEMONSTRATION:
+- REF-1 shows a hand stretching/pulling the cover fabric — preserve this hand pose exactly.
+- Render the fabric with visible stretch deformation at the pulled area: radial pattern distortion, tension lines, stress folds.
+- The pattern stretches and slightly elongates with the fabric but remains recognizable.`
+  }
 
-  // Capa Lisa: descreve cor no prompt (sem reference image).
-  // Estampada/Alto-relevo: usa o swatch fornecido como secondary reference.
-  const sourceBlock = p.tipoCapa === 'lisa' && p.corHex
-    ? `
-INSTRUCTION:
-Apply a SOLID UNIFORM COLOR ${p.corHex.toUpperCase()} stretch jersey cover to
-the visible cover area of the ${objectPlural} in the scene. The cover is
-polyester elastane jersey knit with a flat matte finish, no pattern.
-Preserve every other element of the original scene completely unchanged.
-`
-    : `
-INSTRUCTION:
-Apply the fabric pattern/color from the reference swatch (provided as
-secondary reference) to the cover of the ${objectPlural} in the scene.
-Preserve every other element of the original scene completely unchanged.
-`
+  if (tipoFoto === 'detalhe-tecido') {
+    if (detalheVariant === 'zoom') {
+      return `MACRO TEXTURE FOCUS:
+- Extreme close-up of the cover fabric texture and stitching.
+- Visible weave/knit structure of the polyester elastane jersey.
+- Visible cover seam, elastic edge and stitching detail.
+- Sharp focus on textile details; soft background.`
+    }
+    return `HAND PULLING DETAIL:
+- Hands lifting/pulling back the cover, partially revealing the original upholstery underneath.
+- Preserve the exact hand position and pose from REF-1.
+- Cover stitching and elastic seam clearly visible on the underside.
+- Sharp focus on the fabric-original transition.`
+  }
 
-  const preserveBlock = `
-PRESERVE STRICTLY (do not alter):
-- Environment: walls, floor, decoration, surrounding furniture, plants
+  // Foto Capa (default): realismo extra por tipo de capa.
+  if (tipoCapa === 'alto-relevo') {
+    return `REALISM (embossed cover):
+- The quilted 3D relief is visible across the cover, with shadows in the stitched grooves.
+- The base color is uniform; the design is purely textural.
+- Natural fabric drape; the relief follows the furniture geometry over edges and folds.`
+  }
+
+  return `REALISM:
+- Natural fabric drape on the existing cover shape from REF-1.
+- Folds and tucking follow the same wrinkles already visible in REF-1.
+- Subtle, barely visible seam lines along the cover edges.
+- Match lighting, shadows and color temperature from REF-1 exactly.`
+}
+
+// ──────────────── Capa Lisa: prompt com HEX, sem REF-2 ────────────────
+function buildStep2PromptLisa(p: Step2Params): string {
+  const furniture = furnitureNames(p.movel, p.tipoFoto)
+  const corHex = (p.corHex ?? '').toUpperCase()
+
+  const header = `SUBSTITUTE THE FABRIC PATTERN OF THE COVER ON THE ${furniture.plural.toUpperCase()} IN REF-1.`
+
+  const refBlock = `INPUTS:
+- REF-1 (first image): base scene with the ${furniture.single} wearing a plain gray cover. This image defines EVERYTHING in the output.
+
+TARGET COVER: a SOLID UNIFORM COLOR ${corHex} polyester elastane stretch jersey knit cover, flat matte finish, no patterns, no variation.`
+
+  const cushionRule = p.tipoFoto === 'detalhe-tecido'
+    ? ''
+    : `  * Cushion count, position and shape\n`
+
+  const preserveBlock = `OUTPUT REQUIREMENTS:
+- The ${furniture.plural}' cover must show the EXACT target color, uniformly applied, with no patterns or variation.
+- All other elements must be IDENTICAL to REF-1 — pixel-level fidelity to:
+  * Furniture geometry, dimensions and pose
+${cushionRule}  * Frame, legs, armrests, backrest
+  * Background scene (walls, floor, decoration, lighting, shadows)
+  * Camera angle and perspective
+  * Color temperature and overall lighting
+
+STRICT PROHIBITIONS:
+- DO NOT add cushions, throws, pillows, blankets or any object not present in REF-1
+- DO NOT change the number of cushions or seats already in REF-1
+- DO NOT modify furniture proportions, geometry or pose
+- DO NOT alter the target color (must be exactly ${corHex})
+- DO NOT introduce any pattern, gradient or texture variation
+- DO NOT change the background scene, decoration or lighting
+- DO NOT apply any texture not present in the target (no velvet, no velour, no embroidery, no satin, no gloss)
+- DO NOT crop, reframe or change camera angle`
+
+  const scenarioBlock = buildScenarioBlock(p.tipoCapa, p.tipoFoto, p.detalheVariant)
+  const customBlock = p.customization
+    ? `USER CUSTOMIZATION (apply within the constraints above):\n${p.customization}`
+    : ''
+  const footer = `OUTPUT: photorealistic, e-commerce catalog quality, sharp focus, natural lighting consistent with REF-1.`
+
+  return [header, refBlock, preserveBlock, scenarioBlock, customBlock, footer]
+    .filter(Boolean)
+    .join('\n\n')
+}
+
+// ──────────── Estampada / Alto Relevo: REF-2 = foto do rolo ────────────
+function buildStep2PromptPattern(p: Step2Params): string {
+  const furniture = furnitureNames(p.movel, p.tipoFoto)
+  const isEmbossed = p.tipoCapa === 'alto-relevo'
+  const patternNoun = isEmbossed ? 'quilted/textured 3D fabric pattern' : 'fabric pattern'
+  const ref2Noun = isEmbossed
+    ? 'quilted/textured 3D fabric pattern'
+    : 'pattern'
+
+  const header = `SUBSTITUTE THE FABRIC PATTERN OF THE COVER ON THE ${furniture.plural.toUpperCase()} IN REF-1.`
+
+  const inputsBlock = `INPUTS:
+- REF-1 (first image): base scene with the ${furniture.single} wearing a plain gray cover.
+  Defines: scene, geometry, lighting, camera, decoration — EVERYTHING except cover pattern.
+- REF-2 (second image): flat photo of the fabric roll showing the ${ref2Noun} at its TRUE PHYSICAL SCALE.
+  Defines: pattern shapes, exact colors, texture, AND physical size per pattern unit.`
+
+  const scaleBlock = `PHYSICAL SCALE LAW (highest priority):
+- Each pattern unit in REF-2 represents a FIXED PHYSICAL SIZE (cm).
+- Apply the pattern to REF-1's furniture preserving that physical size, regardless of furniture dimensions.
+- If REF-1's furniture is larger than the visible area of REF-2, the output MUST show MORE repetitions of the pattern.
+- Think of REF-2 as a piece of physical fabric — if you wrap it around a larger object, you see more repetitions of the same-sized pattern.
+
+DO NOT:
+- DO NOT scale or stretch the pattern to fit the furniture.
+- DO NOT preserve "visual count" — preserve the physical size of each pattern unit.
+- DO NOT crop into a single large motif. Show pattern at the same density seen in REF-2.`
+
+  const cushionLine = p.tipoFoto === 'detalhe-tecido'
+    ? ''
+    : `- Cushion count, position, shape\n`
+
+  const preserveBlock = `PRESERVE STRICTLY (REF-1):
+- Furniture geometry, dimensions, pose
+${cushionLine}- Frame, legs, armrests
+- Background scene (walls, floor, decoration, lighting, shadows)
 - Camera angle and perspective
-- Lighting, shadows and color temperature
-- Geometry, shape and pose of the ${object}
-- All objects, plants and accessories in the scene
 
 REPLACE ONLY:
-- The visible cover fabric on the ${objectPlural}
-${p.tipoCapa === 'lisa'
-  ? `- Render uniformly in ${p.corHex?.toUpperCase()}, no pattern, no variation`
-  : '- Match the reference swatch EXACTLY — same colors, same pattern, no variation'}
-`
+- The visible cover fabric on the furniture
+- Apply the EXACT ${patternNoun}, colors and texture from REF-2
 
-  const fabricBlock = p.tipoCapa === 'alto-relevo'
-    ? `
-FABRIC SPECIFICATION (mandatory):
-The cover is a polyester elastane stretch fabric with EMBOSSED/QUILTED texture.
-The pattern is created by quilted stitching that creates raised 3D relief
-(NOT printed). Render with:
-- Visible depth and shadows in the quilted stitching
-- Uniform base color matching the reference
-- The relief pattern is preserved even where the fabric stretches over edges
-- Subtle, barely visible cover seam lines along the edges
-- Fabric tucking naturally into gaps between cushions, armrests and base
-- Natural draping that follows the ${object} shape
+STRICT PROHIBITIONS:
+- DO NOT add cushions, throws, pillows not present in REF-1
+- DO NOT modify furniture proportions or pose
+- DO NOT reinterpret or stylize the pattern from REF-2
+- DO NOT alter pattern colors
 
-AVOID AT ALL COSTS:
-- Flat envelope-like surface
-- Painted-on appearance
-- Printed pattern (this is embossed, not printed)
-- Color variation in the relief pattern
-- Velvet, velour, plush or satin appearance
-- Any change to the environment, lighting or camera angle
-`
-    : `
-FABRIC SPECIFICATION (mandatory realism):
-The cover is a polyester elastane stretch jersey knit fabric — flat matte finish.
-Render with:
-- Subtle, barely visible seam lines along the cover edges (almost imperceptible)
-- Fabric tucking naturally into gaps between cushions, armrests and base
-- Small wrinkles and folds where the cover meets the furniture geometry
-- Visible fabric texture — never a flat or painted appearance
-- Natural draping that follows the underlying furniture shape
+REALISM:
+- Natural fabric drape following REF-1's existing wrinkles
+- Match lighting and shadows from REF-1`
 
-AVOID AT ALL COSTS:
-- Flat envelope-like surface
-- Painted-on appearance
-- Cartoon or 3D-render aesthetic
-- Color or pattern variation from the reference
-- Any change to the environment, lighting or camera angle
-- Velvet, velour, plush or satin appearance
-- Sheen, gloss or reflective fabric look
-- Any fabric type other than matte jersey knit
-`
-
-  // DEC-004: coerência multi-móveis ativa só em Foto Ambiente.
-  const ambienteBlock = p.tipoFoto === 'ambiente'
-    ? `
-MULTI-FURNITURE COHERENCE (critical):
-- Scene contains multiple matching pieces
-- Apply the SAME pattern/color/relief CONSISTENTLY on ALL pieces
-- Maintain coherent pattern SCALE across all pieces, even at different angles
-- All pieces must look like matching items from the same collection
-- The pattern/color must be EXACTLY the same on every piece — no variation
-  in hue, saturation, pattern density or scale
-`
-    : ''
-
-  // Elástico: foco em demonstrar elasticidade (template já tem mão puxando).
-  const elasticoBlock = p.tipoFoto === 'elastico'
-    ? `
-ELASTICITY DEMONSTRATION (critical for this scene):
-- The template shows a hand stretching/pulling the cover fabric
-- Render the fabric with visible STRETCH DEFORMATION at the pulled area:
-  · Radial pattern distortion in the direction of the pull
-  · Fabric tension lines and stress folds
-  · Pattern stretches and slightly elongates with the fabric
-- Keep fabric texture clear and matte (NO painted look, NO posterization)
-- Show that the fabric is elastic, recovering from the deformation
-`
-    : ''
-
-  // Detalhe Tecido: close vs zoom recebe orientação diferente.
-  const detalheBlock = p.tipoFoto === 'detalhe-tecido'
-    ? (p.detalheVariant === 'zoom'
-      ? `
-MACRO TEXTURE FOCUS (zoom half):
-- Extreme close-up of the cover fabric texture and stitching
-- Visible weave/knit of the polyester elastane jersey
-- Visible cover seam, elastic edge and stitching detail
-- Fabric tension and elasticity clearly readable
-- Sharp focus on textile details, soft background
-`
-      : `
-HAND PULLING DETAIL (close half):
-- Hands lifting/pulling back the cover, partially revealing the original
-  upholstery underneath — this contrast communicates "before/after"
-- Cover stitching and elastic seam clearly visible on the underside
-- Hand position natural, gesture readable
-- Sharp focus on the fabric-original transition
-`)
-    : ''
-
+  const scenarioBlock = buildScenarioBlock(p.tipoCapa, p.tipoFoto, p.detalheVariant)
   const customBlock = p.customization
-    ? `
-USER CUSTOMIZATION (apply within constraints):
-${p.customization}
-`
+    ? `USER CUSTOMIZATION (apply within the constraints above):\n${p.customization}`
     : ''
+  const footer = `OUTPUT: photorealistic, e-commerce catalog quality, sharp focus.`
 
-  return `${headerCapa} · ${p.tipoFoto} · ${p.movel}
-${sourceBlock}${preserveBlock}${fabricBlock}${ambienteBlock}${elasticoBlock}${detalheBlock}${customBlock}
+  return [header, inputsBlock, scaleBlock, preserveBlock, scenarioBlock, customBlock, footer]
+    .filter(Boolean)
+    .join('\n\n')
+}
 
-OUTPUT: photorealistic, magazine-quality product photo, sharp focus,
-natural lighting consistent with the original scene.`
+export function buildStep2Prompt(p: Step2Params): string {
+  if (p.tipoCapa === 'lisa') return buildStep2PromptLisa(p)
+  return buildStep2PromptPattern(p)
 }

@@ -14,8 +14,8 @@ import { ResultsGrid, type ResultSlot } from './results-grid'
 import type { M1Movel, M1TipoCapa, M1TipoFoto, M1RenderInput } from '@/lib/m1/schema'
 import type { M1Set } from '@/lib/m1/templates'
 
-// Custo por render do Pipeline A (fal.ai Flux Kontext Pro).
-const CUSTO_POR_FOTO_USD = 0.1
+// Custo por render do Pipeline A (nano-banana-2 @ 2K, single-step).
+const CUSTO_POR_FOTO_USD = 0.12
 // A partir desse total, mostra modal de confirmação.
 const LIMIAR_CUSTO_USD = 0.3
 // Worker pool: 2 renders em paralelo, fila pra >2 fotos.

@@ -4,22 +4,22 @@ import path from 'node:path'
 import { put } from '@vercel/blob'
 import { nanoid } from 'nanoid'
 import { brandM1 } from '@/lib/brand/m1.brand'
-import type { M1RenderInput, M1TipoCapa, M1TipoFoto } from './schema'
+import type { M1RenderInput, M1TipoFoto } from './schema'
 import { getTemplate, type M1TemplateSimple } from './templates'
-import { buildStep1Prompt, buildStep2Prompt } from './prompts'
-import { callFluxKontext, callFluxKontextInpaint } from './fal-client'
-import { buildCacheKey, getCachedSwatch, setCachedSwatch } from './cache'
+import { buildStep2Prompt } from './prompts'
+import { callNanoBananaEdit } from './fal-client'
 
-// Pipeline A único — aplica capa no template via inpainting.
-// Subfluxo Capa Lisa: pula Step 1 (sem swatch), Step 2 só com prompt de cor.
+// Pipeline A — aplica capa no template via nano-banana-2 em UM passo.
+// Estampada/Alto Relevo: foto do rolo (referenciaBlobUrl) entra direto como
+// REF-2; sem swatch intermediário (Step 1 flux-pro/kontext desativado).
+// Capa Lisa: sem REF-2; cor HEX descrita no prompt.
 // Detalhe Tecido sofá é orquestrado em render-pipeline-detalhe.ts (split close+zoom);
 // Detalhe Tecido cadeira (simple) usa este pipeline direto.
 
 export type PipelineAOptions = {
-  // Para Detalhe Tecido split: força uso de imagem/mask específicas (close ou zoom).
+  // Para Detalhe Tecido split: força uso de imagem específica (close ou zoom).
   overrideTemplate?: {
     imagePath: string
-    maskPath: string
   }
   // Refina o prompt do Step 2 para a metade close ou zoom do Detalhe Tecido.
   detalheVariant?: 'close' | 'zoom'
@@ -38,22 +38,12 @@ export async function renderPipelineA(
   options: PipelineAOptions = {}
 ): Promise<PipelineAResult> {
   const template = getTemplate(input.movel, input.tipoFoto, input.set)
-  const { imageAbs, maskAbs } = resolveTemplatePaths(template, options)
+  const { imageAbs } = resolveTemplatePaths(template, options)
 
-  const [templateBuffer, maskBuffer] = await Promise.all([
-    readFile(imageAbs),
-    readFile(maskAbs),
-  ])
+  const templateBuffer = await readFile(imageAbs)
 
-  // STEP 1 — capa neutra (swatch). Capa Lisa pula este passo.
-  let swatchBuffer: Buffer | undefined
-  if (input.tipoCapa !== 'lisa') {
-    const step1Start = Date.now()
-    swatchBuffer = await getOrGenerateSwatch(input.referenciaBlobUrl!, input.tipoCapa)
-    console.log(`[M1] Step 1 (swatch) ${Date.now() - step1Start}ms`)
-  }
-
-  // STEP 2 — aplicar capa no template via inpainting.
+  // STEP único — nano-banana-2 com REF-1 = template, REF-2 = foto do rolo.
+  // Capa Lisa: referenciaBlobUrl ausente; prompt traz a cor HEX.
   const step2Prompt = buildStep2Prompt({
     movel: input.movel,
     tipoCapa: input.tipoCapa,
@@ -64,15 +54,14 @@ export async function renderPipelineA(
   })
 
   const step2Start = Date.now()
-  const finalBuffer = await callFluxKontextInpaint({
-    imageBuffer: templateBuffer,
-    maskBuffer,
-    referenceBuffer: swatchBuffer,
+  const finalBuffer = await callNanoBananaEdit({
+    templateBuffer,
+    referenceUrl: input.referenciaBlobUrl,
     prompt: step2Prompt,
   })
-  console.log(`[M1] Step 2 (inpaint) ${Date.now() - step2Start}ms`)
+  console.log(`[M1] Step 2 (nano-banana) ${Date.now() - step2Start}ms`)
 
-  // Resize final.
+  // Resize final (nano-banana retorna 2K → downscale pra 1080 mantém qualidade).
   const { width, height } = options.outputDimensions ?? brandM1.dimensions.final
   const resized = await sharp(finalBuffer)
     .resize(width, height, { fit: 'cover', position: 'center' })
@@ -93,11 +82,10 @@ export async function renderPipelineA(
 function resolveTemplatePaths(
   template: ReturnType<typeof getTemplate>,
   options: PipelineAOptions
-): { imageAbs: string; maskAbs: string } {
+): { imageAbs: string } {
   if (options.overrideTemplate) {
     return {
       imageAbs: path.join(process.cwd(), 'public', options.overrideTemplate.imagePath),
-      maskAbs: path.join(process.cwd(), 'public', options.overrideTemplate.maskPath),
     }
   }
   if (template.variant !== 'simple') {
@@ -108,32 +96,7 @@ function resolveTemplatePaths(
   const simple: M1TemplateSimple = template
   return {
     imageAbs: path.join(process.cwd(), 'public', simple.imagePath),
-    maskAbs: path.join(process.cwd(), 'public', simple.maskPath),
   }
-}
-
-async function getOrGenerateSwatch(
-  referenciaBlobUrl: string,
-  tipoCapa: Exclude<M1TipoCapa, 'lisa'>
-): Promise<Buffer> {
-  const cacheKey = buildCacheKey(referenciaBlobUrl, tipoCapa)
-  const cached = getCachedSwatch(cacheKey)
-  if (cached) {
-    console.log(`[M1] Cache hit — capa neutra reutilizada`)
-    return cached
-  }
-  console.log(`[M1] Cache miss — gerando capa neutra (${tipoCapa})`)
-
-  const referenciaResp = await fetch(referenciaBlobUrl)
-  if (!referenciaResp.ok) throw new Error('Falha ao baixar referência da capa')
-  const referenciaBuffer = Buffer.from(await referenciaResp.arrayBuffer())
-
-  const swatchBuffer = await callFluxKontext({
-    imageBuffer: referenciaBuffer,
-    prompt: buildStep1Prompt(tipoCapa),
-  })
-  setCachedSwatch(cacheKey, swatchBuffer)
-  return swatchBuffer
 }
 
 // Wrapper conveniente: Pipeline A produzindo URL final (uso direto pra

@@ -17,7 +17,7 @@ export const M1_TOOLTIPS = {
   set:
     'Set é a estética dos 4 cenários do produto (capa, ambiente, elástico, detalhe). O Set escolhido vale para todos os tipos de foto deste móvel — mantém coerência visual entre as fotos.',
   uploadCapa:
-    'Foto pronta da capa, usada apenas para ajuste e padronização da estampa/cor. PNG ou JPEG, até 10MB. Quanto melhor a foto, mais fiel o resultado.',
+    'Foto plana do rolo de tecido (estampa esticada em fundo neutro). Mostre 10–20 repetições do padrão. Câmera perpendicular, sem flash, iluminação difusa.',
   corLisa:
     'Cor exata da capa em hex (#RRGGBB). Use o seletor ou digite o código direto.',
   customization:
