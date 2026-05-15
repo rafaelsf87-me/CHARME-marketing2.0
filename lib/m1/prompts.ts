@@ -137,10 +137,23 @@ function buildScenarioBlock(
   }
 
   if (tipoFoto === 'elastico') {
-    return `ELASTICITY DEMONSTRATION:
+    const elasticityBlock = `ELASTICITY DEMONSTRATION:
 - REF-1 shows a hand stretching/pulling the cover fabric — preserve this hand pose exactly.
 - Render the fabric with visible stretch deformation at the pulled area: radial pattern distortion, tension lines, stress folds.
 - The pattern stretches and slightly elongates with the fabric but remains recognizable.`
+
+    // Elástico é close-up: o sofá inteiro não aparece, então não há ratio
+    // template↔REF-2 pra calcular. Trava escala diretamente em REF-2.
+    // Lisa pula porque não tem REF-2 (apenas HEX no prompt).
+    if (tipoCapa === 'lisa') return elasticityBlock
+    return `${elasticityBlock}
+
+PATTERN SCALE MATCH (CRITICAL):
+- Match the pattern scale EXACTLY as seen in REF-2's fabric.
+- Pattern unit size in the output must be IDENTICAL to REF-2.
+- DO NOT enlarge the pattern units.
+- DO NOT shrink the pattern units.
+- Pattern density (units per visible area) must MATCH REF-2.`
   }
 
   if (tipoFoto === 'detalhe-tecido') {
@@ -155,7 +168,13 @@ function buildScenarioBlock(
 - Hands lifting/pulling back the cover, partially revealing the original upholstery underneath.
 - Preserve the exact hand position and pose from REF-1.
 - Cover stitching and elastic seam clearly visible on the underside.
-- Sharp focus on the fabric-original transition.`
+- Sharp focus on the fabric-original transition.
+
+SINGLE FURNITURE ONLY (CRITICAL):
+- The image shows ONLY ONE piece of furniture being covered with a slipcover.
+- DO NOT add any second furniture, sofa, chair, or piece of upholstery below, beside, or behind the main subject.
+- The space outside the main furniture must show ONLY floor, rug, wall, or empty space.
+- No phantom furniture parts. No partial sofa surfaces. No additional cushions on separate furniture.`
   }
 
   // Foto Capa (default): realismo extra por tipo de capa.
