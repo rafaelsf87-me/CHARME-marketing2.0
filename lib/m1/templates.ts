@@ -118,18 +118,45 @@ function split(
   }
 }
 
+// Vestindo a Capa reusa o image-close.png de sofa-detalhe-1 como REF-1 pra
+// fornecer ao modelo um cenário de "ação no tecido" (close de mãos+tecido)
+// que ele extrapola — junto com o bloco DRESSING ACTION + STRICT — pra gerar
+// o sofá 3-lugares em ângulo dramático sendo vestido. Mask e thumbnail
+// herdadas do mesmo template detalhe-1. Apenas sofá; sem Set 2 por ora.
+function sofaVestindoCapa1(): M1TemplateSimple {
+  const dims = PHYSICAL_DEFAULTS.sofa
+  return {
+    variant: 'simple',
+    id: 'sofa-vestindo-capa-1',
+    movel: 'sofa',
+    tipoFoto: 'vestindo-capa',
+    set: 1,
+    ordem: 1,
+    nome: 'Sofá Vestindo a Capa 1',
+    descricao: 'Mão estendendo a capa parcialmente aplicada sobre o sofá 3-lugares',
+    imagePath: '/templates/m1/sofa-detalhe-1/image-close.png',
+    maskPath: '/templates/m1/sofa-detalhe-1/mask-close.png',
+    thumbnailPath: '/templates/m1/sofa-detalhe-1/thumbnail.webp',
+    physicalWidthCm: dims.widthCm,
+    physicalInnerWidthCm: dims.innerWidthCm,
+    physicalHeightCm: dims.heightCm,
+  }
+}
+
 export const M1_TEMPLATES: M1Template[] = [
   // ─── Sofá · Set 1 ────────────────────────────
   simple('sofa-capa-1',     'sofa', 'capa',     1, 1, 'Sofá Capa 1',     'Sala moderna minimalista — quadro geométrico, planta, prateleira'),
   simple('sofa-ambiente-1', 'sofa', 'ambiente', 1, 1, 'Sofá Ambiente 1', '2 sofás (2+3 lugares) — sala contemporânea com espelho e planta'),
   simple('sofa-elastico-1', 'sofa', 'elastico', 1, 1, 'Sofá Elástico 1', 'Close de mão esticando a capa no braço do sofá'),
   split( 'sofa-detalhe-1',  'sofa',             1, 1, 'Sofá Detalhe 1',  'Split close+zoom — mãos puxando a capa e macro da costura'),
+  sofaVestindoCapa1(),
 
   // ─── Sofá · Set 2 ────────────────────────────
   simple('sofa-capa-2',     'sofa', 'capa',     2, 2, 'Sofá Capa 2',     'Sala boho contemporânea — quadro abstrato, abajur dourado'),
   simple('sofa-ambiente-2', 'sofa', 'ambiente', 2, 2, 'Sofá Ambiente 2', '2 sofás (2+3 lugares) — sala clean moderna com cortina padronizada'),
   simple('sofa-elastico-2', 'sofa', 'elastico', 2, 2, 'Sofá Elástico 2', 'Close de mão esticando a capa no encosto do sofá'),
   // (Sofá Detalhe Set 2 não existe — fallback para Set 1 documentado em getTemplate.)
+  // (Sofá Vestindo Set 2 não existe — fallback para Set 1 documentado em getTemplate.)
 
   // ─── Cadeira · Set 1 ─────────────────────────
   simple('cadeira-capa-1',     'cadeira', 'capa',           1, 1, 'Cadeira Capa 1',     'Sala de leitura — cortina bege, planta, banco dourado'),
@@ -167,6 +194,14 @@ export function getTemplate(
   if (movel === 'sofa' && tipoFoto === 'detalhe-tecido') {
     const fallback = M1_TEMPLATES.find(
       (t) => t.movel === 'sofa' && t.tipoFoto === 'detalhe-tecido' && t.set === 1
+    )
+    if (fallback) return fallback
+  }
+
+  // Fallback: Sofá Vestindo a Capa Set 2 → Set 1 (Set 2 não existe por ora).
+  if (movel === 'sofa' && tipoFoto === 'vestindo-capa') {
+    const fallback = M1_TEMPLATES.find(
+      (t) => t.movel === 'sofa' && t.tipoFoto === 'vestindo-capa' && t.set === 1
     )
     if (fallback) return fallback
   }

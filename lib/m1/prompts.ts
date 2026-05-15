@@ -118,6 +118,10 @@ function furnitureNames(movel: M1Movel, tipoFoto: M1TipoFoto): FurnitureNames {
         : 'dining chairs (6 chairs around the table)',
     }
   }
+  // Vestindo a Capa é sempre sofá (validado no schema).
+  if (tipoFoto === 'vestindo-capa') {
+    return { single: '3-seater sofa', plural: '3-seater sofa' }
+  }
   return { single, plural: single }
 }
 
@@ -154,6 +158,34 @@ PATTERN SCALE MATCH (CRITICAL):
 - DO NOT enlarge the pattern units.
 - DO NOT shrink the pattern units.
 - Pattern density (units per visible area) must MATCH REF-2.`
+  }
+
+  if (tipoFoto === 'vestindo-capa') {
+    return `DRESSING ACTION (this image type only):
+- The output must show a 3-seater sofa, with proper proportions and geometry.
+- A HUMAN HAND must be visible on the right side of the frame, mid-action: pulling the slipcover into place over the sofa.
+- One small section near the hand shows the cover being adjusted (mid-motion, naturally tucked or held by the fingers).
+- The scene should feel candid, slightly amateur — like a real customer photo, NOT a polished studio shoot.
+- Camera angle: side / three-quarter dramatic angle (NOT the polished frontal catalog shot).
+- Background: simple wall, soft natural light. No decoration. No second furniture.
+
+COVERAGE STATE (CRITICAL):
+- The slipcover is PARTIALLY APPLIED — approximately 60-70% of the sofa is covered with the patterned fabric.
+- A VISIBLE SECTION of the bare gray sofa underneath MUST remain uncovered (typically the right armrest or one cushion area near the hand).
+- The uncovered section must clearly contrast with the patterned area — the original gray upholstery is visible.
+- DO NOT cover the entire sofa.
+- DO NOT make the bare section disappear under shadow or framing.
+
+SINGLE FURNITURE ONLY (CRITICAL):
+- The image shows ONLY ONE piece of furniture being covered with a slipcover.
+- DO NOT add any second furniture, sofa, chair, or piece of upholstery below, beside, or behind the main subject.
+- The space outside the main furniture must show ONLY floor, rug, wall, or empty space.
+- No phantom furniture parts. No partial sofa surfaces. No additional cushions on separate furniture.
+
+STRICT — SOFA GEOMETRY:
+- The sofa must be a 3-seater with realistic proportions — armrests, backrest, base, legs.
+- DO NOT invent additional furniture pieces.
+- DO NOT modify the sofa's size or shape into anything other than a standard 3-seater.`
   }
 
   if (tipoFoto === 'detalhe-tecido') {
@@ -367,10 +399,10 @@ function buildDimensionsBlock(
   const rawColumns = Math.round(REF_SOFA_BASELINE_COLUMNS * (innerRatio || ratio))
   const targetColumns = Math.max(6, Math.min(7, rawColumns))
 
-  // HORIZONTAL PATTERN COLUMNS só faz sentido em Foto Capa (1 sofá completo
-  // visível). Em Ambiente, múltiplos móveis distantes tornam a contagem
-  // ambígua — mantemos só o ratio de dimensões.
-  const columnsBlock = hasInner && tipoFoto === 'capa'
+  // HORIZONTAL PATTERN COLUMNS só faz sentido em Foto Capa e Vestindo a Capa
+  // (1 sofá completo visível em ambos). Em Ambiente, múltiplos móveis
+  // distantes tornam a contagem ambígua — mantemos só o ratio de dimensões.
+  const columnsBlock = hasInner && (tipoFoto === 'capa' || tipoFoto === 'vestindo-capa')
     ? `
 
 HORIZONTAL PATTERN COLUMNS (CRITICAL):

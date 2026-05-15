@@ -20,7 +20,7 @@
  * Custo: ~$0.12/run (nano-banana 2K, single-step).
  */
 
-import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, readdir, stat, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { fal } from '@fal-ai/client'
 import { renderPipelineA } from '@/lib/m1/render-pipeline-a'
@@ -64,6 +64,24 @@ async function resolveToUrl(arg: string, label: string): Promise<string> {
 
 function isEmptySlot(arg: string | undefined): boolean {
   return !arg || arg === '' || arg === '-'
+}
+
+// Mantém só os N arquivos mais recentes em tmp/smoke/. Política compartilhada
+// com smoke-m1-detalhe.ts pra evitar acúmulo após várias iterações.
+async function pruneSmokeDir(outDir: string, keep = 4): Promise<void> {
+  const names = await readdir(outDir).catch(() => [] as string[])
+  if (names.length <= keep) return
+  const files = await Promise.all(
+    names.map(async (name) => {
+      const full = path.join(outDir, name)
+      const s = await stat(full)
+      return { full, mtime: s.mtimeMs }
+    })
+  )
+  files.sort((a, b) => b.mtime - a.mtime)
+  const toDelete = files.slice(keep)
+  await Promise.all(toDelete.map((f) => unlink(f.full)))
+  console.log(`[cleanup] removidos ${toDelete.length} arquivo(s) antigo(s); mantidos ${keep}.`)
 }
 
 async function main() {
@@ -120,6 +138,8 @@ async function main() {
     `m1-${Date.now()}-${movel}-${tipoCapa}-${tipoFoto}-set${set}-${tag}.png`
   )
   await writeFile(outPath, result.buffer)
+
+  await pruneSmokeDir(outDir)
 
   console.log('───────────────────────────────────────────────')
   console.log(`[3/3] Concluído em ${took}ms`)

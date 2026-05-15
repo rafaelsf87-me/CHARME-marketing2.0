@@ -19,6 +19,9 @@ const LABELS: Record<M1TipoFoto, string> = {
   ambiente: 'Foto Ambiente',
   elastico: 'Foto Elástico',
   'detalhe-tecido': 'Detalhe do Tecido',
+  // Vestindo a Capa: backend pronto (em construção, sem checkbox na UI).
+  // Ver DIVIDAS_PROJETO.md REF-005.
+  'vestindo-capa': 'Vestindo a Capa',
 }
 
 interface ResultsGridProps {

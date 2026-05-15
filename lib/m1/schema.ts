@@ -6,10 +6,12 @@ export type M1Movel = (typeof M1_MOVEIS)[number]
 export const M1_TIPOS_CAPA = ['estampada', 'lisa', 'alto-relevo'] as const
 export type M1TipoCapa = (typeof M1_TIPOS_CAPA)[number]
 
-// Todos os 4 tipos usam Pipeline A com template + cenário (v1.2).
+// Todos os 5 tipos usam Pipeline A com template + cenário (v1.5).
 // Capa Lisa: subfluxo pula Step 1 (sem ref, prompt com cor).
 // Detalhe Tecido: sofá usa split (compositing close+zoom), cadeira usa simple.
-export const M1_TIPOS_FOTO = ['capa', 'ambiente', 'elastico', 'detalhe-tecido'] as const
+// Vestindo a Capa: apenas sofá; reusa template sofa-capa-1 (mesma geometria);
+// prompt adiciona DRESSING ACTION (mão estendendo capa parcialmente aplicada).
+export const M1_TIPOS_FOTO = ['capa', 'ambiente', 'elastico', 'detalhe-tecido', 'vestindo-capa'] as const
 export type M1TipoFoto = (typeof M1_TIPOS_FOTO)[number]
 
 // Regex hex #RGB ou #RRGGBB (case-insensitive).
@@ -33,6 +35,14 @@ export const M1RenderSchema = z
     customization: z.string().max(500).optional(),
   })
   .superRefine((data, ctx) => {
+    // Vestindo a Capa: apenas sofá (não cadeira).
+    if (data.tipoFoto === 'vestindo-capa' && data.movel !== 'sofa') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['tipoFoto'],
+        message: 'Vestindo a Capa só está disponível para sofá',
+      })
+    }
     // Capa Lisa: corHex obrigatório, fotos opcionais/ignoradas.
     if (data.tipoCapa === 'lisa') {
       if (!data.corHex) {

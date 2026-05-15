@@ -62,6 +62,22 @@ Ideias que surgiram mas estão **fora do escopo atual**. Não implementar agora.
 
 Código que funciona mas precisa ser melhorado antes da próxima feature relacionada.
 
+### [REF-005] Vestindo a Capa não converge — modo "em construção" no backend, oculto na UI
+- **Onde:** `lib/m1/prompts.ts` (branch `vestindo-capa` em `buildScenarioBlock`), `lib/m1/templates.ts` (`sofaVestindoCapa1`), `lib/m1/schema.ts` (`M1_TIPOS_FOTO`).
+- **Descrição:** tipoFoto `vestindo-capa` implementado com template-base reusando `sofa-detalhe-1/image-close.png` + prompt com `DRESSING ACTION` + `COVERAGE STATE` (60-70% coverage com seção bare visível) + `SINGLE FURNITURE ONLY`. Múltiplos smokes da mesma config produziram outputs muito diferentes: uma run mostrou contraste covered/uncovered + mão puxando (aceitável), outra degenerou pra sofá 100% coberto sem mão (estilo catalog). Modelo nano-banana é não-determinístico nesse caso de template macro extrapolando 3-lug. Critérios "saco retangular descendo top-down + assento exposto cinza + mão puxando borda da frente" não foram codificados — bloco atual só direciona "right armrest or one cushion area".
+- **Estado:** backend (schema + templates + prompts) committado e funcional via API/scripts. UI (`app/imagens/m1-vitrine/_components/step-tipo-foto.tsx`) NÃO expõe checkbox — feature invisível pro usuário final.
+- **Bloqueia:** nada agora. Outros 4 tipos de foto seguem em prod.
+- **Próximo nível:** (a) reescrever bloco como `COVERAGE MECHANICS` real ("rectangular bag-like cover descending top-down, NOT yet tucked, back/seat fully exposed gray, hand pulling front edge downward"); (b) template-base dedicado fotografado com pose top-down; (c) pipeline alternativo (composite manual via Sharp com mask gradient).
+- **Esforço estimado:** alto (foto novo template OU pipeline composite); médio (só iterar prompt).
+- **Identificado em:** Sessão M1 V1, 17/05/2026
+
+### [REF-004] Refinamento de fabric realism (tecido aveludado vs poliéster-elastano)
+- **Onde:** `lib/m1/prompts.ts` (bloco FABRIC CHARACTERISTICS)
+- **Descrição:** outputs IA em close-up renderizam tecido com aparência de "algodão premium aveludado", quando o produto real é poliéster-elastano stretch jersey (sutil brilho satinado, fino, leve). Tentativa de adicionar bloco FABRIC CHARACTERISTICS (sessão 17/05/2026) causou 3 regressões: framing wide no Detalhe Tecido close+zoom (mostrou sofá inteiro em vez de macro), encolhimento do padrão no Elástico (estampa shrinked ~50%). Bloco revertido. Próxima tentativa requer abordagem diferente — provavelmente prompt cirúrgico com safety guard explícito ou pós-processamento de imagem.
+- **Bloqueia:** nada agora. Qualidade visual atual é aceitável.
+- **Esforço estimado:** médio
+- **Identificado em:** Sessão M1 V1, 17/05/2026
+
 ### [REF-003] Estampa renderizada ~15–25% maior que ideal — platô de prompt-engineering atingido (M1 Pipeline A2)
 - **Onde:** `lib/m1/prompts.ts` (`buildStep2PromptPattern` + `buildDimensionsBlock`).
 - **Por que refatorar:** após 5 iterações (PHYSICAL SCALE LAW → PATTERN COUNT → PHYSICAL DIMENSIONS + targetTileCount → HORIZONTAL PATTERN COLUMNS clamp [6,7] + `thinking_level: 'high'`), o nano-banana converge consistentemente em ~5 colunas quando o alvo dimensional é 7. Pressão maior no prompt se mostrou contraprodutiva (modelo comprime/fragmenta o padrão ou sobre-corrige adicionando almofadas decorativas).

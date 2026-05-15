@@ -17,7 +17,7 @@
  * Custo: ~$0.24/run (nano-banana 2K × 2 calls).
  */
 
-import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, readdir, stat, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import sharp from 'sharp'
 import { fal } from '@fal-ai/client'
@@ -48,6 +48,24 @@ async function resolveToUrl(arg: string, label: string): Promise<string> {
 
 function isEmptySlot(arg: string | undefined): boolean {
   return !arg || arg === '' || arg === '-'
+}
+
+// Mantém só os N arquivos mais recentes em tmp/smoke/. Política compartilhada
+// com smoke-m1-nano.ts pra evitar acúmulo após várias iterações.
+async function pruneSmokeDir(outDir: string, keep = 4): Promise<void> {
+  const names = await readdir(outDir).catch(() => [] as string[])
+  if (names.length <= keep) return
+  const files = await Promise.all(
+    names.map(async (name) => {
+      const full = path.join(outDir, name)
+      const s = await stat(full)
+      return { full, mtime: s.mtimeMs }
+    })
+  )
+  files.sort((a, b) => b.mtime - a.mtime)
+  const toDelete = files.slice(keep)
+  await Promise.all(toDelete.map((f) => unlink(f.full)))
+  console.log(`[cleanup] removidos ${toDelete.length} arquivo(s) antigo(s); mantidos ${keep}.`)
 }
 
 async function cropCenter(
@@ -155,6 +173,8 @@ async function main() {
   await writeFile(closePath, closeResult.buffer)
   await writeFile(zoomPath, zoomResult.buffer)
   await writeFile(splitPath, composite)
+
+  await pruneSmokeDir(outDir)
 
   console.log('───────────────────────────────────────────────────')
   console.log(`[4/4] Concluído em ${took}ms`)
