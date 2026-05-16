@@ -1,9 +1,9 @@
 # SPEC.md
 ## Marketing IA Charme 2.0 — Especificação Funcional
 ### Módulo: Criação de Imagens (6 Submódulos + Template Creator)
-**Versão:** 1.6 (M2 Fase 1 fechada · T1 Atual_Maio26 em prod · M6 placeholder)
+**Versão:** 1.7 (M2 V1 fechado · T1 Atual_Maio26 em prod · T2/T3 placeholder oficial · investigação modelos IA encerrada)
 **Data:** 18/05/2026
-**Status:** M1 V1 em prod (a0360ba) · M2 T1 em prod (9c32313) · M3/M4/M5/M6/Template Creator pendentes
+**Status:** M1 V1 em prod (a0360ba) · M2 T1 em prod (d25a255) · M3/M4/M5/M6/Template Creator pendentes
 
 ---
 
@@ -194,14 +194,14 @@ O M2 abandonou o "compositing puro" da SPEC ≤v1.5 e adotou estrutura de 3 temp
 | Template | Slug | Pipeline | Status |
 |---|---|---|---|
 | **Atual_Maio26** | `atual-maio26` | `fal-prompt-puro` via gpt-image-1 tier high | **Ativo (em prod)** |
-| **Atual_Maio26_New** | `atual-maio26-new` | `hibrido-compositing` (Sharp/Satori + IA pontual) | Em construção (Fase 3) |
-| **Novo_Teste1** | `novo-teste-1` | A definir após smoke T1+T2 | A definir (Fase 5) |
+| **Atual_Maio26_New** | `atual-maio26-new` | `hibrido-compositing` (Sharp/Satori + IA pontual) | **Placeholder oficial** — em construção (Fase 2 wireframes Opus + Fase 3 implementação Code) |
+| **Novo_Teste1** | `novo-teste-1` | A definir após T2 ativo | **Placeholder oficial** — a definir (Fase 5) |
 
 **T1 (Atual_Maio26)** = réplica imperfeita do workflow ChatGPT Plus que a equipe usa hoje. Composição inteira (layout, tipografia, footer) fica por conta do gpt-image-1. Aceita variabilidade como trade-off (ver [LIMIT-M2-001] em DIVIDAS).
 
-**T2 (Atual_Maio26_New, Fase 3)** = evolução com controle pixel-preciso via Sharp/Satori. IA fica restrita a gerar elementos isolados (produto, atriz, ícones); layout + tipografia + footer 100% determinísticos.
+**T2 (Atual_Maio26_New)** = evolução com controle pixel-preciso via Sharp/Satori. IA fica restrita a gerar elementos isolados (produto, atriz, ícones); layout + tipografia + footer 100% determinísticos. Direção **confirmada** após investigação [INV-M2-001]: nenhum modelo IA público (Recraft V3, Flux Pro 1.1 Ultra, Ideogram V3) substitui gpt-image-1 high em fidelidade de texto pt-BR — diferenciação T2 vs T1 não pode vir de troca de modelo. Pipeline Híbrido é a única solução estrutural viável. Ver [DEC-M2-004].
 
-**T3 (Novo_Teste1, Fase 5)** = direção a definir.
+**T3 (Novo_Teste1, Fase 5)** = direção a definir após T2 ativo.
 
 ### Fluxo de uso (T1 em prod)
 
@@ -622,6 +622,13 @@ PASSO 5: Preview + [Salvar como Custom] ou [Refinar] ou [Descartar]
 ---
 
 ## Changelog
+
+### v1.7 — 18/05/2026 (M2 V1 fechado · investigação modelos IA T2 encerrada · T2/T3 placeholder oficial)
+- **Investigação de modelos IA alternativos pro T2 encerrada** (ver [INV-M2-001] em DIVIDAS). Três modelos testados via FAL — Recraft V3 ($0.04), Flux Pro 1.1 Ultra ($0.06), Ideogram V3 QUALITY ($0.10) — todos reprovaram o critério crítico de fidelidade de texto pt-BR. Custo total investigação: $0.32.
+- **Decisão fechada:** T2 oficialmente placeholder até Fase 2 (wireframes Opus) + Fase 3 (implementação Code). Direção é **Pipeline Híbrido** (Sharp/Satori controla 100% do texto + IA gera apenas elementos visuais isolados) — única forma estrutural de garantir tipografia pt-BR pixel-perfeita e diferenciar T2 do T1. Ver [DEC-M2-004].
+- **gpt-image-1 high** confirmado como único modelo IA público com tipografia pt-BR aceitável. T1 permanece com este modelo.
+- **T3 Novo_Teste1** permanece placeholder oficial — direção será definida após T2 ativo.
+- **M2 V1 entregue** com T1 ativo, hotfixes v6/v8 aplicados, BUG-M2-001 conhecido (workaround manual), LIMIT-M2-001 documentado.
 
 ### v1.6 — 18/05/2026 (M2 Fase 1 fechada · T1 em prod · M6 placeholder)
 - **Header version**: salto de v0.4 → v1.6 (header estava desatualizado; corrige inconsistência).

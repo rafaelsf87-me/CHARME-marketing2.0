@@ -188,3 +188,64 @@ scripts/
 ---
 
 **FIM HANDOFF M2 FASE 1.**
+
+---
+
+## Sessão final M2 V1 (18/05/2026)
+
+Esta seção fecha o ciclo M2 V1 — entrega completa de Fase 1 + hotfixes + investigação T2.
+
+### Hotfixes aplicados pós-Fase 1
+
+- **v6** (commits `9d469a3`, `136d32a`): reference image gradient base como anchor de fundo + safe area 60px + UI fixes (modo geração `w-fit`, descrição truncada, preview pós-geração, pipeline T1 migrado pra edit-image sempre). Ver [FIX-M2-002].
+- **v8** (commits `fd406e9`, `d25a255`): revisor de fundo via retry automático (`background-check.ts` + `generateWithBgCheck`, max 2 attempts) + remoção da estratégia de reference image (causava lavagem do gradient) + mudanças UX J/K (CTA dentro do copy do último slide, slides collapsed por default com badges). Ver [FIX-M2-003].
+
+### Investigação de modelos IA pro T2 (encerrada)
+
+3 modelos testados via FAL — todos reprovaram fidelidade de texto pt-BR. Detalhes completos em [INV-M2-001]:
+- **Recraft V3** ($0.04): brand ignorado, texto destruído, hard limit 1000 chars no prompt
+- **Flux Pro 1.1 Ultra** ($0.06 + 2 retries falsos-NSFW): brand OK, texto alucinado, inventou domínio fake
+- **Ideogram V3 QUALITY** ($0.10): brand OK, mas renderizou trechos do **prompt** em vez do copy
+
+**Custo investigação:** $0.32. **Conclusão:** `gpt-image-1 high` é o único modelo IA público com tipografia pt-BR aceitável. **Decisão:** T2 oficialmente placeholder até Pipeline Híbrido (ver [DEC-M2-004]).
+
+### Estado final dos templates M2
+
+| Template | Status (código) | Status (produção) |
+|---|---|---|
+| T1 `atual-maio26` | `'ativo'` | ✅ Em prod (commit `d25a255`) |
+| T2 `atual-maio26-new` | `'em-construcao'` | ⏳ Placeholder oficial — aguarda Fase 2 (wireframes Opus) + Fase 3 (implementação Code) |
+| T3 `novo-teste-1` | `'a-definir'` | ⏳ Placeholder oficial — a definir após T2 ativo |
+
+### Custo total da sessão M2
+
+- T1 smokes Fase 1 (validação pré-prod): ~$0.95
+- Investigação T2 (3 modelos): ~$0.32
+- **Total acumulado:** ~$1.27
+
+### Bugs conhecidos / limitações aceitas
+
+- **[BUG-M2-001]** background-check.ts não calibrado corretamente (smoke v8 saiu com fundo preto e validador aceitou). Workaround: equipe regenera manualmente quando fundo problemático aparece. Resolução estrutural prevista no T2 (Pipeline Híbrido — Sharp controla background determinístico).
+- **[LIMIT-M2-001]** T1 herda limitações inerentes do gpt-image-1: variabilidade tipográfica, continuidade entre slides do carrossel, fundo ocasionalmente fora do gradient apesar do enforcement. Aceito como trade-off; resolução estrutural prevista no T2.
+
+### Pendências (próximas sessões)
+
+1. **Validação manual prod T1** — Rafael, amanhã (19/05/2026).
+2. **Fase 2 (próxima sessão Opus):** wireframes T2 com qualidade visual real (SVG filters avançados — efeito metálico, gradient nebula, drop shadows, sparkles 3D). Não usar mockup amador.
+3. **Fase 3 (sessão futura Code):** implementação T2 após aprovação dos wireframes.
+4. **Fase 5:** T3 — direção a definir após T2 ativo.
+
+### Commits da sessão M2 (cronológico)
+
+```
+9c32313 feat(m2): fase 1 fechada — T1 prompt v5 (anti-handle + bg enforcement + hierarquia strict)
+62e55a7 feat(m2): smoke carrossel v1 (3 slides paralelo)
+f783594 fix(m2): hotfix UX carrossel — 1 imagem + prompt por slide + slides expanded + reorder + rename
+9d469a3 feat(m2): hotfix v2 — bg ref-image + safe area + UI fixes (toggle width + template 1-line + preview after gen)
+136d32a docs(m2): registra hotfix v6 em DIVIDAS
+fd406e9 feat(m2): hotfix v8 — revisor de fundo via retry + remove ref image (compensa lavagem do gpt-image-1)
+d25a255 docs(m2): registra hotfix v8 + BUG-M2-001 (validador de fundo não calibrado)
+<hash-fechamento-v1> docs(m2): fecha v1 — investigação T2 concluída (3 modelos testados, todos falham em pt-BR), T2 oficialmente placeholder até Pipeline Híbrido Fase 2/3
+```
+
+**FIM SESSÃO M2 V1.**

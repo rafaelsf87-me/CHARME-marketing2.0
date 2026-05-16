@@ -1,6 +1,6 @@
 # ARCHITECTURE.md
 ## Marketing IA Charme 2.0 — Módulo: Criação de Imagens
-**Versão:** 0.8 (M2 Fase 1 fechada · T1 fal-prompt-puro · M6 placeholder)
+**Versão:** 0.9 (M2 V1 fechado · T1 fal-prompt-puro · background-check no tree · M6 placeholder)
 **Data:** 18/05/2026
 **Status:** M1 V1 em prod · M2 T1 em prod (9c32313) · M3/M4/M5/M6/Template Creator pendentes
 
@@ -191,6 +191,7 @@ marketing-ia-charme/
 │   │   ├── schema.ts                 # Zod: discriminatedUnion imagem-unica | carrossel
 │   │   ├── fal-client.ts             # Wrapper gpt-image-1 text-to-image / edit-image
 │   │   ├── post-process.ts           # Sharp resize 1024×1536 → 1080×1350
+│   │   ├── background-check.ts       # Hotfix v8 — revisor HSL de fundo + retry (ver BUG-M2-001)
 │   │   ├── footer-gen.ts             # Footer overlay (T2/T3 only, inativo no T1)
 │   │   ├── render.ts                 # Orquestrador renderM2 (paralelo via Promise.all)
 │   │   └── templates/
@@ -532,6 +533,11 @@ Dois componentes globais de texto (usados em M2, M3, M4, M5 — não em M1):
 ---
 
 ## 14. Changelog
+
+### v0.9 — 18/05/2026 (M2 V1 fechado · background-check no tree)
+- **`lib/m2/background-check.ts`** adicionado ao tree (hotfix v8 — revisor HSL de fundo + retry wrapper `generateWithBgCheck`). Validador conhecidamente descalibrado: ver [BUG-M2-001] em DIVIDAS.
+- **Investigação de modelos IA pro T2 encerrada** (ver [INV-M2-001]): Recraft V3, Flux Pro 1.1 Ultra, Ideogram V3 — todos reprovados em fidelidade de texto pt-BR. T2 direção arquitetural **confirmada** como Pipeline Híbrido (Sharp/Satori texto + IA elementos visuais). Sem impacto em código atual — T2 permanece placeholder.
+- **Sem outras mudanças estruturais.** M2 V1 entregue.
 
 ### v0.8 — 18/05/2026 (M2 Fase 1 fechada · T1 em prod · M6 placeholder)
 - **M2 estrutura por-template:** abandonado "compositing puro" da SPEC ≤v1.5. Adotada estrutura híbrida com 3 templates independentes em `lib/m2/templates/`, cada um carregando seu próprio `falConfig` + `buildPrompt`.

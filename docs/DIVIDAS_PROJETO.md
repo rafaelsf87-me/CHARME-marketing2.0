@@ -206,6 +206,31 @@ Pontos onde uma decisão de produto é necessária antes de avançar.
 
 Quando uma dívida é resolvida ou descartada, mover para cá com nota curta. Manter os últimos 20 itens, depois limpar.
 
+### [INV-M2-001] Investigação de modelos IA alternativos pro T2 — RESOLVIDA em 18/05/2026
+- **Hipótese inicial:** trocar `gpt-image-1` por modelo "melhor em design" desbloquearia visual T2 sem mudar pipeline.
+- **3 modelos testados via FAL** (script `scripts/smoke-m2-t2-comparativo.ts`, deletado no fechamento V1):
+  - **Recraft V3** (`fal-ai/recraft-v3`, style `digital_illustration/2d_art_poster`, `image_size: {width:1080, height:1350}`, $0.04): brand identity ignorada (preset dominou e gerou look vintage circus marrom/bege/vermelho), texto pt-BR totalmente destruído ("Esclher", "Una", "Capa Elastica" sem acento, "SOFA" sem acento, "Mnutos", "27 Tecido" alucinatório). Hard limit de 1000 chars no prompt forçou cortes agressivos.
+  - **Flux Pro 1.1 Ultra** (`fal-ai/flux-pro/v1.1-ultra`, `aspect_ratio: '3:4'` — enum não tem 4:5, $0.06 +2 retries falsos-NSFW): brand gradient cyan→roxo OK, mas texto totalmente alucinado ("BEEN NOME ANCUTURE + ELSS FREM", "BODY VICAN 508EFFF"), inventou domínio fake ("DFEARNFLOOKS.COM") apesar do bloco `NO BRAND ELEMENTS`. NSFW classifier disparou falso-positivo no copy português ("Veste o sofá... sem precisar tirar nada") — não há flag pra desligar, só `safety_tolerance:'6'` + `raw:true` + suavizar linguagem cinemática burlou.
+  - **Ideogram V3 QUALITY** (`fal-ai/ideogram/v3`, `style: DESIGN`, `rendering_speed: QUALITY`, `expand_prompt: false`, $0.10): brand gradient OK, hierarquia tipográfica OK, mas modelo **leu o prompt** em vez do copy — renderizou "Home Textiles" (do "home textiles brand"), "MontSeerat Bold" (do "Montserrat Bold"), "#50FEFFD" (tentou renderizar hex codes), "Bradian" (de "Brazilian"), "Slasct CoUFFFF". Zero renderização do copy real. Falha catastrófica de leitura.
+- **Custo total da investigação:** $0.32 ($0.04 Recraft + $0.18 Flux 3 chamadas com retries + $0.10 Ideogram).
+- **Conclusão:** `gpt-image-1 high` é o único modelo IA público com tipografia pt-BR confiável. Os três modelos testados são state-of-the-art em design genérico mas falham em renderizar texto pt-BR fiel (acentos, sem alucinação de palavras, sem invenção de marcas).
+- **Decisão estrutural:** T2 NÃO pode ser diferenciado via troca de modelo. Única solução viável = **Pipeline Híbrido** (Sharp/Satori texto + IA elementos visuais isolados). T2 fica placeholder oficial até Fase 2 (wireframes Opus) + Fase 3 (implementação Code). Ver [DEC-M2-004].
+- Identificado em Sessão M2 V1 fechamento, 18/05/2026.
+
+### [DEC-M2-004] T2 (Atual_Maio26_New) — direção confirmada como Pipeline Híbrido pós-investigação — RESOLVIDA em 18/05/2026
+- **Pré-investigação (Sessão M2 Fase 1):** direção inicial era Pipeline B Híbrido Sharp/Satori + IA pontual pra PNGs cutout — assumida como uma das opções, não confirmada como única.
+- **Pós-investigação ([INV-M2-001]):** confirmado que Pipeline Híbrido é a **única direção viável** porque nenhum modelo IA público (testados Recraft V3, Flux Pro 1.1 Ultra, Ideogram V3) substitui `gpt-image-1` em fidelidade de texto pt-BR. Diferenciação T2 vs T1 não pode vir de troca de modelo.
+- **Arquitetura T2 fechada:**
+  - **Texto:** 100% determinístico via Satori (Montserrat real, acentos pt-BR garantidos, hierarquia tipográfica pixel-perfeita).
+  - **Background gradient:** Sharp sintético (sempre controlado, sem variabilidade — resolve [LIMIT-M2-001] e [BUG-M2-001] estruturalmente).
+  - **Layout:** componente React fixo (continuidade automática entre slides do carrossel).
+  - **Imagem hero:** user upload **obrigatório** com fundo removido via `fal-ai/imageutils/rembg` (~$0.005/img).
+  - **Custo por geração:** ~$0.005 (97% mais barato que T1 $0.19).
+- **Pendências de implementação:**
+  - **Fase 2** (próxima sessão Opus): wireframes detalhados de T2. Não usar o mockup amador anterior — projetar com SVG filters avançados (efeito metálico no título, gradient nebula no background, drop shadows, sparkles 3D, etc.) pra entregar qualidade visual real.
+  - **Fase 3** (sessão futura Code): implementação após aprovação visual prévia dos wireframes.
+- Identificado em Sessão M2 Fase 1, **confirmado e atualizado** em fechamento V1, 18/05/2026.
+
 ### [FIX-M2-003] Hotfix v8 — revisor de fundo via retry automático (parcialmente funcional) — 18/05/2026
 - Revertida a estratégia de reference image base (v6) — causava "lavagem" do gradient e desbotava output.
 - Pipeline T1 volta a usar `text-to-image` quando user não fornece PNGs (edit-image apenas com PNGs do user).
