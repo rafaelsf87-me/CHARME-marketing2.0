@@ -11,7 +11,14 @@
 
 ## 🐛 Bugs Conhecidos
 
-*(nenhum até o momento)*
+### [BUG-M2-001] background-check.ts não detecta fundo sólido preto/branco
+- **Onde:** `lib/m2/background-check.ts`
+- **Descrição:** validador deveria amostrar 4 cantos 200×200 e detectar fundo sólido via HSL (saturação < 15 + brightness < 40 OU > 215). No smoke v8, output tinha fundo preto puro nos 4 cantos e validador retornou `true` (gradient OK) — retry não disparou.
+- **Hipóteses:** bug na fórmula HSL, buffer Sharp retornando canais inesperados (RGBA em vez de RGB apesar do `removeAlpha()`), ou thresholds errados.
+- **Severidade:** baixa — equipe regenera output quando aparece fundo problemático (workaround manual aceito).
+- **Decisão:** NÃO investigar agora. Pode ser descartado se T2 (Fase 3) resolver via Sharp/Satori controle total do background.
+- **Reavaliar:** antes da Fase 3 OU se equipe reportar frequência alta de fundos problemáticos em prod.
+- **Identificado em:** Sessão M2 Fase 1 Hotfix v8, 18/05/2026.
 
 ### Template para entrada
 ```
@@ -28,13 +35,13 @@
 ## ⚠️ Limitações Aceitas
 
 ### [LIMIT-M2-001] T1 Atual_Maio26 — limitações inerentes do gpt-image-1 (carrossel)
-- Pipeline T1 = `fal-prompt-puro` via gpt-image-1 tier high (desde v6: sempre `edit-image` com gradient base como ref[0]).
-- Limitações estruturais que reforços de prompt + reference image mitigam mas NÃO eliminam:
+- Pipeline T1 = `fal-prompt-puro` via gpt-image-1 tier high. Desde v8: text-to-image (sem PNGs) ou edit-image (com PNGs do user).
+- Limitações estruturais que reforços de prompt mitigam mas NÃO eliminam:
   - Falta de continuidade visual entre slides paralelos (sofás/produtos podem variar entre slides do mesmo carrossel)
+  - Variabilidade ocasional de fundo (preto/branco sólido) — retry automático implementado mas com bug a investigar ([BUG-M2-001]). Equipe regenera quando aparece.
   - IA pode inventar handles/marcas d'água apesar de `NO BRAND ELEMENTS`
   - Hierarquia tipográfica imprecisa apesar de `TYPOGRAPHIC HIERARCHY STRICT`
   - Tipografia densa em PT-BR com diacríticos tem variabilidade
-- **Removido em v6 (18/05/2026):** "variabilidade ocasional de fundo" — agora travado via reference image (ver [FIX-M2-002]).
 - ACEITO como trade-off do T1 ("réplica imperfeita do ChatGPT Plus"). T1 = "rascunho rápido pra brainstorm interno".
 - Resolução real prevista no T2 (Atual_Maio26_New, Fase 3) via Pipeline Híbrido Sharp/Satori — controle pixel-preciso elimina TODOS esses problemas (IA fica restrita a gerar elementos isolados, layouts + tipografia + footer são 100% determinísticos).
 - **Identificado em:** Sessão M2 Fase 1, 18/05/2026.
@@ -198,6 +205,18 @@ Pontos onde uma decisão de produto é necessária antes de avançar.
 ## 🗑️ Resolvidas / Descartadas
 
 Quando uma dívida é resolvida ou descartada, mover para cá com nota curta. Manter os últimos 20 itens, depois limpar.
+
+### [FIX-M2-003] Hotfix v8 — revisor de fundo via retry automático (parcialmente funcional) — 18/05/2026
+- Revertida a estratégia de reference image base (v6) — causava "lavagem" do gradient e desbotava output.
+- Pipeline T1 volta a usar `text-to-image` quando user não fornece PNGs (edit-image apenas com PNGs do user).
+- Adicionado `lib/m2/background-check.ts` + retry wrapper `generateWithBgCheck` (max 2 attempts).
+- ⚠️ **VALIDADOR NÃO ESTÁ CALIBRADO CORRETAMENTE:** smoke v8 saiu com fundo preto sólido e o validador aceitou (retry não disparou). Bug no critério HSL ou no acesso ao buffer Sharp. Registrado em [BUG-M2-001].
+- **Mudanças adicionais aplicadas no v8 (UX pendentes):**
+  - J — `ctaFinal` removido como campo separado: CTA agora vai dentro do copy do último slide. Prompt T1 ganhou bloco `LAST SLIDE GUIDANCE` (genérico) que instrui IA a destacar visualmente CTA presente no copy.
+  - K — Slides do carrossel collapsed por default (`useState(false)`). Badges "⚠ Copy pendente" e "⚠ Imagem obrigatória" no header dão visão geral sem expandir.
+- Asset `gradient-base.png` permanece em `public/brand/m2/backgrounds/` pra T2 (Fase 3).
+- **Decisão Rafael:** aceitar como limitação aceita do T1, equipe regenera quando aparece fundo problemático. T2 (Pipeline Híbrido Sharp/Satori, Fase 3) vai resolver definitivamente via controle programático do background.
+- Identificado em validação manual prod 4, 18/05/2026.
 
 ### [FIX-M2-002] Hotfix v6 — reference image gradient base + safe area + UI fixes — RESOLVIDA em 18/05/2026
 - Background gradient travado via reference image (resolve fundo preto/branco aleatório do gpt-image-1)
