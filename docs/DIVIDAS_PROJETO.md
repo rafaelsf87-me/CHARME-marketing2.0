@@ -28,13 +28,13 @@
 ## ⚠️ Limitações Aceitas
 
 ### [LIMIT-M2-001] T1 Atual_Maio26 — limitações inerentes do gpt-image-1 (carrossel)
-- Pipeline T1 = `fal-prompt-puro` via gpt-image-1 tier high.
-- Limitações estruturais que reforços de prompt mitigam mas NÃO eliminam:
+- Pipeline T1 = `fal-prompt-puro` via gpt-image-1 tier high (desde v6: sempre `edit-image` com gradient base como ref[0]).
+- Limitações estruturais que reforços de prompt + reference image mitigam mas NÃO eliminam:
   - Falta de continuidade visual entre slides paralelos (sofás/produtos podem variar entre slides do mesmo carrossel)
-  - Variabilidade ocasional de fundo (pode escapar do gradient cyan→roxo apesar de `BACKGROUND ENFORCEMENT`)
   - IA pode inventar handles/marcas d'água apesar de `NO BRAND ELEMENTS`
   - Hierarquia tipográfica imprecisa apesar de `TYPOGRAPHIC HIERARCHY STRICT`
   - Tipografia densa em PT-BR com diacríticos tem variabilidade
+- **Removido em v6 (18/05/2026):** "variabilidade ocasional de fundo" — agora travado via reference image (ver [FIX-M2-002]).
 - ACEITO como trade-off do T1 ("réplica imperfeita do ChatGPT Plus"). T1 = "rascunho rápido pra brainstorm interno".
 - Resolução real prevista no T2 (Atual_Maio26_New, Fase 3) via Pipeline Híbrido Sharp/Satori — controle pixel-preciso elimina TODOS esses problemas (IA fica restrita a gerar elementos isolados, layouts + tipografia + footer são 100% determinísticos).
 - **Identificado em:** Sessão M2 Fase 1, 18/05/2026.
@@ -198,6 +198,17 @@ Pontos onde uma decisão de produto é necessária antes de avançar.
 ## 🗑️ Resolvidas / Descartadas
 
 Quando uma dívida é resolvida ou descartada, mover para cá com nota curta. Manter os últimos 20 itens, depois limpar.
+
+### [FIX-M2-002] Hotfix v6 — reference image gradient base + safe area + UI fixes — RESOLVIDA em 18/05/2026
+- Background gradient travado via reference image (resolve fundo preto/branco aleatório do gpt-image-1)
+- Safe area 60px nas 4 bordas (resolve título cortado)
+- Modo geração com largura natural (não full-width) — wrapper `w-fit`
+- Template descrição truncada em 1 linha (`line-clamp-1` + `truncate` + `title` attribute pra hover)
+- Preview só aparece após gerar (não mais placeholder pré-geração) — carrossel e imagem única
+- Pipeline T1 migrou de text-to-image → edit-image sempre (mesmo custo, com `input_fidelity: high` já default)
+- Asset versionado no repo: `public/brand/m2/backgrounds/gradient-base.png` (1024×1536, 53.5KB) gerado por `scripts/generate-gradient-base.ts`
+- URL pública servida pelo Vercel: `https://charme-marketing2-0.vercel.app/brand/m2/backgrounds/gradient-base.png` (override por `NEXT_PUBLIC_GRADIENT_BASE_URL`)
+- Identificado em validação manual prod 2, 18/05/2026. Smoke 1 imagem-única validado — todos os 6 critérios atendidos.
 
 ### [FIX-M2-001] Hotfix UX carrossel pós-validação prod — RESOLVIDA em 18/05/2026
 - Slides expanded por default + badge de copy pendente / imagem obrigatória
