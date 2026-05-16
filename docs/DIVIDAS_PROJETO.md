@@ -199,6 +199,15 @@ Pontos onde uma decisão de produto é necessária antes de avançar.
 
 Quando uma dívida é resolvida ou descartada, mover para cá com nota curta. Manter os últimos 20 itens, depois limpar.
 
+### [FIX-M2-001] Hotfix UX carrossel pós-validação prod — RESOLVIDA em 18/05/2026
+- Slides expanded por default + badge de copy pendente / imagem obrigatória
+- 1 imagem por slide (era até 8) + textarea `promptImagem` por slide opcional (substitui `instrucoesUsoImagens` global do carrossel)
+- Reorder de campos do form (Contexto → Qtd+CTA → Modo+Logo → Slides → Gerar)
+- Layout 2 colunas (Modo+Logo) colapsa pra 1 quando `LogoSelector` escondido (T1)
+- Rename "PNGs de referência" / "ref(s)" → "Imagem do Slide" / "caracteres"
+- Tooltip de pendências no botão Gerar quando disabled (lista slides com copy/imagem faltando)
+- Identificado em validação manual prod, 18/05/2026. Sem novo smoke — mudança incremental de UX, não toca pipeline.
+
 ### [DEC-M2-003] T1 sem footer programático (réplica fiel do ChatGPT Plus) — RESOLVIDA em Sessão M2 Fase 1, 18/05/2026
 - **Decisão:** após smokes 1 e 2, gpt-image-1 mostrou-se incapaz de respeitar pixel-precisamente reserva de 100/180px no bottom mesmo com bloco `FOOTER RESERVATION (STRICT)` no prompt. Body text continuou invadindo a zona de footer overlay. Composite Sharp resultava em texto da IA sob o footer programático.
 - **Solução:** remover footer overlay do T1. Composição inteira fica por conta do gpt-image-1 (incluindo a convenção do modelo de adicionar handle/brand text, que é variabilidade aceita).

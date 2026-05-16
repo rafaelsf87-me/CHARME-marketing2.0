@@ -5,6 +5,12 @@ import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { TooltipInfo } from '@/components/tooltip-info'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { LogoSelector } from './logo-selector'
 import { ModoGeracaoSelector } from './modo-geracao-selector'
 import { SlideBlock, type SlideState } from './slide-block'
@@ -19,14 +25,12 @@ interface FormCarrosselProps {
 const { min: SLIDES_MIN, max: SLIDES_MAX } = brandM2.pipeline.carouselSlidesRange
 const DEFAULT_QTD = 3
 const COPY_MIN = 10
-const COPY_MAX = 2000
 const CONTEXTO_MAX = 500
 const CTA_MIN = 5
 const CTA_MAX = 300
-const USO_IMAGENS_MAX = 800
 
 function emptySlide(): SlideState {
-  return { copyTexto: '', pngSlots: [] }
+  return { copyTexto: '', pngUrl: null, promptImagem: '' }
 }
 
 export function FormCarrossel({ templateId }: FormCarrosselProps) {
@@ -34,7 +38,6 @@ export function FormCarrossel({ templateId }: FormCarrosselProps) {
   const [modoGeracao, setModoGeracao] = React.useState<M2ModoGeracao>('ia')
   const [contextoGeral, setContextoGeral] = React.useState('')
   const [ctaFinal, setCtaFinal] = React.useState('')
-  const [instrucoesUsoImagens, setInstrucoesUsoImagens] = React.useState('')
   const [slides, setSlides] = React.useState<SlideState[]>(() =>
     Array.from({ length: DEFAULT_QTD }, emptySlide)
   )
@@ -42,6 +45,7 @@ export function FormCarrossel({ templateId }: FormCarrosselProps) {
   const [previewSlots, setPreviewSlots] = React.useState<CarrosselSlot[]>([])
 
   const isUpload = modoGeracao === 'upload'
+  const showLogoSelector = templateId !== 'atual-maio26'
 
   function onChangeQtd(novaQtd: number) {
     setSlides((prev) => {
@@ -57,13 +61,22 @@ export function FormCarrossel({ templateId }: FormCarrosselProps) {
     setSlides((prev) => prev.map((s, i) => (i === idx ? next : s)))
   }
 
-  const todosSlidesCopyValidos = slides.every(
-    (s) => s.copyTexto.length >= COPY_MIN && s.copyTexto.length <= COPY_MAX
-  )
-  const todosSlidesUploadValidos =
-    !isUpload || slides.every((s) => s.pngSlots.filter(Boolean).length > 0)
-  const ctaValido = ctaFinal.trim().length >= CTA_MIN && ctaFinal.trim().length <= CTA_MAX
-  const isValid = todosSlidesCopyValidos && todosSlidesUploadValidos && ctaValido && !generating
+  // Lista de pendências serve pro tooltip do botão Gerar quando disabled.
+  // Compõe slide-by-slide na ordem visível ao usuário.
+  const pendencias: string[] = []
+  slides.forEach((s, i) => {
+    if (s.copyTexto.length < COPY_MIN) {
+      pendencias.push(`Slide ${i + 1}: copy faltando (mín. ${COPY_MIN} caracteres)`)
+    }
+    if (isUpload && !s.pngUrl) {
+      pendencias.push(`Slide ${i + 1}: imagem obrigatória no modo Upload`)
+    }
+  })
+  const ctaTrim = ctaFinal.trim()
+  if (ctaTrim.length < CTA_MIN || ctaTrim.length > CTA_MAX) {
+    pendencias.push(`CTA do último slide: ${ctaTrim.length < CTA_MIN ? 'faltando' : 'excedeu limite'} (${CTA_MIN}-${CTA_MAX} caracteres)`)
+  }
+  const isValid = pendencias.length === 0 && !generating
 
   async function onGenerate() {
     if (!isValid) return
@@ -80,16 +93,11 @@ export function FormCarrossel({ templateId }: FormCarrosselProps) {
           logo,
           modoGeracao,
           contextoGeral: contextoGeral.trim() || undefined,
-          ctaFinal: ctaFinal.trim(),
-          instrucoesUsoImagens: isUpload && instrucoesUsoImagens.trim()
-            ? instrucoesUsoImagens.trim()
-            : undefined,
+          ctaFinal: ctaTrim,
           slides: slides.map((s) => ({
             copyTexto: s.copyTexto.trim(),
-            pngUrls: (() => {
-              const pngs = s.pngSlots.filter((u): u is string => !!u)
-              return pngs.length > 0 ? pngs : undefined
-            })(),
+            pngUrl: s.pngUrl ?? undefined,
+            promptImagem: s.promptImagem.trim() || undefined,
           })),
         }),
       })
@@ -116,14 +124,7 @@ export function FormCarrossel({ templateId }: FormCarrosselProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* LogoSelector só aparece em T2/T3 — T1 não aplica footer programático */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <ModoGeracaoSelector value={modoGeracao} onChange={setModoGeracao} disabled={generating} />
-        {templateId !== 'atual-maio26' && (
-          <LogoSelector value={logo} onChange={setLogo} disabled={generating} />
-        )}
-      </div>
-
+      {/* 1. Contexto geral */}
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
           <label className="flex items-center gap-2 text-xs font-medium">
@@ -144,6 +145,7 @@ export function FormCarrossel({ templateId }: FormCarrosselProps) {
         />
       </div>
 
+      {/* 2. Qtd Slides + CTA — 2 colunas */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <label className="flex items-center gap-2 text-xs font-medium">
@@ -185,6 +187,21 @@ export function FormCarrossel({ templateId }: FormCarrosselProps) {
         </div>
       </div>
 
+      {/* 3. Modo de Geração + Logo (2 cols em T2/T3, 1 col em T1) */}
+      <div
+        className={
+          showLogoSelector
+            ? 'grid grid-cols-1 gap-4 md:grid-cols-2'
+            : 'flex flex-col'
+        }
+      >
+        <ModoGeracaoSelector value={modoGeracao} onChange={setModoGeracao} disabled={generating} />
+        {showLogoSelector && (
+          <LogoSelector value={logo} onChange={setLogo} disabled={generating} />
+        )}
+      </div>
+
+      {/* 4. Slides — expandidos por default */}
       <div className="flex flex-col gap-2">
         {slides.map((slide, i) => (
           <SlideBlock
@@ -199,45 +216,47 @@ export function FormCarrossel({ templateId }: FormCarrosselProps) {
         ))}
       </div>
 
-      {isUpload && (
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 text-xs font-medium">
-              Instruções de uso das imagens (carrossel)
-              <TooltipInfo text="Como referenciar: nome do arquivo + número do slide + função. Ex.: 'No slide 2 use foto-sofa.png como elemento central. No slide 5 use cta-bg.png como fundo do bloco de CTA.' O modelo segue literalmente — seja específico." />
-            </label>
-            <span className="tabular-nums text-[11px] text-[color:var(--text-tertiary)]">
-              {instrucoesUsoImagens.length}/{USO_IMAGENS_MAX}
-            </span>
-          </div>
-          <Textarea
-            value={instrucoesUsoImagens}
-            onChange={(e) => setInstrucoesUsoImagens(e.target.value)}
-            maxLength={USO_IMAGENS_MAX}
-            placeholder="Ex.: No slide 2 use foto-sofa.png à esquerda do título. No slide 3 use produto.png como elemento central, escala 60%."
-            rows={4}
-            disabled={generating}
-          />
-        </div>
-      )}
-
+      {/* 5. Botão Gerar — com tooltip de pendências quando disabled */}
       <div>
-        <Button
-          type="button"
-          variant="brand"
-          size="lg"
-          disabled={!isValid}
-          onClick={onGenerate}
-        >
-          {generating ? (
-            <>
-              <Loader2 size={16} className="animate-spin" />
-              Gerando {slides.length} slides...
-            </>
-          ) : (
-            `Gerar carrossel (${slides.length} slides)`
-          )}
-        </Button>
+        {isValid ? (
+          <Button
+            type="button"
+            variant="brand"
+            size="lg"
+            disabled={generating}
+            onClick={onGenerate}
+          >
+            {generating ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Gerando {slides.length} slides...
+              </>
+            ) : (
+              `Gerar carrossel (${slides.length} slides)`
+            )}
+          </Button>
+        ) : (
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                {/* span wrapper porque Tooltip não dispara em button[disabled] */}
+                <span className="inline-block">
+                  <Button type="button" variant="brand" size="lg" disabled>
+                    Gerar carrossel ({slides.length} slides)
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[320px]">
+                <div className="text-[11px] font-medium mb-1">Pendências:</div>
+                <ul className="text-[11px] leading-snug list-disc pl-4 space-y-0.5">
+                  {pendencias.map((p, i) => (
+                    <li key={i}>{p}</li>
+                  ))}
+                </ul>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </div>
 
       <PreviewCarrossel slots={previewSlots} />

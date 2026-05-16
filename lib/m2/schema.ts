@@ -11,11 +11,12 @@ export const M2_LOGO_OPTIONS = ['casinha', 'quadrado', '3d', 'retangular'] as co
 export type M2LogoOption = (typeof M2_LOGO_OPTIONS)[number]
 
 // Modo de geração (Adendo §3.2). IA = composição livre via gpt-image-1.
-// Upload = usuário fornece 1-8 PNGs + instruções de uso por nome/slide, IA usa
-// como reference image pra resolver erros físicos (anatomia, perspectiva).
+// Upload = usuário fornece PNGs + instruções de uso, IA usa como reference image
+// pra resolver erros físicos (anatomia, perspectiva).
 export const M2_MODO_GERACAO = ['ia', 'upload'] as const
 export type M2ModoGeracao = (typeof M2_MODO_GERACAO)[number]
 
+// Imagem única mantém estrutura original (até 8 PNGs + instruções globais).
 const pngUrlsField = z
   .array(z.string().url())
   .max(brandM2.pipeline.maxReferenceImages)
@@ -34,9 +35,15 @@ export const imagemUnicaSchema = z.object({
   instrucoesUsoImagens: z.string().max(800).optional(),
 })
 
+// Carrossel: 1 imagem por slide (hotfix UX pós-validação prod, 18/05/2026).
+// `pngUrl` substitui `pngUrls[]` — a UX anterior com até 8 PNGs/slide
+// confundia (modo IA permitia 3, modo upload permitia 8, semântica dupla).
+// `promptImagem` é a instrução de uso da PNG, por-slide (substitui
+// `instrucoesUsoImagens` global do carrossel — mais granular).
 export const slideSchema = z.object({
   copyTexto: z.string().min(10).max(2000),
-  pngUrls: pngUrlsField,
+  pngUrl: z.string().url().optional(),
+  promptImagem: z.string().max(500).optional(),
 })
 
 export const carrosselSchema = z.object({
@@ -52,14 +59,11 @@ export const carrosselSchema = z.object({
     .max(brandM2.pipeline.carouselSlidesRange.max),
   // Anexado ao copy do último slide com instrução de exibição em destaque.
   ctaFinal: z.string().min(5).max(300),
-  // Instruções globais de uso das imagens (modo upload). Referencia por
-  // nome de arquivo + número do slide.
-  instrucoesUsoImagens: z.string().max(800).optional(),
 })
 
-// Regras cross-field (Adendo §3.3 e §3.4):
+// Regras cross-field:
 // - Imagem única em modo upload exige ≥1 PNG.
-// - Carrossel em modo upload exige ≥1 PNG em cada slide.
+// - Carrossel em modo upload exige 1 PNG em cada slide.
 export const m2GenerateSchema = z
   .discriminatedUnion('modo', [imagemUnicaSchema, carrosselSchema])
   .superRefine((data, ctx) => {
@@ -75,11 +79,11 @@ export const m2GenerateSchema = z
       return
     }
     data.slides.forEach((slide, i) => {
-      if ((slide.pngUrls?.length ?? 0) === 0) {
+      if (!slide.pngUrl) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: 'Modo upload exige pelo menos 1 imagem por slide',
-          path: ['slides', i, 'pngUrls'],
+          message: 'Modo upload exige 1 imagem por slide',
+          path: ['slides', i, 'pngUrl'],
         })
       }
     })

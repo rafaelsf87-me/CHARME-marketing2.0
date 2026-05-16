@@ -75,21 +75,23 @@ export async function renderM2(input: M2GenerateInput): Promise<{ urls: string[]
 
   // Carrossel: cada slide é uma geração independente, em paralelo.
   // Homogeneidade visual fica por conta do prompt comum (gradient + brand id).
-  // `instrucoesUsoImagens` é GLOBAL do carrossel (refere slides por número).
+  // Hotfix UX 18/05/2026: 1 imagem por slide + promptImagem por slide
+  // (substitui instrucoesUsoImagens global). Mais granular.
   const tasks = input.slides.map((slide: M2SlideInput, idx: number) => {
     const isUltimo = idx === input.slides.length - 1
+    const referenceUrls = slide.pngUrl ? [slide.pngUrl] : undefined
     const prompt = template.buildPrompt({
       copyTexto: slide.copyTexto,
       contextoGeral: input.contextoGeral,
-      instrucoesUsoImagens: isUploadMode ? input.instrucoesUsoImagens : undefined,
+      instrucoesUsoImagens: slide.promptImagem,
       isUltimoSlide: isUltimo,
       ctaFinal: isUltimo ? input.ctaFinal : undefined,
-      hasReferences: (slide.pngUrls?.length ?? 0) > 0,
+      hasReferences: !!slide.pngUrl,
     })
     return generateOne({
       template,
       prompt,
-      referenceUrls: slide.pngUrls,
+      referenceUrls,
       blobKey: `m2/${Date.now()}-slide-${idx + 1}.png`,
     })
   })
