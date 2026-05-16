@@ -1,8 +1,8 @@
 # ARCHITECTURE.md
 ## Marketing IA Charme 2.0 — Módulo: Criação de Imagens
-**Versão:** 0.4 (Render real M4 implementado · Tinos como fonte)
-**Data:** 13/05/2026
-**Status:** Em implementação — Base do Sistema + M4
+**Versão:** 0.8 (M2 Fase 1 fechada · T1 fal-prompt-puro · M6 placeholder)
+**Data:** 18/05/2026
+**Status:** M1 V1 em prod · M2 T1 em prod (9c32313) · M3/M4/M5/M6/Template Creator pendentes
 
 ---
 
@@ -29,7 +29,8 @@ Este projeto é o **Módulo de Criação de Imagens** do sistema **Marketing IA 
 2. **M2 — Posts Instagram**
 3. **M3 — Banners Website**
 4. **M4 — Thumbnails Feed Instagram**
-5. **M5 — Banners Emails** *(placeholder — a desenvolver por último)*
+5. **M5 — Banners Emails** *(placeholder — penúltimo módulo)*
+6. **M6 — Imagens Ads** *(placeholder — último módulo, 100% a definir)*
 + **Template Creator** (painel de criação de templates customizados)
 
 ---
@@ -64,11 +65,17 @@ Este projeto é o **Módulo de Criação de Imagens** do sistema **Marketing IA 
 - Atualizado de GPT-4o Image Edit (v0.1) para GPT Image 2 (modelo atual)
 - Usado para ajustes de pose da atriz antes de compor no banner final
 
-**M2 e M4 — Compositing puro:**
+**M2 — Híbrido com 3 templates independentes (estrutura nova v0.8):**
+- T1 (Atual_Maio26, em prod): `fal-prompt-puro` via `gpt-image-1` tier high — réplica imperfeita do ChatGPT Plus, composição inteira por conta da IA.
+- T2 (Atual_Maio26_New, Fase 3): `hibrido-compositing` — IA gera elementos isolados (produto, atriz, ícones), Sharp/Satori monta layout final com pixel-precisão.
+- T3 (Novo_Teste1, Fase 5): a definir após smoke T1+T2.
+- Princípio "compositing puro" da SPEC ≤v1.5 mantido apenas no M4.
+
+**M4 — Compositing puro:**
 - Sem IA de geração — Sharp/Satori renderizam template HTML/CSS com variáveis
 - Elimina "cara de IA", reduz custo a zero, garante consistência
 
-**Princípio geral:** IA só é chamada quando compositing puro não resolve.
+**Princípio geral:** IA só é chamada quando compositing puro não resolve OU quando o custo de templatizar superaria o ganho de consistência (caso do M2 T1).
 
 ---
 
@@ -135,6 +142,22 @@ marketing-ia-charme/
 │   │   │   └── _components/
 │   │   ├── m5-email/                 # Submódulo 5: Banners Email (placeholder)
 │   │   │   └── page.tsx
+│   │   ├── m6-ads/                   # Submódulo 6: Imagens Ads (placeholder)
+│   │   │   └── page.tsx
+│   │   ├── m2-posts/                 # Submódulo 2: Posts Instagram (M2 Fase 1 em prod)
+│   │   │   ├── page.tsx
+│   │   │   └── _components/
+│   │   │       ├── m2-form.tsx
+│   │   │       ├── tab-switcher.tsx
+│   │   │       ├── template-selector.tsx
+│   │   │       ├── modo-geracao-selector.tsx     # IA / Upload
+│   │   │       ├── logo-selector.tsx             # 4 logos (T2/T3 only)
+│   │   │       ├── form-imagem-unica.tsx
+│   │   │       ├── form-carrossel.tsx
+│   │   │       ├── slide-block.tsx
+│   │   │       ├── png-upload-list.tsx           # maxSlots dinâmico (3 IA / 8 Upload)
+│   │   │       ├── preview-imagem-unica.tsx
+│   │   │       └── preview-carrossel.tsx
 │   │   └── template-creator/
 │   │       ├── m1-ambientes/
 │   │       ├── m2-layouts/
@@ -147,7 +170,7 @@ marketing-ia-charme/
 │       ├── upload/route.ts           # Upload genérico Vercel Blob (client upload)
 │       └── imagens/
 │           ├── m1/generate/route.ts
-│           ├── m2/render/route.ts
+│           ├── m2/generate/route.ts             # M2: POST imagem-única OU carrossel
 │           ├── m3/render/route.ts
 │           ├── m4/render/route.ts
 │           ├── m5/render/route.ts
@@ -159,11 +182,27 @@ marketing-ia-charme/
 │   ├── brand/
 │   │   ├── base.config.ts            # Cores hex, logo — FONTE ÚNICA (nunca duplicar)
 │   │   ├── m1.brand.ts               # Estende base: specs M1
-│   │   ├── m2.brand.ts               # Estende base: fontes e specs M2
+│   │   ├── m2.brand.ts               # Estende base: fontes, dimensões 1080×1350, logos
 │   │   ├── m3.brand.ts               # Estende base: fontes e specs M3
 │   │   ├── m4.brand.ts               # Estende base: fontes e specs M4
 │   │   └── m5.brand.ts               # placeholder
-│   ├── sharp-compose.ts              # Funções de compositing (M2, M4)
+│   ├── m1/                           # M1 pipeline (em prod desde 17/05/2026)
+│   ├── m2/                           # M2 pipeline (em prod desde 18/05/2026 · commit 9c32313)
+│   │   ├── schema.ts                 # Zod: discriminatedUnion imagem-unica | carrossel
+│   │   ├── fal-client.ts             # Wrapper gpt-image-1 text-to-image / edit-image
+│   │   ├── post-process.ts           # Sharp resize 1024×1536 → 1080×1350
+│   │   ├── footer-gen.ts             # Footer overlay (T2/T3 only, inativo no T1)
+│   │   ├── render.ts                 # Orquestrador renderM2 (paralelo via Promise.all)
+│   │   └── templates/
+│   │       ├── index.ts              # Registry { atual-maio26, ...new, novo-teste-1 }
+│   │       ├── types.ts              # Template, FalConfig, BuildPromptArgs
+│   │       ├── atual-maio26/         # T1 ativo
+│   │       │   ├── config.ts         # falConfig (high tier)
+│   │       │   ├── prompt.ts         # buildT1Prompt v5
+│   │       │   └── README.md
+│   │       ├── atual-maio26-new/     # T2 placeholder (Fase 3)
+│   │       └── novo-teste-1/         # T3 placeholder (Fase 5)
+│   ├── sharp-compose.ts              # Funções de compositing (M4)
 │   ├── template-engine.ts            # Render HTML/CSS → PNG via Satori
 │   ├── flux-image.ts                 # Client Flux Kontext (fal.ai) — M1 principal
 │   ├── openai-image.ts               # Client GPT Image 2 — M3
@@ -487,11 +526,22 @@ Dois componentes globais de texto (usados em M2, M3, M4, M5 — não em M1):
 | 4 | **M1 Foto Produto** | Maior complexidade técnica — Flux Kontext + 6 cenários |
 | 5 | **M3 Banners** | Aproveita aprendizado do M1 + GPT Image 2 |
 | 6 | **Template Creator** | Depende dos outros módulos funcionando |
-| 7 | **M5 Banners Emails** | Último — a especificar antes de iniciar |
+| 7 | **M5 Banners Emails** | Penúltimo — a especificar antes de iniciar |
+| 8 | **M6 Imagens Ads** | Último — 100% a especificar |
 
 ---
 
 ## 14. Changelog
+
+### v0.8 — 18/05/2026 (M2 Fase 1 fechada · T1 em prod · M6 placeholder)
+- **M2 estrutura por-template:** abandonado "compositing puro" da SPEC ≤v1.5. Adotada estrutura híbrida com 3 templates independentes em `lib/m2/templates/`, cada um carregando seu próprio `falConfig` + `buildPrompt`.
+- **M2 T1 (Atual_Maio26):** pipeline `fal-prompt-puro` via `fal-ai/gpt-image-1` (text-to-image / edit-image), tier `high` (~$0.19/img). Réplica imperfeita do ChatGPT Plus.
+- **M2 T2/T3:** placeholders aguardando Fase 3 (Pipeline Híbrido Sharp/Satori) e Fase 5.
+- **M2 schema:** `discriminatedUnion` `imagem-unica` | `carrossel` + `superRefine` pras regras de upload obrigatório (z.discriminatedUnion não aceita ZodEffects de refine no nível dos members).
+- **M2 dimensões:** 1080×1350 (4:5 portrait Instagram) substitui 1080×1080 da SPEC ≤v1.5.
+- **M2 footer overlay:** `lib/m2/footer-gen.ts` implementado mas **inativo no T1** (decisão Rafael pós-smoke 2: gpt-image-1 não respeita pixel-precisamente reserva de footer). Ativação prevista no T2.
+- **M6 — Imagens Ads** adicionado nas listas como placeholder.
+- **Commit:** `9c32313 feat(m2): fase 1 fechada — T1 prompt v5 (anti-handle + bg enforcement + hierarquia strict)`.
 
 ### v0.7.1 — 16/05/2026 (post-mortem CORS M1)
 - **Regra arquitetural nova (§8):** uploads sempre via `/api/upload` server-side com `FormData`. Proibido `@vercel/blob/client.upload()` no browser — Vercel Blob não devolve `Access-Control-Allow-Origin` em prod, então o flow client-direct falha com CORS opaco.

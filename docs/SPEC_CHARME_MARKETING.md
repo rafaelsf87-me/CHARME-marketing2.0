@@ -1,9 +1,9 @@
 # SPEC.md
 ## Marketing IA Charme 2.0 — Especificação Funcional
-### Módulo: Criação de Imagens (5 Submódulos + Template Creator)
-**Versão:** 0.4 (Tinos como fonte do M4 + Bloco C iniciado)
-**Data:** 13/05/2026
-**Status:** Em implementação — Base do Sistema + M4 (UI + API stub)
+### Módulo: Criação de Imagens (6 Submódulos + Template Creator)
+**Versão:** 1.6 (M2 Fase 1 fechada · T1 Atual_Maio26 em prod · M6 placeholder)
+**Data:** 18/05/2026
+**Status:** M1 V1 em prod (a0360ba) · M2 T1 em prod (9c32313) · M3/M4/M5/M6/Template Creator pendentes
 
 ---
 
@@ -24,7 +24,8 @@ Sistema web (Next.js + Vercel) para geração e tratamento padronizado de imagen
 2. M2 — Posts Instagram
 3. M3 — Banners Website
 4. M4 — Thumbnails Feed Instagram
-5. M5 — Banners Emails *(a desenvolver por último)*
+5. M5 — Banners Emails *(placeholder — penúltimo módulo a definir)*
+6. M6 — Imagens Ads *(placeholder — 100% a definir)*
 + Template Creator (painel de criação de templates customizados)
 
 ---
@@ -176,76 +177,93 @@ Mesmo input das opções acima. **Não há upload de foto bruta.**
 
 ---
 
-## Módulo 2 — Posts Instagram (`/m2-posts-insta`)
+## Módulo 2 — Posts Instagram (`/imagens/m2-posts`)
 
 ### Objetivo
-Gerar imagens estáticas e carrosséis para o Instagram da Charme do Detalhe com template padronizado da loja. Volume: 1–4 posts/dia.
+Gerar imagens estáticas e carrosséis pro Instagram da Charme do Detalhe. Volume: 1–4 posts/dia.
 
-### Subtipos
-| Subtipo | Descrição | Slides |
+### Abas
+| Aba | Descrição | Slides | Custo T1 high |
+|---|---|---|---|
+| Imagem Única | 1 imagem standalone | 1 | ~$0.19 |
+| Carrossel | N slides em paralelo, CTA no último | 2–8 | ~$0.19 × N |
+
+### Princípio técnico — híbrido com 3 templates independentes
+O M2 abandonou o "compositing puro" da SPEC ≤v1.5 e adotou estrutura de 3 templates independentes, cada um com pipeline próprio:
+
+| Template | Slug | Pipeline | Status |
+|---|---|---|---|
+| **Atual_Maio26** | `atual-maio26` | `fal-prompt-puro` via gpt-image-1 tier high | **Ativo (em prod)** |
+| **Atual_Maio26_New** | `atual-maio26-new` | `hibrido-compositing` (Sharp/Satori + IA pontual) | Em construção (Fase 3) |
+| **Novo_Teste1** | `novo-teste-1` | A definir após smoke T1+T2 | A definir (Fase 5) |
+
+**T1 (Atual_Maio26)** = réplica imperfeita do workflow ChatGPT Plus que a equipe usa hoje. Composição inteira (layout, tipografia, footer) fica por conta do gpt-image-1. Aceita variabilidade como trade-off (ver [LIMIT-M2-001] em DIVIDAS).
+
+**T2 (Atual_Maio26_New, Fase 3)** = evolução com controle pixel-preciso via Sharp/Satori. IA fica restrita a gerar elementos isolados (produto, atriz, ícones); layout + tipografia + footer 100% determinísticos.
+
+**T3 (Novo_Teste1, Fase 5)** = direção a definir.
+
+### Fluxo de uso (T1 em prod)
+
+```
+1. Selecionar template (T1 ativo · T2/T3 com badge "Em construção"/"A definir")
+2. Escolher aba: Imagem Única / Carrossel
+3. Selecionar modo de geração: IA (automático) / Upload de imagens
+4. [Apenas T2/T3 quando ativos] Selecionar logo do footer
+5. Preencher copy, instruções, CTA (carrossel) e — se modo upload — PNGs + instruções de uso
+6. [Gerar]
+```
+
+### Campos por aba
+
+**Imagem Única**
+| Campo | Tipo | Limites |
 |---|---|---|
-| Imagem Estática | 1 imagem com objeto central + infos ao redor | 1 |
-| Carrossel | 3–5 slides com continuidade temática | 3–5 |
+| Copy do post | textarea (verbatim) | 10–2000 chars |
+| Instruções adicionais (modo IA) | textarea opcional | até 500 |
+| PNGs de referência (modo IA) | upload | 0–3 |
+| PNGs (modo Upload) | upload | 1–8 obrigatórios |
+| Instruções de uso das imagens (modo Upload) | textarea | até 800 |
 
-### Princípio técnico
-**Sem IA de geração.** Compositing puro via Sharp.js + Satori. Template HTML/CSS fixo recebe variáveis (textos + PNGs fornecidos) e renderiza PNG. Isso garante:
-- Custo zero de API de imagem
-- Resultado consistente (não varia entre gerações)
-- Sem "cara de IA" (template real, não gerado)
+**Carrossel**
+| Campo | Tipo | Limites |
+|---|---|---|
+| Contexto/tema geral | textarea opcional | até 500 |
+| Quantidade de slides | select | 2–8 |
+| CTA do último slide | textarea (verbatim, em destaque) | 5–300 |
+| Por slide: copy | textarea | 10–2000 |
+| Por slide: PNGs (modo IA) | upload | 0–3 |
+| Por slide: PNGs (modo Upload) | upload | 1–8 obrigatórios por slide |
+| Instruções de uso das imagens globais (modo Upload) | textarea | até 800 |
 
-### Fluxo de uso
+### Modos de geração
 
-```
-PASSO 1: Selecionar subtipo
-  [Imagem Estática]  /  [Carrossel]
+- **IA** (default): composição livre via gpt-image-1, opcionalmente com 0–3 PNGs de referência leve.
+- **Upload**: 1–8 PNGs obrigatórios + texto livre referenciando cada arquivo por nome. Útil quando IA falha em compor cenas físicas (anatomia, perspectiva).
 
-PASSO 2: Selecionar template
-  [Default V1]  /  [Default V2]  /  [Default V3]  /  [Custom ...]
+### Templates e brand
 
-PASSO 3: Upload de imagens/objetos
-  PNGs sem fundo (produto, atriz, animal, objeto decorativo)
-
-PASSO 4: Preencher campos de texto
-  - Campo Customização / Ideia (livre, para IA ajustar dentro do template)
-  - Campos Texto a Risca (por zona do template)
-
-PASSO 5: Para Carrossel — repetir Passo 3 e 4 para cada slide
-
-PASSO 6: [Gerar]
-```
-
-### Campos de texto — Imagem Estática e Carrossel
-
-**Campo 1 — Customização / Ideia**
-- Tipo: textarea livre
-- Tooltip: *"Descreva ajustes visuais ou de clima que você quer na imagem. Ex: 'atriz comemorando com expressão animada', 'fundo com elementos de Natal'. A IA tenta aplicar dentro do template — sem inventar textos ou sair do padrão visual."*
-- Regra: IA pode ajustar composição/atmosfera, nunca altera textos do Campo 2
-
-**Campo 2 — Textos a Risca (por zona do template)**
-
-Exemplo para template com 3 zonas (zonas variam por template):
-| Sub-campo | Tooltip |
-|---|---|
-| Título principal | *"Texto grande em destaque no topo. Será exibido exatamente como digitado."* |
-| Subtítulo / Corpo | *"Texto de apoio. Será exibido exatamente como digitado. Respeite o limite de caracteres do template."* |
-| CTA (Call to Action) | *"Botão ou frase de ação. Ex: 'Compre agora', 'Ver na loja'. Será exibido exatamente como digitado."* |
-
-### Templates disponíveis
-- **3 variações default** por subtipo (pequenas diferenças de disposição, hierarquia e posição de CTA)
-- **Custom:** criados via Template Creator → M2 Layouts
-- Padrão visual geral: gradiente azul→roxo, tipografia cyan/branco, ícones e setas cyan
-- Cores e fontes: herdadas de `lib/brand/m2.brand.ts`
-
-### Cores e fontes
-- **Fonte:** Montserrat (todos os pesos)
-- **Cores ativas:**
-  - Títulos: `#4CDDC3` (cta — verde)
-  - Outros textos: `#FEFEFC` (branco)
-- **Rodapé fixo:** logo Charme do Detalhe (SVG) + texto `@charmedodetalhe`
+- **Brand config:** `lib/brand/m2.brand.ts` (Montserrat, gradient cyan→roxo, dimensões, faixa de carrossel, logos disponíveis).
+- **Logos disponíveis** (consumidos pelo T2/T3 via `LogoSelector`):  `casinha` (default, 90% dos casos), `quadrado`, `3d`, `retangular`.
+- **T1 não usa LogoSelector** (decisão pós-smoke 2: gpt-image-1 não respeita pixel-precisamente reserva de footer; IA decide composição inteira).
 
 ### Dimensões
-- Post estático: **1080×1080px**
-- Carrossel: **1080×1080px** por slide
+- **1080×1350** (4:5 portrait Instagram) — substitui 1080×1080 da SPEC ≤v1.5.
+- Output nativo gpt-image-1: 1024×1536 → Sharp resize/crop center pra 1080×1350.
+
+### Custo
+- T1 high: ~$0.19/imagem.
+- Volume estimado 30-120 posts/mês × média 2 slides = **$4.80–$22.80/mês** (aceito por Rafael — ver [DEC-M2-001]).
+
+### Limitações inerentes do T1
+Reforços de prompt mitigam mas NÃO eliminam (ver [LIMIT-M2-001]):
+- Falta de continuidade visual entre slides paralelos do carrossel
+- Variabilidade ocasional de fundo (escape do gradient apesar de `BACKGROUND ENFORCEMENT`)
+- IA pode inventar handles/marcas d'água apesar de `NO BRAND ELEMENTS`
+- Hierarquia tipográfica imprecisa apesar de `TYPOGRAPHIC HIERARCHY STRICT`
+- Tipografia densa em PT-BR com diacríticos tem variabilidade
+
+Resolução real prevista no T2 via Pipeline Híbrido (Fase 3).
 
 ---
 
@@ -394,7 +412,7 @@ PASSO 6: [Gerar]
 
 **Contexto registrado:**
 - Ferramenta de email marketing: **Edrone**
-- Posição na ordem de implementação: **último módulo**
+- Posição na ordem de implementação: **penúltimo módulo**
 
 **Tudo abaixo a definir:**
 - Objetivo detalhado
@@ -404,6 +422,26 @@ PASSO 6: [Gerar]
 - Inputs e campos
 - Templates default
 - Dimensões
+- Paleta e fontes
+- API de geração (se aplicável)
+
+---
+
+## Módulo 6 — Imagens Ads (`/m6-ads`)
+
+**Status:** Placeholder. 100% a definir em sessão futura.
+
+**Contexto registrado:**
+- Posição na ordem de implementação: **último módulo** (após M5)
+
+**Tudo a definir:**
+- Objetivo detalhado (criativos pra Meta Ads, Google Ads, TikTok Ads?)
+- Subtipos / variações (estático, vídeo curto, formato vertical/quadrado?)
+- Princípio técnico
+- Fluxo de uso
+- Inputs e campos
+- Templates default
+- Dimensões (provavelmente múltiplas por plataforma)
 - Paleta e fontes
 - API de geração (se aplicável)
 
@@ -584,6 +622,17 @@ PASSO 5: Preview + [Salvar como Custom] ou [Refinar] ou [Descartar]
 ---
 
 ## Changelog
+
+### v1.6 — 18/05/2026 (M2 Fase 1 fechada · T1 em prod · M6 placeholder)
+- **Header version**: salto de v0.4 → v1.6 (header estava desatualizado; corrige inconsistência).
+- **M2 reescrito:** estrutura híbrida com 3 templates independentes (T1 ativo, T2/T3 placeholders). Princípio "compositing puro" da SPEC ≤v1.5 substituído por estrutura por-template.
+- **M2 dimensões:** 1080×1350 (4:5 portrait) substitui 1080×1080.
+- **M2 carrossel:** 2-8 slides (era 3-5), CTA final livre como campo separado.
+- **M2 modos:** novo radio IA / Upload de imagens (Upload exige 1-8 PNGs + instruções de uso por nome).
+- **M2 T1 (Atual_Maio26):** `fal-prompt-puro` via gpt-image-1 tier high (~$0.19/img). Réplica imperfeita do ChatGPT Plus. Limitações registradas em [LIMIT-M2-001].
+- **M2 footer:** decisão Rafael pós-smoke 2 — T1 sem footer programático (gpt-image-1 não respeita reserva pixel-precisa). Footer 100% controlado reservado pro T2.
+- **M6 — Imagens Ads** adicionado como placeholder (100% a definir, igual M5).
+- **Commit:** `9c32313 feat(m2): fase 1 fechada — T1 prompt v5 (anti-handle + bg enforcement + hierarquia strict)`.
 
 ### v0.4 — 13/05/2026 (Tinos + Bloco C)
 - **Fonte M4:** trocada de Times New Roman MT (Monotype, licenciada) para **Tinos** (Google Fonts, Apache 2.0, clone métrico open-source). DEC-003 resolvida.

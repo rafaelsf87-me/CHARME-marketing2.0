@@ -25,6 +25,22 @@
 
 ---
 
+## ⚠️ Limitações Aceitas
+
+### [LIMIT-M2-001] T1 Atual_Maio26 — limitações inerentes do gpt-image-1 (carrossel)
+- Pipeline T1 = `fal-prompt-puro` via gpt-image-1 tier high.
+- Limitações estruturais que reforços de prompt mitigam mas NÃO eliminam:
+  - Falta de continuidade visual entre slides paralelos (sofás/produtos podem variar entre slides do mesmo carrossel)
+  - Variabilidade ocasional de fundo (pode escapar do gradient cyan→roxo apesar de `BACKGROUND ENFORCEMENT`)
+  - IA pode inventar handles/marcas d'água apesar de `NO BRAND ELEMENTS`
+  - Hierarquia tipográfica imprecisa apesar de `TYPOGRAPHIC HIERARCHY STRICT`
+  - Tipografia densa em PT-BR com diacríticos tem variabilidade
+- ACEITO como trade-off do T1 ("réplica imperfeita do ChatGPT Plus"). T1 = "rascunho rápido pra brainstorm interno".
+- Resolução real prevista no T2 (Atual_Maio26_New, Fase 3) via Pipeline Híbrido Sharp/Satori — controle pixel-preciso elimina TODOS esses problemas (IA fica restrita a gerar elementos isolados, layouts + tipografia + footer são 100% determinísticos).
+- **Identificado em:** Sessão M2 Fase 1, 18/05/2026.
+
+---
+
 ## 🔧 Melhorias Pendentes
 
 *(nenhuma até o momento)*
@@ -61,6 +77,20 @@ Ideias que surgiram mas estão **fora do escopo atual**. Não implementar agora.
 ## 🏗️ Refatoração Necessária
 
 Código que funciona mas precisa ser melhorado antes da próxima feature relacionada.
+
+### [REF-M2-002] Footer overlay programático implementado mas desativado no T1
+- **Onde:** `lib/m2/footer-gen.ts` (função `generateFooterOverlay`), `app/imagens/m2-posts/_components/logo-selector.tsx` (escondido quando `templateId === 'atual-maio26'` nos forms).
+- **Descrição:** footer-overlay programático (4 logos + handle via Sharp + SVG inline) foi implementado no Adendo §7 e validado em smoke 1. No smoke 2, ficou claro que gpt-image-1 não respeita pixel-precisamente a reserva de 100/180px no bottom — texto invadia a zona de footer. Decisão Rafael pós-smoke 2: remover footer do T1. T1 vira réplica fiel do ChatGPT Plus (que também não tem footer programático).
+- **Estado atual:** código mantido em `lib/m2/footer-gen.ts` com comentário "Used by Pipeline Híbrido (T2/T3). Not active in T1.". `LogoSelector` renderizado condicionalmente em ambos os forms (`{templateId !== 'atual-maio26' && <LogoSelector ... />}`).
+- **Ativação prevista:** T2 (Atual_Maio26_New, Fase 3) com Pipeline Híbrido Sharp/Satori — controle pixel-preciso elimina o problema. `logo` continua no schema M2 (sempre default `casinha`) pra evitar break.
+- **Identificado em:** Sessão M2 Fase 1, 18/05/2026.
+
+### [REF-M2-001] Vercel Blob store privado legado
+- **Onde:** conta Vercel, store antigo não-deletável.
+- **Descrição:** projeto tem 2 blob stores. Store público (criado depois pro M1) em uso por prod (a0360ba M1, 9c32313 M2). Store privado legado permanece sem uso — `vercel env pull` sem flag não retorna o token público (pull traz vazios pra secrets em production). Smokes locais do M2 falham no `put` por usar o token errado (não-bloqueante, fluxo prod usa env do Vercel diretamente).
+- **Bloqueia:** nada (smokes locais conseguem baixar a imagem direto do FAL e rodar post-process).
+- **Workaround pra smoke local:** rodar imagem manualmente via FAL URL (URL pública do CDN do fal.ai válida por horas).
+- **Identificado em:** Sessão M2 Fase 1, 18/05/2026.
 
 ### [REF-005] Vestindo a Capa não converge — modo "em construção" no backend, oculto na UI
 - **Onde:** `lib/m1/prompts.ts` (branch `vestindo-capa` em `buildScenarioBlock`), `lib/m1/templates.ts` (`sofaVestindoCapa1`), `lib/m1/schema.ts` (`M1_TIPOS_FOTO`).
@@ -168,6 +198,24 @@ Pontos onde uma decisão de produto é necessária antes de avançar.
 ## 🗑️ Resolvidas / Descartadas
 
 Quando uma dívida é resolvida ou descartada, mover para cá com nota curta. Manter os últimos 20 itens, depois limpar.
+
+### [DEC-M2-003] T1 sem footer programático (réplica fiel do ChatGPT Plus) — RESOLVIDA em Sessão M2 Fase 1, 18/05/2026
+- **Decisão:** após smokes 1 e 2, gpt-image-1 mostrou-se incapaz de respeitar pixel-precisamente reserva de 100/180px no bottom mesmo com bloco `FOOTER RESERVATION (STRICT)` no prompt. Body text continuou invadindo a zona de footer overlay. Composite Sharp resultava em texto da IA sob o footer programático.
+- **Solução:** remover footer overlay do T1. Composição inteira fica por conta do gpt-image-1 (incluindo a convenção do modelo de adicionar handle/brand text, que é variabilidade aceita).
+- **Mudanças:** `prompt.ts` v4→v5 sem bloco FOOTER, `post-process.ts` simplificado pra `resizeTo1080x1350` puro, `render.ts` sem `logoOption` propagado, `LogoSelector` escondido em T1 nos forms.
+- **Footer programático:** mantido em `lib/m2/footer-gen.ts` pra uso pelo T2 (Fase 3, Pipeline Híbrido). Ver [REF-M2-002].
+- **Implementado:** commit `9c32313`.
+
+### [DEC-M2-002] Modo Upload pra resolver erros físicos de geração IA — RESOLVIDA em Sessão M2 Fase 1, 18/05/2026
+- **Decisão:** novo radio "Modo de geração" (IA vs Upload). Modo Upload aceita 1-8 PNGs + textarea de instruções de uso por nome de arquivo/slide. Resolve erros físicos (anatomia, perspectiva impossível) ao forçar elementos visuais via reference image em vez de geração pura.
+- **Schema:** `M2_MODO_GERACAO = ['ia', 'upload']` + `superRefine` validando ≥1 PNG por slide no modo upload.
+- **UI:** `<modo-geracao-selector>` + blocos condicionais nos forms.
+- **Implementado:** commit `9c32313`.
+
+### [DEC-M2-001] Tier T1 definido como `high` — RESOLVIDA em Sessão M2 Fase 1, 18/05/2026
+- **Decisão:** após smoke inicial em `medium` ($0.063) gerar output com erros sistemáticos de português ("Veste 9 sofá", "rapido" sem acento, "ELĂSTICA") e hierarquia tipográfica quebrada, decisão foi migrar pra tier `high` ($0.16-0.19/img). Smoke 2 e smoke carrossel confirmaram qualidade aceitável em high.
+- **Custo mensal revisado:** $4.80–$22.80/mês (30-120 posts × ~$0.19). Aceito por Rafael.
+- **Implementado:** `lib/m2/templates/atual-maio26/config.ts` com `quality: 'high'`, commit `9c32313`.
 
 ### [DEC-001] Dimensões exatas M3 (desktop e mobile) — RESOLVIDA em sessão 4 (15/05/2026)
 - **Decisão:** Desktop 1920×550 WEBP, Mobile 800×600 WEBP
