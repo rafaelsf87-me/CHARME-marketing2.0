@@ -52,3 +52,7 @@ coverage/
 
 # Sistema operacional
 Thumbs.db
+
+# Ferramentas locais / temporários
+.claude/
+tmp/
