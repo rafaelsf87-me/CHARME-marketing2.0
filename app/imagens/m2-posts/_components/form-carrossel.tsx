@@ -259,7 +259,8 @@ export function FormCarrossel({ templateId }: FormCarrosselProps) {
         )}
       </div>
 
-      <PreviewCarrossel slots={previewSlots} />
+      {/* Preview só aparece após gerar (hotfix v6) */}
+      {previewSlots.length > 0 && <PreviewCarrossel slots={previewSlots} />}
     </div>
   )
 }

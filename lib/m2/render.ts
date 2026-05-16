@@ -1,4 +1,5 @@
 import { put } from '@vercel/blob'
+import { brandM2 } from '@/lib/brand/m2.brand'
 import { getTemplate } from './templates'
 import type { Template } from './templates/types'
 import { callGptImage } from './fal-client'
@@ -35,10 +36,20 @@ async function generateOne(args: {
   referenceUrls: string[] | undefined
   blobKey: string
 }): Promise<string> {
+  // Hotfix v6 (18/05/2026): T1 sempre usa edit-image com o gradient base
+  // como primeira reference image. Trava o fundo cyan→roxo (resolve fundo
+  // preto/branco aleatório que escapava do BACKGROUND ENFORCEMENT só-via-prompt).
+  // PNGs do usuário (modo IA opcional / Upload obrigatório) entram nas
+  // posições seguintes.
+  const referenceUrls = [
+    brandM2.backgrounds.gradientBaseUrl,
+    ...(args.referenceUrls ?? []),
+  ]
+
   const rawUrl = await callGptImage({
     prompt: args.prompt,
     falConfig: args.template.falConfig,
-    referenceUrls: args.referenceUrls,
+    referenceUrls,
   })
 
   const processed = await resizeTo1080x1350(rawUrl)

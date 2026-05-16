@@ -55,7 +55,10 @@ export function TemplateSelector({ value, onChange }: TemplateSelectorProps) {
                   {badge.label}
                 </span>
               </div>
-              <p className="text-[11.5px] leading-snug text-[color:var(--text-secondary)]">
+              <p
+                className="line-clamp-1 w-full truncate text-[11.5px] leading-snug text-[color:var(--text-secondary)]"
+                title={tpl.descricao}
+              >
                 {tpl.descricao}
               </p>
             </button>

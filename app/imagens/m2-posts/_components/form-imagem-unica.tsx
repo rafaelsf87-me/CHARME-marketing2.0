@@ -209,11 +209,14 @@ export function FormImagemUnica({ templateId }: FormImagemUnicaProps) {
         </Button>
       </div>
 
-      <PreviewImagemUnica
-        state={preview.state}
-        url={preview.state === 'ready' ? preview.url : undefined}
-        errorMsg={preview.state === 'error' ? preview.errorMsg : undefined}
-      />
+      {/* Preview só aparece após gerar (hotfix v6) */}
+      {preview.state !== 'empty' && (
+        <PreviewImagemUnica
+          state={preview.state}
+          url={preview.state === 'ready' ? preview.url : undefined}
+          errorMsg={preview.state === 'error' ? preview.errorMsg : undefined}
+        />
+      )}
     </div>
   )
 }

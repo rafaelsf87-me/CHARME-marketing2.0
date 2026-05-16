@@ -34,6 +34,19 @@ export const brandM2 = {
     },
     default: 'casinha' as const,
   },
+  // Background base do T1 (hotfix v6, 18/05/2026): PNG em
+  // public/brand/m2/backgrounds/gradient-base.png é sempre usado como
+  // primeira reference image no edit-image. Trava o gradient cyan→roxo —
+  // resolve fundo preto/branco aleatório que escapava do BACKGROUND
+  // ENFORCEMENT só-via-prompt. URL pública via Vercel; override por env
+  // se mudar de domínio.
+  backgrounds: {
+    basePath: '/brand/m2/backgrounds',
+    gradientBase: 'gradient-base.png',
+    gradientBaseUrl:
+      process.env.NEXT_PUBLIC_GRADIENT_BASE_URL ??
+      'https://charme-marketing2-0.vercel.app/brand/m2/backgrounds/gradient-base.png',
+  },
   dimensions: {
     // 1080×1350 (4:5 portrait Instagram). Substitui 1080×1080 da SPEC ≤v1.5.
     final: { width: 1080, height: 1350 },

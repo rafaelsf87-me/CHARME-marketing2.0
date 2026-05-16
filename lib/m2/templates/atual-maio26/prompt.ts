@@ -1,17 +1,19 @@
 import type { BuildPromptArgs } from '../types'
 
-// T1 prompt v5 — pós-smoke carrossel (3 reforços de fechamento).
+// T1 prompt v6 — pós-validação prod 2 (Caminho 2: gradient via reference image).
 // Decisão Rafael: T1 é "rascunho rápido pra brainstorm interno" — réplica
-// imperfeita do ChatGPT Plus. Limitações inerentes do gpt-image-1 em
-// carrossel paralelo (continuidade, fundo, handles inventados, hierarquia)
-// estão registradas em [LIMIT-M2-001] e serão resolvidas pelo T2 (Pipeline
-// Híbrido Sharp/Satori, Fase 3).
+// imperfeita do ChatGPT Plus. Hotfix v6 trava o fundo via reference image
+// (não mais só prompt), resolvendo fundo preto/branco aleatório.
 //
-// Reforços v5:
+// Reforços v6:
+//   - REFERENCE IMAGE — BACKGROUND BASE: usa primeira ref image como canvas
+//     edge-to-edge (gradient cyan→roxo). T1 agora sempre chama edit-image.
+//   - SAFE AREA / OVERFLOW PROTECTION: 60px margem nas 4 bordas, título
+//     nunca cortado.
+// Blocos mantidos do v5:
 //   - BACKGROUND ENFORCEMENT: força gradient cyan→roxo em 100% do canvas.
-//   - NO BRAND ELEMENTS: bloqueia IA de inventar "@charmedodetalhe", etc.
+//   - NO BRAND ELEMENTS: bloqueia IA de inventar "@charmedodetalhe".
 //   - TYPOGRAPHIC HIERARCHY STRICT: title ≤25% canvas, body 35-45% do title.
-// Blocos mantidos do v4:
 //   - STYLE REFERENCE + VISUAL STYLE AVOID: força 3D/foto cutout.
 //   - TEXT FIDELITY: bloco crítico contra erros de português.
 //   - DENSITY GUIDANCE: prefere whitespace a fonts pequenas.
@@ -27,6 +29,20 @@ BRAND VISUAL IDENTITY (MANDATORY - NEVER CHANGE):
 - Body text color: White (#FFFFFF)
 - Accent elements: Cyan (#00FFFF) for arrows, icons, highlights
 - Style: Modern, clean, vibrant gradient background
+
+REFERENCE IMAGE — BACKGROUND BASE (CRITICAL):
+- The FIRST reference image provided is the base canvas: a cyan→purple gradient background.
+- Use this EXACT gradient as the background of your composition, edge-to-edge.
+- Do NOT replace, modify, darken, or override this background.
+- Do NOT add black bands, white rectangles, faixas, or any solid-color regions that obscure the gradient.
+- The gradient must remain fully visible across the entire canvas.
+
+SAFE AREA / OVERFLOW PROTECTION (CRITICAL):
+- Reserve a 60px safe-area margin on ALL four edges of the canvas (top, bottom, left, right).
+- NO text (title, body, bullets, captions) may extend into or beyond this 60px margin.
+- The TITLE in particular must be COMPLETELY visible within the safe area — never cropped, never partially cut off by the canvas edge.
+- If the title is too large to fit within the safe area, REDUCE its font size — never let it overflow.
+- All visual elements (illustrations, icons, accents) must also stay within the safe area.
 
 BACKGROUND ENFORCEMENT (CRITICAL):
 - The cyan→purple gradient background MUST cover the ENTIRE canvas on EVERY generated image.

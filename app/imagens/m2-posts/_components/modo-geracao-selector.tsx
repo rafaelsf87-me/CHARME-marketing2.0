@@ -25,7 +25,9 @@ interface ModoGeracaoSelectorProps {
  */
 export function ModoGeracaoSelector({ value, onChange, disabled }: ModoGeracaoSelectorProps) {
   return (
-    <div className="flex flex-col gap-1.5">
+    // w-fit (hotfix v6): não estica pra largura do parent. Em layouts de 1 col
+    // (T1, sem LogoSelector ao lado), evita o "quadro branco esticado" vazio.
+    <div className="flex w-fit flex-col gap-1.5">
       <label className="flex items-center gap-2 text-xs font-medium">
         Modo de geração
         <TooltipInfo text="IA: gera composição visual do zero (rápido, mas pode ter erros físicos/anatômicos). Upload: você fornece imagens (1-8 PNGs) + instruções de uso por nome de arquivo e slide. Garante fidelidade visual." />
