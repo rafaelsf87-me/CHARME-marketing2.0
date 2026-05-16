@@ -36,11 +36,12 @@ const CARROSSEL_EXEMPLO: M2GenerateInput = {
         'Slide 2 — TÍTULO: Capa elástica veste qualquer sofá. Texto de apoio: Encaixa em sofás de 2 e 3 lugares sem precisar tirar nada. 5 minutos por sofá.',
     },
     {
+      // Hotfix v8 (J): CTA agora vai DENTRO do copy do último slide.
+      // LAST SLIDE GUIDANCE no prompt T1 instrui a IA a destacar visualmente.
       copyTexto:
-        'Slide 3 — TÍTULO: Mais de 50 estampas e cores. Texto de apoio: Do liso minimalista ao boho colorido — tem opção pra cada estilo de casa.',
+        'Slide 3 — TÍTULO: Mais de 50 estampas e cores. Texto de apoio: Do liso minimalista ao boho colorido — tem opção pra cada estilo de casa. CTA: Salva o post pra escolher a sua e arrasta pro carrinho lá no perfil!',
     },
   ],
-  ctaFinal: 'Salva o post pra escolher a sua e arrasta pro carrinho lá no perfil!',
 }
 
 async function pruneSmokeDir(outDir: string, keep = 4): Promise<void> {

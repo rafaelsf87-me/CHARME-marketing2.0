@@ -30,7 +30,6 @@ export interface BuildPromptArgs {
   hasReferences: boolean
   // Carrossel:
   isUltimoSlide?: boolean
-  ctaFinal?: string
   contextoGeral?: string
 }
 

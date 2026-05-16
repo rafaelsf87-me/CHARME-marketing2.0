@@ -32,7 +32,8 @@ interface SlideBlockProps {
  * Bloco de slide do carrossel (hotfix UX 18/05/2026).
  * - 1 imagem por slide (era array, simplificou)
  * - Textarea `promptImagem` por slide (substitui instrucoesUsoImagens global)
- * - Expandido por default (era collapsed após o primeiro)
+ * - Collapsed por default (K, hotfix v8) — badges no header dão visão geral
+ *   de pendências sem precisar expandir todos os slides
  * - Badges de pendência (copy < 10, imagem obrigatória em upload)
  */
 export function SlideBlock({
@@ -43,7 +44,7 @@ export function SlideBlock({
   modoGeracao,
   disabled,
 }: SlideBlockProps) {
-  const [expanded, setExpanded] = React.useState(true)
+  const [expanded, setExpanded] = React.useState(false)
   const copyLen = value.copyTexto.length
   const isLast = index === total - 1
   const isUpload = modoGeracao === 'upload'

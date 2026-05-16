@@ -34,12 +34,12 @@ export const brandM2 = {
     },
     default: 'casinha' as const,
   },
-  // Background base do T1 (hotfix v6, 18/05/2026): PNG em
-  // public/brand/m2/backgrounds/gradient-base.png é sempre usado como
-  // primeira reference image no edit-image. Trava o gradient cyan→roxo —
-  // resolve fundo preto/branco aleatório que escapava do BACKGROUND
-  // ENFORCEMENT só-via-prompt. URL pública via Vercel; override por env
-  // se mudar de domínio.
+  // Background base — reservado pra uso pelo T2 (Pipeline Híbrido, Fase 3).
+  // Inativo no T1 desde hotfix v8 (18/05/2026): a estratégia v6 de prepend
+  // como reference image causava "lavagem" do gradient e desbotava output.
+  // T1 voltou a usar text-to-image (sem PNG) ou edit-image (só com PNGs do
+  // user). Asset permanece versionado pra futuro uso pelo T2/T3 com pipeline
+  // Sharp/Satori. URL pública via Vercel; override por env se mudar de domínio.
   backgrounds: {
     basePath: '/brand/m2/backgrounds',
     gradientBase: 'gradient-base.png',

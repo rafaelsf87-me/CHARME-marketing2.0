@@ -26,8 +26,6 @@ const { min: SLIDES_MIN, max: SLIDES_MAX } = brandM2.pipeline.carouselSlidesRang
 const DEFAULT_QTD = 3
 const COPY_MIN = 10
 const CONTEXTO_MAX = 500
-const CTA_MIN = 5
-const CTA_MAX = 300
 
 function emptySlide(): SlideState {
   return { copyTexto: '', pngUrl: null, promptImagem: '' }
@@ -37,7 +35,6 @@ export function FormCarrossel({ templateId }: FormCarrosselProps) {
   const [logo, setLogo] = React.useState<M2LogoOption>('casinha')
   const [modoGeracao, setModoGeracao] = React.useState<M2ModoGeracao>('ia')
   const [contextoGeral, setContextoGeral] = React.useState('')
-  const [ctaFinal, setCtaFinal] = React.useState('')
   const [slides, setSlides] = React.useState<SlideState[]>(() =>
     Array.from({ length: DEFAULT_QTD }, emptySlide)
   )
@@ -62,7 +59,8 @@ export function FormCarrossel({ templateId }: FormCarrosselProps) {
   }
 
   // Lista de pendências serve pro tooltip do botão Gerar quando disabled.
-  // Compõe slide-by-slide na ordem visível ao usuário.
+  // Hotfix v8 (J): CTA não é mais campo separado — fica dentro do copy do
+  // último slide. Pendências agora são só copy mín. 10 + upload obrigatório.
   const pendencias: string[] = []
   slides.forEach((s, i) => {
     if (s.copyTexto.length < COPY_MIN) {
@@ -72,10 +70,6 @@ export function FormCarrossel({ templateId }: FormCarrosselProps) {
       pendencias.push(`Slide ${i + 1}: imagem obrigatória no modo Upload`)
     }
   })
-  const ctaTrim = ctaFinal.trim()
-  if (ctaTrim.length < CTA_MIN || ctaTrim.length > CTA_MAX) {
-    pendencias.push(`CTA do último slide: ${ctaTrim.length < CTA_MIN ? 'faltando' : 'excedeu limite'} (${CTA_MIN}-${CTA_MAX} caracteres)`)
-  }
   const isValid = pendencias.length === 0 && !generating
 
   async function onGenerate() {
@@ -93,7 +87,6 @@ export function FormCarrossel({ templateId }: FormCarrosselProps) {
           logo,
           modoGeracao,
           contextoGeral: contextoGeral.trim() || undefined,
-          ctaFinal: ctaTrim,
           slides: slides.map((s) => ({
             copyTexto: s.copyTexto.trim(),
             pngUrl: s.pngUrl ?? undefined,
@@ -145,46 +138,26 @@ export function FormCarrossel({ templateId }: FormCarrosselProps) {
         />
       </div>
 
-      {/* 2. Qtd Slides + CTA — 2 colunas */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <label className="flex items-center gap-2 text-xs font-medium">
-            Quantidade de slides
-            <TooltipInfo text={`Entre ${SLIDES_MIN} e ${SLIDES_MAX} slides. Cada slide é uma geração independente (~$0.19 cada em tier high).`} />
-          </label>
-          <select
-            value={slides.length}
-            onChange={(e) => onChangeQtd(Number(e.target.value))}
-            disabled={generating}
-            className="h-10 w-full max-w-[160px] rounded-md border border-[color:var(--border-strong)] bg-white px-3 text-sm outline-none focus:border-[#553679] focus:ring-2 focus:ring-[#553679]/15"
-          >
-            {Array.from({ length: SLIDES_MAX - SLIDES_MIN + 1 }, (_, i) => SLIDES_MIN + i).map((n) => (
-              <option key={n} value={n}>
-                {n} slides
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 text-xs font-medium">
-              CTA do último slide
-              <TooltipInfo text="Frase de ação anexada ao último slide com instrução pra IA exibir em destaque. Ex.: 'Salva pra não esquecer'. Mín. 5 / máx. 300." />
-            </label>
-            <span className="tabular-nums text-[11px] text-[color:var(--text-tertiary)]">
-              {ctaFinal.length}/{CTA_MAX}
-            </span>
-          </div>
-          <Textarea
-            value={ctaFinal}
-            onChange={(e) => setCtaFinal(e.target.value)}
-            maxLength={CTA_MAX}
-            placeholder="Ex.: Salva pra não esquecer ou Compre agora no nosso site."
-            rows={2}
-            disabled={generating}
+      {/* 2. Qtd Slides (a CTA agora vai dentro do copy do último slide — J) */}
+      <div className="flex flex-col gap-1.5">
+        <label className="flex items-center gap-2 text-xs font-medium">
+          Quantidade de slides
+          <TooltipInfo
+            text={`Entre ${SLIDES_MIN} e ${SLIDES_MAX} slides. Cada slide é uma geração independente (~$0.19 cada em tier high). A frase de CTA vai dentro do copy do último slide — a IA é instruída a destacá-la.`}
           />
-        </div>
+        </label>
+        <select
+          value={slides.length}
+          onChange={(e) => onChangeQtd(Number(e.target.value))}
+          disabled={generating}
+          className="h-10 w-full max-w-[160px] rounded-md border border-[color:var(--border-strong)] bg-white px-3 text-sm outline-none focus:border-[#553679] focus:ring-2 focus:ring-[#553679]/15"
+        >
+          {Array.from({ length: SLIDES_MAX - SLIDES_MIN + 1 }, (_, i) => SLIDES_MIN + i).map((n) => (
+            <option key={n} value={n}>
+              {n} slides
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* 3. Modo de Geração + Logo (2 cols em T2/T3, 1 col em T1) */}
@@ -201,7 +174,7 @@ export function FormCarrossel({ templateId }: FormCarrosselProps) {
         )}
       </div>
 
-      {/* 4. Slides — expandidos por default */}
+      {/* 4. Slides — collapsed por default (K) */}
       <div className="flex flex-col gap-2">
         {slides.map((slide, i) => (
           <SlideBlock

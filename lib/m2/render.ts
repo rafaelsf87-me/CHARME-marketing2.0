@@ -1,9 +1,9 @@
 import { put } from '@vercel/blob'
-import { brandM2 } from '@/lib/brand/m2.brand'
 import { getTemplate } from './templates'
 import type { Template } from './templates/types'
-import { callGptImage } from './fal-client'
+import { callGptImage, type CallGptImageArgs } from './fal-client'
 import { resizeTo1080x1350 } from './post-process'
+import { isBackgroundGradient } from './background-check'
 import type { M2GenerateInput, M2SlideInput } from './schema'
 
 interface ResolvedTemplate extends Template {
@@ -30,29 +30,63 @@ function resolveTemplate(templateId: M2GenerateInput['templateId']): ResolvedTem
   return template as ResolvedTemplate
 }
 
+// Retry wrapper (hotfix v8, 18/05/2026). Sharp valida cantos do output —
+// se >=2 cantos parecem fundo sólido (preto/branco/cinza neutro), retenta
+// 1× e aceita o segundo output (mesmo se também falhar — log + sigue).
+//
+// Custo médio sobe ~10-20% nos casos de retry ocasional. Aceito como
+// trade-off do T1 ("réplica imperfeita do ChatGPT Plus"). T2 (Fase 3)
+// elimina o problema via Pipeline Híbrido com gradient determinístico.
+const MAX_ATTEMPTS = 2
+
+async function generateWithBgCheck(args: CallGptImageArgs): Promise<{ url: string; buffer: Buffer }> {
+  let lastUrl: string | null = null
+  let lastBuffer: Buffer | null = null
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const url = await callGptImage(args)
+    const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error(`[M2] Falha ao baixar imagem do FAL (${response.status})`)
+    }
+    const buffer = Buffer.from(await response.arrayBuffer())
+    lastUrl = url
+    lastBuffer = buffer
+
+    const isOk = await isBackgroundGradient(buffer)
+    if (isOk) {
+      if (attempt > 1) console.log(`[M2] Background retry succeeded on attempt ${attempt}`)
+      return { url, buffer }
+    }
+
+    if (attempt < MAX_ATTEMPTS) {
+      console.log(`[M2] Background check failed (attempt ${attempt}), retrying...`)
+    } else {
+      console.log(`[M2] Background check failed after ${MAX_ATTEMPTS} attempts, accepting last output`)
+    }
+  }
+
+  return { url: lastUrl as string, buffer: lastBuffer as Buffer }
+}
+
 async function generateOne(args: {
   template: ResolvedTemplate
   prompt: string
   referenceUrls: string[] | undefined
   blobKey: string
 }): Promise<string> {
-  // Hotfix v6 (18/05/2026): T1 sempre usa edit-image com o gradient base
-  // como primeira reference image. Trava o fundo cyan→roxo (resolve fundo
-  // preto/branco aleatório que escapava do BACKGROUND ENFORCEMENT só-via-prompt).
-  // PNGs do usuário (modo IA opcional / Upload obrigatório) entram nas
-  // posições seguintes.
-  const referenceUrls = [
-    brandM2.backgrounds.gradientBaseUrl,
-    ...(args.referenceUrls ?? []),
-  ]
-
-  const rawUrl = await callGptImage({
+  // Hotfix v8 (18/05/2026): revertida a estratégia v6 de prepend gradient
+  // base. Agora `referenceUrls` só carrega os PNGs do user. Sem PNGs,
+  // pipeline cai em text-to-image automaticamente (via fal-client).
+  // Validação de fundo é feita via retry com Sharp (background-check.ts).
+  const { url, buffer } = await generateWithBgCheck({
     prompt: args.prompt,
     falConfig: args.template.falConfig,
-    referenceUrls,
+    referenceUrls: args.referenceUrls,
   })
 
-  const processed = await resizeTo1080x1350(rawUrl)
+  // Reusa o buffer já baixado pra evitar segundo fetch.
+  const processed = await resizeTo1080x1350(url, buffer)
   const blob = await put(args.blobKey, processed, {
     access: 'public',
     addRandomSuffix: true,
@@ -85,9 +119,9 @@ export async function renderM2(input: M2GenerateInput): Promise<{ urls: string[]
   }
 
   // Carrossel: cada slide é uma geração independente, em paralelo.
-  // Homogeneidade visual fica por conta do prompt comum (gradient + brand id).
-  // Hotfix UX 18/05/2026: 1 imagem por slide + promptImagem por slide
-  // (substitui instrucoesUsoImagens global). Mais granular.
+  // Hotfix v8 (J): sem `ctaFinal` global — CTA vai dentro do copy do último
+  // slide e a IA é instruída via LAST SLIDE GUIDANCE a destacá-la quando
+  // presente.
   const tasks = input.slides.map((slide: M2SlideInput, idx: number) => {
     const isUltimo = idx === input.slides.length - 1
     const referenceUrls = slide.pngUrl ? [slide.pngUrl] : undefined
@@ -96,7 +130,6 @@ export async function renderM2(input: M2GenerateInput): Promise<{ urls: string[]
       contextoGeral: input.contextoGeral,
       instrucoesUsoImagens: slide.promptImagem,
       isUltimoSlide: isUltimo,
-      ctaFinal: isUltimo ? input.ctaFinal : undefined,
       hasReferences: !!slide.pngUrl,
     })
     return generateOne({

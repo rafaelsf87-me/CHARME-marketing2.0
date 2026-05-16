@@ -57,8 +57,6 @@ export const carrosselSchema = z.object({
     .array(slideSchema)
     .min(brandM2.pipeline.carouselSlidesRange.min)
     .max(brandM2.pipeline.carouselSlidesRange.max),
-  // Anexado ao copy do último slide com instrução de exibição em destaque.
-  ctaFinal: z.string().min(5).max(300),
 })
 
 // Regras cross-field:

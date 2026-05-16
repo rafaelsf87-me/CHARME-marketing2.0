@@ -1,21 +1,22 @@
 import type { BuildPromptArgs } from '../types'
 
-// T1 prompt v6 — pós-validação prod 2 (Caminho 2: gradient via reference image).
-// Decisão Rafael: T1 é "rascunho rápido pra brainstorm interno" — réplica
-// imperfeita do ChatGPT Plus. Hotfix v6 trava o fundo via reference image
-// (não mais só prompt), resolvendo fundo preto/branco aleatório.
+// T1 prompt v8 — pós-validação prod 4 (revisor de fundo via retry automático).
+// Revertida a estratégia v6 de reference image base (causava "lavagem" do
+// gradient e desbotava output). Pipeline volta a usar text-to-image quando
+// user não fornece PNGs; edit-image apenas com PNGs do user.
 //
-// Reforços v6:
-//   - REFERENCE IMAGE — BACKGROUND BASE: usa primeira ref image como canvas
-//     edge-to-edge (gradient cyan→roxo). T1 agora sempre chama edit-image.
-//   - SAFE AREA / OVERFLOW PROTECTION: 60px margem nas 4 bordas, título
-//     nunca cortado.
-// Blocos mantidos do v5:
+// Mudanças v8:
+//   - Removido bloco REFERENCE IMAGE — BACKGROUND BASE (v6).
+//   - Removida dependência de `ctaFinal` (J): CTA agora vai dentro do copy
+//     do último slide. Substituído por bloco LAST SLIDE GUIDANCE genérico.
+// Blocos mantidos:
 //   - BACKGROUND ENFORCEMENT: força gradient cyan→roxo em 100% do canvas.
+//   - SAFE AREA / OVERFLOW PROTECTION: 60px margem, título nunca cortado.
 //   - NO BRAND ELEMENTS: bloqueia IA de inventar "@charmedodetalhe".
 //   - TYPOGRAPHIC HIERARCHY STRICT: title ≤25% canvas, body 35-45% do title.
 //   - STYLE REFERENCE + VISUAL STYLE AVOID: força 3D/foto cutout.
 //   - TEXT FIDELITY: bloco crítico contra erros de português.
+//   - LAST SLIDE GUIDANCE: instrui IA a destacar CTA quando presente no copy.
 //   - DENSITY GUIDANCE: prefere whitespace a fonts pequenas.
 const BASE_PROMPT = `Create an image for a social media content post for the CharmedoDetalhe store following the guidelines below.
 
@@ -29,13 +30,6 @@ BRAND VISUAL IDENTITY (MANDATORY - NEVER CHANGE):
 - Body text color: White (#FFFFFF)
 - Accent elements: Cyan (#00FFFF) for arrows, icons, highlights
 - Style: Modern, clean, vibrant gradient background
-
-REFERENCE IMAGE — BACKGROUND BASE (CRITICAL):
-- The FIRST reference image provided is the base canvas: a cyan→purple gradient background.
-- Use this EXACT gradient as the background of your composition, edge-to-edge.
-- Do NOT replace, modify, darken, or override this background.
-- Do NOT add black bands, white rectangles, faixas, or any solid-color regions that obscure the gradient.
-- The gradient must remain fully visible across the entire canvas.
 
 SAFE AREA / OVERFLOW PROTECTION (CRITICAL):
 - Reserve a 60px safe-area margin on ALL four edges of the canvas (top, bottom, left, right).
@@ -100,6 +94,14 @@ DENSITY GUIDANCE:
 - Avoid overcrowding text. If copy is dense, prefer larger whitespace over shrinking fonts to fit.
 - For Instagram readability, keep total visible characters per image moderate.`
 
+// LAST SLIDE GUIDANCE substitui o append explícito de ctaFinal (v8/J).
+// Instrui a IA a procurar e destacar visualmente uma frase de chamada à
+// ação que o usuário pode ter colocado dentro do copy do último slide.
+const LAST_SLIDE_GUIDANCE = `LAST SLIDE GUIDANCE (carrossel — último slide):
+- This is the FINAL slide of a carousel. If the copy contains a call-to-action phrase (a final instruction like "Salva o post", "Compre agora", "Acesse o link", "Compartilha com quem precisa"), give it strong visual emphasis.
+- The CTA should be the most prominent element AFTER the title: larger, bolder, or set inside a pill/button shape with cyan accent.
+- If no clear CTA is present in the copy, follow the standard hierarchy without inventing one.`
+
 const REQUIREMENTS = `REQUIREMENTS:
 - Portuguese text only, no English
 - Preserve all accents (á, ã, â, é, ê, í, ó, ô, ú, ç)
@@ -118,22 +120,15 @@ export function buildT1Prompt(args: BuildPromptArgs): string {
     instrucoesUsoImagens,
     contextoGeral,
     isUltimoSlide,
-    ctaFinal,
   } = args
 
-  // Carrossel: prefixa contexto + (no último slide) anexa CTA com instrução
-  // explícita pra IA exibir em destaque.
+  // Carrossel: prefixa contexto geral (se houver).
   let textContent = copyTexto
   if (contextoGeral) {
     textContent = `Context: ${contextoGeral}\n\n${textContent}`
   }
-  if (isUltimoSlide && ctaFinal) {
-    textContent = `${textContent}\n\nCTA (call to action — display prominently): ${ctaFinal}`
-  }
 
   // Combina instruções extras (modo IA) + uso de imagens (modo upload).
-  // No upload o usuário referencia PNGs por nome de arquivo — texto vai bruto
-  // pro modelo decidir como aplicar.
   const instrucoesCombined = [
     instrucoesExtras,
     instrucoesUsoImagens ? `Image usage guidance: ${instrucoesUsoImagens}` : null,
@@ -145,5 +140,7 @@ export function buildT1Prompt(args: BuildPromptArgs): string {
     ? `\n\nADDITIONAL INSTRUCTIONS:\n- ${instrucoesCombined}\n`
     : ''
 
-  return `${BASE_PROMPT}${instructionsBlock}\n\nTEXT CONTENT (PORTUGUESE-BR — IMMUTABLE, RENDER VERBATIM):\n${textContent}\n\n${REQUIREMENTS}`
+  const lastSlideBlock = isUltimoSlide ? `\n\n${LAST_SLIDE_GUIDANCE}` : ''
+
+  return `${BASE_PROMPT}${lastSlideBlock}${instructionsBlock}\n\nTEXT CONTENT (PORTUGUESE-BR — IMMUTABLE, RENDER VERBATIM):\n${textContent}\n\n${REQUIREMENTS}`
 }
