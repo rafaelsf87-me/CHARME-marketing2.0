@@ -28,3 +28,51 @@ export interface Template {
   buildTituloPrompt?: (texto: string) => string
   falConfig?: FalConfig
 }
+
+// ─── Composição visual (Sub-fase 2.2) ────────────────────────────────────────
+
+export interface M3Cores {
+  primary: string
+  secondary: string
+  accent: string
+  cardBg: string
+  cardBgEnd: string
+}
+
+export interface M3Textos {
+  // Texto exibido no círculo do desconto (ex.: "38% OFF", "Até 74% OFF").
+  descontoPromo: string
+  // Quando true, renderiza "na loja toda" abaixo do desconto.
+  naLojaToda?: boolean
+  // Asterisco do rodapé (texto longo com observações).
+  footer?: string
+}
+
+// Cada condição do card. textos[] suporta múltiplas linhas (ex.: FRETE GRÁTIS*
+// + subitens *Sul/Sudeste R$200... Outras regiões R$299...).
+export interface M3Condicao {
+  id: string
+  iconePng: Buffer
+  textos: string[]
+}
+
+// Decoração posicionada pixel-precisa no canvas (corações, etc).
+// layer 'back' = compostada antes do título/atriz; 'front' = depois.
+export interface M3Decoracao {
+  buffer: Buffer
+  x: number
+  y: number
+  w: number
+  h: number
+  layer: 'back' | 'front'
+}
+
+// Contrato unificado consumido por composeDesktop/composeMobile.
+export interface M3Layers {
+  bg: M3Cores
+  textos: M3Textos
+  condicoes: M3Condicao[]
+  tituloPng: Buffer
+  atrizPng: Buffer
+  decoracoesPngs: M3Decoracao[]
+}
