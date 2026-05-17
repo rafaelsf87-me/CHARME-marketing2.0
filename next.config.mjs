@@ -11,6 +11,13 @@ const nextConfig = {
       // M1 lê foto-template + mask via readFile(process.cwd() + '/public/templates/m1/...').
       // Sem este include, o bundle da função serverless não embarca os assets.
       '/api/imagens/m1/render': ['./public/templates/m1/**/*'],
+      // M3 usa Satori (Montserrat 600/700/800 estáticos) + decorações PNG do banco.
+      '/api/imagens/m3/render': [
+        './public/fonts/Montserrat-SemiBold.ttf',
+        './public/fonts/Montserrat-Bold.ttf',
+        './public/fonts/Montserrat-ExtraBold.ttf',
+        './public/brand/m3/decoracoes/*.png',
+      ],
     },
   },
   images: {

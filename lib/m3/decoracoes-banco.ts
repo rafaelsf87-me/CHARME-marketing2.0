@@ -1,12 +1,13 @@
-import { readFile } from 'node:fs/promises'
-import path from 'node:path'
-
 // Banco curado de decorações pro M3 — Microsoft Fluent Emoji 3D (MIT).
 // Repo: https://github.com/microsoft/fluentui-emoji
 // 13 assets PNG 256×256 com alpha real, baixados em 2026-05-17.
 // Curadoria inicial cobre: corações (4), itens promo (cartão, dinheiro,
 // presente), comemoração (foguete, confete, coroa, estrela), natalino
 // (papai-noel = Mx claus default), floral (cherry blossom). Ver DEC-M3-004.
+//
+// CLIENT-SAFE: este arquivo NÃO importa fs/path — o array DECORACOES_BANCO
+// pode ser consumido por componentes client (form-decoracoes.tsx).
+// `loadDecoracao()` mora em `decoracoes-banco-server.ts` (server-only).
 
 export interface DecoracaoBancoItem {
   id: string
@@ -33,13 +34,4 @@ export const DECORACOES_BANCO: readonly DecoracaoBancoItem[] = [
 
 export function getDecoracaoById(id: string): DecoracaoBancoItem | undefined {
   return DECORACOES_BANCO.find((d) => d.id === id)
-}
-
-// Carrega o PNG do filesystem (public/brand/m3/decoracoes/<filename>).
-// Server-side only — pra preview no browser, a UI usa o path público direto.
-export async function loadDecoracao(id: string): Promise<Buffer> {
-  const item = getDecoracaoById(id)
-  if (!item) throw new Error(`[M3] Decoração desconhecida: ${id}`)
-  const fullPath = path.resolve(process.cwd(), 'public/brand/m3/decoracoes', item.filename)
-  return readFile(fullPath)
 }
