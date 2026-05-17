@@ -84,9 +84,49 @@ export async function callFluxAtriz(args: CallFluxAtrizArgs): Promise<Buffer> {
   return Buffer.from(await resp.arrayBuffer())
 }
 
-// ─── Rembg ────────────────────────────────────────────────────────────────────
-
 const REMBG_ENDPOINT = 'fal-ai/imageutils/rembg'
+
+// ─── Decoração IA (fallback quando banco curado não cobre) ────────────────────
+
+const FLUX_DECORACAO_ENDPOINT = 'fal-ai/flux-pro/v1.1-ultra'
+
+export interface CallFluxDecoracaoArgs {
+  prompt: string
+}
+
+// Gera decoração visual via Flux (PNG cru com fundo). Pareada com callRembg
+// pelo orquestrador pra produzir cutout transparente. Aspect 1:1 — decorações
+// são elementos isolados quadrados (corações, ícones, etc).
+export async function callFluxDecoracao(args: CallFluxDecoracaoArgs): Promise<Buffer> {
+  const { prompt } = args
+
+  // Reforço do prompt pra forçar isolamento + estilo coerente com o banco
+  // Fluent Emoji 3D (caso o user esqueça de pedir).
+  const reforced = `${prompt}. Isolated 3D illustration on plain neutral background (will be removed), centered subject, glossy 3D style consistent with Microsoft Fluent Emoji aesthetic, soft studio lighting.`
+
+  const { data } = await fal.subscribe(FLUX_DECORACAO_ENDPOINT, {
+    input: {
+      prompt: reforced,
+      aspect_ratio: '1:1',
+      num_images: 1,
+      output_format: 'png',
+      safety_tolerance: '6',
+    },
+    logs: false,
+  })
+
+  const output = data as FalOutput
+  const url = output.images?.[0]?.url
+  if (!url) throw new Error(`[M3] FAL ${FLUX_DECORACAO_ENDPOINT} não retornou URL`)
+
+  console.log(`[M3] ${FLUX_DECORACAO_ENDPOINT} (decoração) OK → ${url}`)
+
+  const resp = await fetch(url)
+  if (!resp.ok) throw new Error(`[M3] Falha ao baixar decoração do FAL (${resp.status})`)
+  return Buffer.from(await resp.arrayBuffer())
+}
+
+// ─── Rembg ────────────────────────────────────────────────────────────────────
 
 // Remove fundo do Buffer de entrada via rembg do FAL. Retorna PNG com alpha.
 // FAL aceita URL pública — fazemos upload temporário do Buffer via storage.

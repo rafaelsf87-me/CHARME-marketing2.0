@@ -1,8 +1,7 @@
 import { z } from 'zod'
+import { brandM3 } from '@/lib/brand/m3.brand'
 
-// Schema base do M3 — Fase 1 é shell mínimo. Inputs completos (atriz upload,
-// decorações, condições, color pickers) entram na Fase 2/3 quando a UI for
-// implementada. Por ora, só validamos o input do título isolado.
+// ─── Enums e primitivas ─────────────────────────────────────────────────────
 
 export const M3CondicaoSchema = z.enum([
   '12x-cartao',
@@ -13,38 +12,108 @@ export const M3CondicaoSchema = z.enum([
 ])
 export type M3Condicao = z.infer<typeof M3CondicaoSchema>
 
-export const M3ModoAtrizSchema = z.enum(['ia', 'upload'])
-export const M3ModoDecoracoesSchema = z.enum(['banco', 'ia'])
+export const M3TemplateIdSchema = z.enum(['atual-maio26'])
 
-// Shell do M3InputSchema — Fase 1 só usa nomePromo (título). Os outros campos
-// ficam opcionais pra não bloquear o desenvolvimento. Tornar obrigatórios
-// conforme cada feature entrar (Fase 2/3).
-export const M3InputSchema = z.object({
-  templateId: z.string().min(1),
-  nomePromo: z
+const hexColor = z
+  .string()
+  .regex(/^#[0-9A-Fa-f]{6}$/, 'Cor deve ser hex #RRGGBB')
+
+const M3CoresSchema = z.object({
+  primary: hexColor.default(brandM3.defaultColors.primary),
+  secondary: hexColor.default(brandM3.defaultColors.secondary),
+  accent: hexColor.default(brandM3.defaultColors.accent),
+  cardBg: hexColor.default(brandM3.defaultColors.cardBg),
+  cardBgEnd: hexColor.default(brandM3.defaultColors.cardBgEnd),
+})
+
+const M3TextosSchema = z.object({
+  nomePromocao: z
     .string()
     .min(1, 'Nome da promoção é obrigatório')
     .max(60, 'Nome da promoção até 60 caracteres'),
-  // Tudo abaixo: Fase 2/3.
-  descontoPromo: z.string().optional(),
-  naLojaToda: z.boolean().optional(),
-  cores: z
-    .object({
-      primary: z.string(),
-      secondary: z.string(),
-      accent: z.string(),
-    })
-    .optional(),
-  condicoes: z.array(M3CondicaoSchema).max(4).optional(),
-  modoAtriz: M3ModoAtrizSchema.optional(),
-  atrizPromptExtra: z.string().optional(),
-  modoDecoracoes: M3ModoDecoracoesSchema.optional(),
-  decoracoesIds: z.array(z.string()).optional(),
+  descontoTexto: z
+    .string()
+    .min(1, 'Texto do desconto é obrigatório')
+    .max(30, 'Texto do desconto até 30 caracteres'),
+  naLojaToda: z.boolean().default(true),
+})
+
+// ─── Atriz: discriminated union ──────────────────────────────────────────────
+
+const M3AtrizIASchema = z.object({
+  modo: z.literal('ia'),
+  detalhes: z.string().max(500).optional(),
+})
+
+const M3AtrizUploadSchema = z.object({
+  modo: z.literal('upload'),
+  // Base64 do PNG/JPG enviado pela UI. Decodificado pra Buffer no render.
+  uploadBase64: z.string().min(1),
+})
+
+const M3AtrizSchema = z.discriminatedUnion('modo', [M3AtrizIASchema, M3AtrizUploadSchema])
+
+// ─── Decorações: discriminated union ─────────────────────────────────────────
+
+const M3DecoracoesBancoSchema = z.object({
+  modo: z.literal('banco'),
+  ids: z.array(z.string().min(1)).min(1).max(8),
+})
+
+const M3DecoracoesIASchema = z.object({
+  modo: z.literal('ia'),
+  prompts: z.array(z.string().min(1).max(300)).min(1).max(4),
+})
+
+const M3DecoracoesSchema = z.discriminatedUnion('modo', [
+  M3DecoracoesBancoSchema,
+  M3DecoracoesIASchema,
+])
+
+// ─── Input principal ─────────────────────────────────────────────────────────
+
+// 4 condições default = top 4 da SPEC (entrega-rapida no lugar de turbinada).
+const CONDICOES_DEFAULT: M3Condicao[] = [
+  '12x-cartao',
+  'frete-gratis',
+  'cashback',
+  'entrega-rapida',
+]
+
+export const M3InputSchema = z.object({
+  template: M3TemplateIdSchema.default('atual-maio26'),
+  textos: M3TextosSchema,
+  cores: M3CoresSchema.default({
+    primary: brandM3.defaultColors.primary,
+    secondary: brandM3.defaultColors.secondary,
+    accent: brandM3.defaultColors.accent,
+    cardBg: brandM3.defaultColors.cardBg,
+    cardBgEnd: brandM3.defaultColors.cardBgEnd,
+  }),
+  condicoes: z
+    .array(M3CondicaoSchema)
+    .min(1, 'Selecione pelo menos 1 condição')
+    .max(4, 'Máximo 4 condições por banner')
+    .default(CONDICOES_DEFAULT),
+  atriz: M3AtrizSchema,
+  decoracoes: M3DecoracoesSchema,
 })
 export type M3Input = z.infer<typeof M3InputSchema>
 
-// Schema isolado do título — usado pelo smoke da Fase 1 e pelo endpoint
-// `/api/imagens/m3/titulo` (Fase 2).
+// ─── Output ──────────────────────────────────────────────────────────────────
+
+export const M3OutputSchema = z.object({
+  desktopUrl: z.string().url(),
+  mobileUrl: z.string().url(),
+  generatedAt: z.string().datetime(),
+  custoEstimado: z.number().nonnegative(),
+})
+export type M3Output = z.infer<typeof M3OutputSchema>
+
+// ─── Schema legado (título isolado) ──────────────────────────────────────────
+
+// Mantido pra compatibilidade com endpoint dedicado `/api/imagens/m3/titulo`
+// (a criar na Fase 3). generateTitulo() não depende deste schema.
 export const M3TituloInputSchema = z.object({
   texto: z.string().min(1).max(60),
 })

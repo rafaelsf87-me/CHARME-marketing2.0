@@ -20,6 +20,11 @@ export function setTituloCache(texto: string, png: Buffer): void {
   cache.set(normalizeTituloKey(texto), png)
 }
 
+// Alias semântico — mesmo comportamento de setTituloCache. Útil pra hidratação
+// pré-execução em smokes (carrega PNG do disco no cache antes de chamar
+// renderM3, garantindo cache hit e evitando custo IA repetido).
+export const setTituloCached = setTituloCache
+
 export function clearTituloCache(): void {
   cache.clear()
 }
