@@ -56,3 +56,6 @@ Thumbs.db
 # Ferramentas locais / temporários
 .claude/
 tmp/
+
+# Outputs de smokes (binários, regeneráveis — não inchar repo)
+scripts/smoke-*/output/
