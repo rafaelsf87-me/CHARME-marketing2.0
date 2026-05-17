@@ -1,7 +1,7 @@
 # SPEC.md
 ## Marketing IA Charme 2.0 — Especificação Funcional
 ### Módulo: Criação de Imagens (6 Submódulos + Template Creator)
-**Versão:** 1.7 (M2 V1 fechado · T1 Atual_Maio26 em prod · T2/T3 placeholder oficial · investigação modelos IA encerrada)
+**Versão:** 1.8 (M3 V1 detalhado · Pipeline Híbrido fechado · Template 1 Atual_Maio26 pronto pra implementação)
 **Data:** 18/05/2026
 **Status:** M1 V1 em prod (a0360ba) · M2 T1 em prod (d25a255) · M3/M4/M5/M6/Template Creator pendentes
 
@@ -267,65 +267,200 @@ Resolução real prevista no T2 via Pipeline Híbrido (Fase 3).
 
 ---
 
-## Módulo 3 — Banners Website (`/m3-banners-site`)
+## Módulo 3 — Banners Website (`/imagens/m3-banners`)
 
 ### Objetivo
-Gerar banners temáticos de campanhas promocionais mensais (Dia das Mães, Black Friday, Mês do Consumidor, Outubro Rosa, etc.) nos formatos desktop e mobile.
+Gerar par de banners (desktop + mobile) para o topo da home do e-commerce, trocado mensalmente. Layout padronizado, identidade visual consistente, parametrização total por promoção.
 
-### Fluxo de uso
+### Princípio técnico — Pipeline Híbrido
+
+100% do layout, tipografia descritiva, BG, card de condições e footer são determinísticos via **Sharp/Satori**. IA é restrita a 2 elementos isolados gerados como PNGs transparentes:
+1. **Título 3D balão** — `gpt-image-1 high` parametrizado
+2. **Atriz cutout** — Flux Kontext text-to-image OU Upload do user
+
+Decorações (corações, ícones de condições) vêm de banco curado de PNGs cutout (Microsoft Fluent Emoji 3D). Fluxo:
 
 ```
-PASSO 1: Selecionar template
-  [Default V1]  /  [Default V2]  /  [Default V3]  /  [Custom ...]
-
-PASSO 2: Upload da atriz/personagem
-  PNG com ou sem fundo (preferência: sem fundo)
-
-PASSO 3: Selecionar cor tema da campanha
-  [Picker de cor]  (ex: rosa para Dia das Mães, preto para Black Friday)
-
-PASSO 4: Preencher campos de texto
-
-PASSO 5: [Gerar Desktop + Mobile]  (sempre gera os 2 formatos juntos)
+INPUT → generateTitulo() → tituloPng
+      → generateAtriz() → atrizPng (rembg obrigatório)
+      → selectDecoracoes() → array PNGs
+      → renderDesktop(1920×550 WEBP)
+      → renderMobile(800×600 WEBP)
+OUTPUT: 2 WEBPs prontos pra download
 ```
 
-### Campos de texto
+### Templates V1
 
-**Campo 1 — Customização / Ideia**
-- Tooltip: *"Descreva o clima ou ajuste visual da campanha. Ex: 'atriz comemorando, balões ao fundo', 'tom sério e elegante'. A IA aplica dentro do template sem alterar textos definidos abaixo."*
+| Template | Slug | Status | Pipeline |
+|---|---|---|---|
+| **Atual_Maio26** | `atual-maio26` | ✅ V1 ativo | Pipeline Híbrido com layout "Descontão de Mãe" |
+| **Novo_Teste1** | `novo-teste-1` | ⏳ Placeholder visível na UI | A definir após T1 ativo |
+| **Novo_Teste2** | `novo-teste-2` | ⏳ Placeholder visível na UI | A definir após T1 ativo |
 
-**Campo 2 — Textos a Risca (por zona)**
-| Sub-campo | Tooltip |
-|---|---|
-| Título da campanha | *"Nome ou chamada principal da promoção. Ex: 'Descontão de Mãe'. Exibido exatamente como digitado."* |
-| % ou valor de desconto | *"Ex: 'Até 38% OFF'. Exibido exatamente como digitado em destaque."* |
-| Condições (bullets) | *"Lista de condições da promoção. Ex: 'Frete Grátis*, Pagamento em 6x sem juros'. Uma condição por linha."* |
-| Nota de rodapé | *"Texto pequeno com asteriscos e observações. Ex: '*Frete grátis para Sul/Sudeste acima R$200'. Exibido exatamente como digitado."* |
-
-### Atriz/personagem
-- Sempre fornecida como upload (foto real, PNG preferencialmente sem fundo)
-- Sistema não gera atriz do zero
-- Se precisar adaptar a pose: **GPT Image 2** processa o PNG da atriz antes de compor no banner
-- A mesma atriz pode ser reutilizada — sistema não salva histórico de uploads (cada sessão é nova)
-
-### API de geração
-- **Modelo:** **GPT Image 2** (OpenAI) — atualizado de GPT-4o Image Edit
-- Usado para ajustes de pose da atriz e composição final do banner
-
-### Templates disponíveis
-- **3 variações default** (diferenças de posição da atriz, hierarquia de texto, elementos decorativos)
-- **Custom:** criados via Template Creator → M3 Layouts
-
-### Cores e fontes
-- **Fonte:** Montserrat (todos os pesos)
-- **Cores:** definidas no template / cor-tema da campanha (sem paleta fixa de marca)
+Cards T2 e T3 ficam visíveis (disabled) na tela com badge "em construção / a definir" — confirma para a equipe que mais templates virão.
 
 ### Dimensões
 
-| Variação | Width | Height | Aspect | Formato |
-|---|---|---|---|---|
-| Desktop | 1920 | 550 | ~3.49:1 | WEBP |
-| Mobile | 800 | 600 | 4:3 | WEBP |
+| Output | Resolução | Formato |
+|---|---|---|
+| Desktop | 1920 × 550 px | WEBP (quality 90) |
+| Mobile | 800 × 600 px | WEBP (quality 90) |
+
+Layouts são **independentes** (não responsivos). Sharp/Satori renderiza 2 vezes, cada um com seu próprio componente layout.
+
+### Inputs (campos do formulário)
+
+| Campo | Obrigatório | Default | Tooltip |
+|---|---|---|---|
+| Nome da promoção | Sim | — | "Texto principal do banner (ex.: 'DESCONTÃO DE MÃE', 'BOTA FORA CHARME'). Vira título 3D balão." |
+| Desconto da promoção | Sim | — | "Texto do desconto (ex.: '35% OFF', 'Até 74% OFF'). Aparece na bola/círculo." |
+| "na loja toda" | Checkbox | On | "Texto fixo abaixo do desconto. Desmarque pra remover." |
+| Cor primary | Color picker | `#E91E63` | "Cor principal do BG. Domina o gradient." |
+| Cor secondary | Color picker | `#C2185B` | "Cor secundária do BG. Aparece nas bordas do gradient e nos detalhes." |
+| Cor accent | Color picker | `#7A1640` | "Cor de acento. Usada em outlines, footer, textos de destaque sobre fundo claro." |
+| Condições do footer | Multi-checkbox (max 4) | Top 4 on | Lista das 5 condições (ver abaixo) |
+| Modo Atriz | Radio | IA | "IA gera atriz a partir de prompt OU usa Upload de PNG sua." |
+| → Modo IA: prompt opcional | Textarea | — | "Detalhes adicionais pra atriz (ex.: 'cabelo cacheado', 'óculos'). Opcional. Idade ~35-45 sempre forçada." |
+| → Modo Upload: PNG | File input | — | "Upload de PNG da atriz. Fundo será removido automaticamente (rembg). 1 arquivo." |
+| Modo Decorações | Radio | Banco | "Banco curado (Fluent Emoji 3D) OU geração IA via Flux." |
+| → Modo Banco: seleção | Multi-select | Top 4 (corações) | "Selecione decorações do banco. Default: corações balão." |
+| → Modo IA: prompt | Textarea | — | "Descreva decorações desejadas (ex.: 'flores rosa pequenas 3D balão')." |
+
+### Footer — 5 condições padrão (max 4 simultâneas)
+
+| ID | Texto exibido | Ícone | Default |
+|---|---|---|---|
+| `12x-cartao` | "Pague em até 12x no cartão" | cartão | ✅ on |
+| `frete-gratis` | "FRETE GRÁTIS*" (com 2 subitens *Sul/Sudeste acima R$200 · Outras regiões acima R$299,90*) | presente | ✅ on |
+| `cashback` | "CASHBACK garantido na próxima compra" | dinheiro | ✅ on |
+| `entrega-rapida` | "Entrega Rápida em todo Brasil" | foguete | ✅ on |
+| `entrega-turbinada` | "Entrega TURBINADA Liberada" | foguete | off |
+
+UI valida limite: ao selecionar 5ª, desmarcar uma. Mensagem: "Máximo 4 condições por banner."
+
+### Layout pixel-preciso — Desktop 1920×550
+
+| Elemento | Posição | Detalhes |
+|---|---|---|
+| BG gradient | 0,0 — 1920,550 | linear esquerda→direita: `secondary` (0%) → `primary` (50%) → `accent darken` (100%) |
+| Waves brancas | 3 paths SVG | opacity 6-10%, posições topo/meio/bottom |
+| Corações decorativos | ~6-10 PNGs | espalhados, posições fixas no layout |
+| Título PNG (gpt-image-1) | `<image>` em x=80, y=80, w=600, h=370 | placeholder area; PNG contém DESCONTÃO + DE + MÃE em 3 linhas |
+| Círculo desconto | cx=675, cy=445, r=115 | radial gradient `secondary lightened` → `primary`, stroke `secondary` 4px |
+| → Texto "Até" | x=675, y=410, anchor middle | Montserrat 700, 32px, branco |
+| → Texto desconto (ex: "38% OFF") | x=675, y=460 | Montserrat 800, 52px, branco |
+| → Texto "na loja toda" | x=675, y=495, italic | Montserrat 600, 22px, branco |
+| Card condições | x=800, y=90, w=600, h=380, rx=36 | gradient `cardBg` (rosa claro), stroke 2px |
+| → Divisores internos | linhas 1.5px | vertical em x=1100, horizontal em y=280 |
+| → Grid 2×2 ícones+textos | quadrantes 290×175 | ícones ~70-80px, textos Montserrat 700/800 |
+| Atriz PNG cutout | `<image>` em x=1480, y=20, w=440, h=520 | placeholder area; PNG contém atriz isolada |
+| Speed lines | linhas brancas curtas | opcionais, 3-4 traços perto da atriz |
+| Footer asterisco | x=960, y=525, anchor middle | Montserrat 600, 24px, branco |
+
+### Layout pixel-preciso — Mobile 800×600
+
+| Elemento | Posição | Detalhes |
+|---|---|---|
+| BG gradient | 0,0 — 800,600 | linear diagonal: `secondary` → `primary` → `accent darken` |
+| Waves brancas | 3 paths | opacity 6-10% |
+| Corações decorativos | ~7-9 PNGs | espalhados |
+| Título PNG | `<image>` em x=20, y=50, w=380, h=210 | DESCONTÃO + DE + MÃE em 3 linhas |
+| Círculo desconto | cx=420, cy=190, r=95 | sobreposta parcialmente ao MÃE à direita |
+| → Texto "Até" | x=420, y=165 | Montserrat 700, 22px, branco |
+| → Texto desconto | x=420, y=208 | Montserrat 800, 40px, branco |
+| → Texto "na loja toda" | x=420, y=238, italic | Montserrat 600, 17px, branco |
+| Card condições | x=30, y=295, w=480, h=240, rx=24 | grid 2×2 compacto |
+| → Ícones | ~50px | menores que desktop |
+| → Textos | Montserrat 700/800, 13-20px | |
+| Atriz PNG cutout | `<image>` em x=480, y=80, w=320, h=480 | scale 0.95 |
+| Speed lines | 4-6 traços brancos | 2 perto da atriz, 2 no bottom-left |
+| Footer asterisco | x=30, y=565+585, anchor start | Montserrat 600, 15px, branco, 2 linhas alinhadas esquerda |
+
+### Pipeline do título 3D
+
+Endpoint: `fal-ai/gpt-image-1/text-to-image`
+Quality: `high`
+Size: `1536x1024`
+Background: `transparent`
+
+**Prompt parametrizado (`buildTituloPrompt(texto: string)`):**
+
+```
+3D inflated balloon typography, chrome-like glossy highlights, white body with magenta double outline, exact text: '${texto}'. Transparent background, no scene, no decorations, isolated typographic element only. Portuguese language. DO NOT misspell, DO NOT add extra letters, DO NOT translate to English, DO NOT add background elements, DO NOT add hearts or shapes around the text.
+```
+
+Validado em smoke (19/05/2026) com 5 textos: "DESCONTÃO DE MÃE", "BOTA FORA CHARME", "SAÍDEIRA 2024" — todos com fidelidade tipográfica PT-BR (acentos corretos), efeito 3D balão consistente, PNG transparente real.
+
+**Custo:** ~$0.20-0.25/título. Cache: chave = texto normalizado (uppercase + trim). Banner é mensal, reuso de cache praticamente garantido se mesma promo regenerada.
+
+### Pipeline da atriz
+
+**Modo IA (Flux Kontext text-to-image):**
+- Endpoint: `fal-ai/flux-pro/v1.1` (a confirmar na Fase 2 — endpoint mais barato pra text-to-image isolado)
+- Prompt base: `"Professional portrait photo of a Brazilian woman aged 35-45, friendly smile, hands gracefully near the face, wearing simple white blouse, neutral expression of happiness, soft studio lighting, photorealistic, isolated subject on plain background (background will be removed). ${detalhesUsuario || ''}"`
+- Output: PNG → rembg automático (`fal-ai/imageutils/rembg`) → atrizPng transparente
+- Custo: ~$0.045 (Flux) + $0.005 (rembg) = $0.05
+
+**Modo Upload:**
+- User faz upload de PNG
+- Se PNG já transparente (alpha channel detectado): usa direto
+- Se não transparente: rembg automático
+- Custo: $0 ou $0.005
+
+### Pipeline de decorações
+
+**Banco curado (Microsoft Fluent Emoji 3D):**
+- Repositório: https://github.com/microsoft/fluentui-emoji
+- Versão usada: 3D (PNG transparente, 256×256 ou 512×512)
+- Curadoria inicial M3 V1 (10-15 assets em `public/brand/m3/decoracoes/`):
+  - `coracao-rosa.png` (heart-3d, color shifted)
+  - `coracao-vermelho.png`
+  - `coracao-balao.png` (heart-decoration)
+  - `foguete.png` (rocket)
+  - `presente.png` (wrapped-gift)
+  - `cartao.png` (credit-card)
+  - `dinheiro.png` (dollar-banknote)
+  - `papai-noel.png` (santa)
+  - `flor.png` (cherry-blossom)
+  - `estrela.png` (star)
+  - `confete.png` (confetti)
+  - `coroa.png` (crown)
+  - `presente-azul.png`
+
+**Modo IA fallback (Flux):**
+- Quando banco curado não cobre, user descreve via prompt
+- Endpoint: `fal-ai/flux-pro/v1.1` ou similar
+- Output: PNG → rembg → asset transparente
+- Custo: ~$0.05/asset
+
+### Estimativa de custo mensal
+
+| Item | Custo |
+|---|---|
+| Título (1 por banner) | ~$0.22 |
+| Atriz IA (se modo IA) | ~$0.05 |
+| Atriz Upload | ~$0.005 |
+| Decorações banco | $0 |
+| Decorações IA (eventual) | ~$0.05 cada |
+| **Total por banner par (modo IA atriz)** | **~$0.27** |
+| **Total por banner par (modo Upload atriz)** | **~$0.22** |
+
+Volume base: 1-2 banners/mês = **~$0.30-1.00/mês**. Cache do título reduz ainda mais quando regenera.
+
+### Output e UX
+
+Após clicar Gerar:
+1. Loading state com etapas visíveis ("Gerando título...", "Gerando atriz...", "Compondo banner desktop...", "Compondo banner mobile...")
+2. Preview lado a lado dos 2 WEBPs
+3. Botões "Fazer Download Desktop" e "Fazer Download Mobile"
+4. Sem histórico — fechou aba, perdeu (padrão do sistema)
+
+### Pendências M3 V1 abertas
+
+- [ ] Curadoria final das 15 decorações default (Fase 2)
+- [ ] Definir endpoint Flux exato pra atriz e decorações IA fallback (Fase 2)
+- [ ] Confirmar gradient exato do BG paramétrico vs cores Brand (Fase 2)
+- [ ] T2 e T3 — direção a definir após T1 ativo
 
 ---
 

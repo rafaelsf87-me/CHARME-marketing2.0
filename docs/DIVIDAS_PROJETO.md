@@ -206,6 +206,33 @@ Pontos onde uma decisão de produto é necessária antes de avançar.
 
 Quando uma dívida é resolvida ou descartada, mover para cá com nota curta. Manter os últimos 20 itens, depois limpar.
 
+### [DEC-M3-005] Templates M3 V1 — 1 ativo + 2 placeholders — RESOLVIDA em 19/05/2026
+- **Decisão:** M3 V1 entrega apenas 1 template ativo (`atual-maio26` — "Descontão de Mãe"). Slots `novo-teste-1` e `novo-teste-2` ficam visíveis na UI como cards disabled com badges "em construção" / "a definir". Confirma pra equipe que mais templates virão sem prometer prazo.
+- **Justificativa:** Lição do M2 (Fase 1 com 1 template em prod, T2/T3 incrementais). Ampla horizontal primeiro, refinamento depois.
+- **Implementação:** Fase 1 M3.
+
+### [DEC-M3-004] Decorações via Microsoft Fluent Emoji 3D + Flux fallback — RESOLVIDA em 19/05/2026
+- **Decisão:** Banco curado de ~15 PNGs do Microsoft Fluent Emoji 3D (open source, Apache 2.0) em `public/brand/m3/decoracoes/`. User seleciona manualmente quais entram no banner. Modo fallback: Flux gera PNG transparente sob demanda (~$0.05/asset) quando banco não cobre.
+- **Justificativa:** Banco gratuito de qualidade alta, ~3000 assets cobrindo 90% dos casos. Já validado no M4. Evita compra de pack pago (IconScout, Flaticon). Fallback IA mantém flexibilidade.
+- **Curadoria inicial (Fase 2):** corações (rosa, vermelho, balão), foguete, presente, cartão, dinheiro, papai-noel, flor, estrela, confete, coroa, presente-azul.
+
+### [DEC-M3-003] Atriz via IA (Flux Kontext text-to-image) ou Upload com rembg obrigatório — RESOLVIDA em 19/05/2026
+- **Decisão:** Modo IA usa Flux Kontext text-to-image com prompt base forçando "Brazilian woman aged 35-45, friendly smile" + detalhes opcionais do user. Output passa por rembg automático (`fal-ai/imageutils/rembg`) pra gerar PNG cutout transparente. Modo Upload aceita PNG do user — se já transparente, usa direto; se não, rembg automático.
+- **Custo:** ~$0.05 (IA + rembg) ou ~$0.005 (Upload se precisar rembg).
+- **Justificativa:** BG do banner é sintético (Sharp/Satori), atriz precisa estar isolada pra compose. Rembg automático evita exigir do user que prepare PNG transparente. Endpoint Flux exato pra atriz será confirmado na Fase 2 (provável `fal-ai/flux-pro/v1.1` text-to-image).
+
+### [DEC-M3-002] Título 3D balão via gpt-image-1 high com Prompt C parametrizado — RESOLVIDA em 19/05/2026
+- **Decisão:** Endpoint `fal-ai/gpt-image-1/text-to-image`, quality `high`, size `1536x1024`, background `transparent`. Prompt parametrizado em `buildTituloPrompt(texto: string)` com a fórmula validada no smoke.
+- **Smoke validatório:** 5 textos testados ("DESCONTÃO DE MÃE", "BOTA FORA CHARME", "SAÍDEIRA 2024" + 2 variações iniciais Prompt A/B/C). Custo total ~$1.20. Resultado: Prompt C entrega ~90-95% do efeito 3D balão original com fidelidade tipográfica PT-BR (acentos, cedilha, números) em todos os testes.
+- **Custo por banner:** ~$0.20-0.25/título. Cache em memória (chave = texto normalizado) reduz custo quando banner regenerado.
+- **Alternativas descartadas:** (1) Satori puro com técnica stack stroke + fill — gap >25% vs original. (3) SVG manual designer por template — não escala por promoção (texto é variável). gpt-image-1 high é único caminho com acabamento + parametrização.
+
+### [DEC-M3-001] Pipeline arquitetural M3 — Híbrido (SVG/Satori controla 100% + IA isolada) — RESOLVIDA em 19/05/2026
+- **Decisão:** M3 adota Pipeline Híbrido como padrão arquitetural: Sharp/Satori controla 100% do layout, BG, tipografia descritiva, card de condições, footer (determinístico). IA é restrita a 2 elementos isolados gerados como PNGs transparentes — título 3D (gpt-image-1) e atriz cutout (Flux + rembg). Decorações vêm de banco curado (Fluent Emoji 3D) com Flux fallback.
+- **Justificativa:** Mesma direção arquitetural do M2 T2 (registrado em DEC-M2-004). Garante: (1) pixel-precisão de layout, (2) fidelidade tipográfica PT-BR no título, (3) BG sempre controlado (resolve estruturalmente os bugs LIMIT-M2-001 e BUG-M2-001), (4) custo ~97% menor que pipeline IA-only ($0.27 vs $0.20+ do M2 T1 fal-prompt-puro), (5) reuso de aprendizado entre M2 T2 e M3.
+- **Implicações:** Pipeline Híbrido vira padrão arquitetural pra todo novo template envolvendo tipografia user-provided + composição rica. Substitui "compositing puro" (M4) quando há necessidade visual rica, e substitui "fal-prompt-puro" (M2 T1) quando há necessidade de fidelidade PT-BR + controle de layout.
+- **Validação visual:** Wireframes desktop (1920×550) + mobile (800×600) v2 aprovados em 19/05/2026 — posicionamento, hierarquia, paleta paramétrica.
+
 ### [INV-M2-001] Investigação de modelos IA alternativos pro T2 — RESOLVIDA em 18/05/2026
 - **Hipótese inicial:** trocar `gpt-image-1` por modelo "melhor em design" desbloquearia visual T2 sem mudar pipeline.
 - **3 modelos testados via FAL** (script `scripts/smoke-m2-t2-comparativo.ts`, deletado no fechamento V1):

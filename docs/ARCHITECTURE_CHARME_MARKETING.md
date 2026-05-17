@@ -1,6 +1,6 @@
 # ARCHITECTURE.md
 ## Marketing IA Charme 2.0 — Módulo: Criação de Imagens
-**Versão:** 0.9 (M2 V1 fechado · T1 fal-prompt-puro · background-check no tree · M6 placeholder)
+**Versão:** 1.0 (M3 V1 spec completo · Pipeline Híbrido · estrutura lib/m3 definida)
 **Data:** 18/05/2026
 **Status:** M1 V1 em prod · M2 T1 em prod (9c32313) · M3/M4/M5/M6/Template Creator pendentes
 
@@ -48,7 +48,8 @@ Este projeto é o **Módulo de Criação de Imagens** do sistema **Marketing IA 
 | Compositing/imagem | **Sharp.js** | M2, M4 — overlay texto/imagem server-side, zero custo de API |
 | HTML → PNG | **Satori + resvg-js** | Render de templates HTML/CSS para PNG, roda em Vercel Edge |
 | **IA Imagem M1** | **Flux Kontext [Pro]** (via fal.ai) | Edit-by-reference com preservação de regiões não-editadas — ideal para "muda estampa, mantém o resto" |
-| IA Imagem M3 | **GPT Image 2** (OpenAI) | Ajuste de pose da atriz e composição do banner |
+| **IA Imagem M3** | **gpt-image-1 high** (via fal.ai) + **Flux Kontext** (atriz) + **rembg** | gpt-image-1 único modelo público com fidelidade tipográfica PT-BR (validado em INV-M2-001). Usado isolado pra título 3D balão. Flux pra atriz text-to-image. rembg pra cutout automático. |
+| **Decorações M3** | **Microsoft Fluent Emoji 3D** (open source, PNG) | Banco curado de ~15 assets em `public/brand/m3/decoracoes/`. Cobre 90% dos casos. Flux fallback quando user precisa de asset não coberto. |
 | Upload de arquivos | **Vercel Blob** | Nativo Vercel, simples, sem configuração extra |
 | Brand config | **JSON/TS centralizado** | Cores, fontes, dimensões — fonte única de verdade |
 
@@ -61,9 +62,13 @@ Este projeto é o **Módulo de Criação de Imagens** do sistema **Marketing IA 
 - Custo fixo de ~$0.04/imagem
 - **Sem A/B test com GPT** — decisão fechada na fase de planejamento
 
-**M3 — GPT Image 2:**
-- Atualizado de GPT-4o Image Edit (v0.1) para GPT Image 2 (modelo atual)
-- Usado para ajustes de pose da atriz antes de compor no banner final
+**M3 — Pipeline Híbrido (v1.0):**
+- Sharp/Satori controla 100% do layout, BG, tipografia descritiva, card de condições e footer (determinístico)
+- IA restrita a 2 elementos isolados como PNGs transparentes: título 3D balão (gpt-image-1 high) e atriz cutout (Flux + rembg)
+- Decorações vêm de banco curado (Microsoft Fluent Emoji 3D) com Flux fallback
+- Pipeline Híbrido vira padrão arquitetural pra todo template novo com tipografia user-provided + composição rica
+- Custo ~97% menor que pipeline IA-only (~$0.27/banner par vs $0.20+/post do M2 T1)
+- Substitui "compositing puro" (M4) quando há composição rica e "fal-prompt-puro" (M2 T1) quando há fidelidade PT-BR + layout pixel-preciso
 
 **M2 — Híbrido com 3 templates independentes (estrutura nova v0.8):**
 - T1 (Atual_Maio26, em prod): `fal-prompt-puro` via `gpt-image-1` tier high — réplica imperfeita do ChatGPT Plus, composição inteira por conta da IA.
@@ -203,10 +208,28 @@ marketing-ia-charme/
 │   │       │   └── README.md
 │   │       ├── atual-maio26-new/     # T2 placeholder (Fase 3)
 │   │       └── novo-teste-1/         # T3 placeholder (Fase 5)
+│   ├── m3/                           # M3 Banners Website — Pipeline Híbrido (v1.0)
+│   │   ├── templates/
+│   │   │   ├── atual-maio26/
+│   │   │   │   ├── config.ts         # falConfig, dimensoes, cores default, slug
+│   │   │   │   ├── prompt.ts         # buildTituloPrompt(texto) + buildAtrizPrompt (Fase 2)
+│   │   │   │   ├── layout-desktop.tsx # Satori component 1920×550 (Fase 2)
+│   │   │   │   └── layout-mobile.tsx  # Satori component 800×600 (Fase 2)
+│   │   │   ├── novo-teste-1/         # placeholder (Fase 1: só config.ts)
+│   │   │   │   └── config.ts         # status: 'placeholder'
+│   │   │   └── novo-teste-2/         # placeholder
+│   │   │       └── config.ts         # status: 'placeholder'
+│   │   ├── fal-client.ts             # callGptImage1Title (Fase 1) + callFluxAtriz + callRembg (Fase 2)
+│   │   ├── render.ts                 # Orquestrador renderM3() (Fase 2)
+│   │   ├── post-process.ts           # Sharp compose + WEBP encode (Fase 2)
+│   │   ├── schema.ts                 # Zod: M3InputSchema, M3CondicoesEnum, etc.
+│   │   ├── decoracoes-banco.ts       # lista curada de Fluent Emoji 3D (Fase 2)
+│   │   ├── titulo-cache.ts           # cache de títulos gerados (key = texto normalizado)
+│   │   └── types.ts                  # interfaces M3
 │   ├── sharp-compose.ts              # Funções de compositing (M4)
 │   ├── template-engine.ts            # Render HTML/CSS → PNG via Satori
 │   ├── flux-image.ts                 # Client Flux Kontext (fal.ai) — M1 principal
-│   ├── openai-image.ts               # Client GPT Image 2 — M3
+│   ├── openai-image.ts               # (legado v0.1, será removido após M3 V1)
 │   └── storage.ts                    # Vercel Blob: upload, read, delete
 │
 ├── templates/                        # Templates visuais
@@ -258,8 +281,11 @@ marketing-ia-charme/
 │
 ├── public/
 │   └── brand/                        # Logo SVG, assets estáticos da marca
-│       └── logo.svg                  # Logo único (casinha quadrada)
+│       ├── logo.svg                  # Logo único (casinha quadrada)
+│       └── m3/
+│           └── decoracoes/           # Microsoft Fluent Emoji 3D — banco curado (Fase 2)
 │
+
 ├── docs/                             # Documentação do projeto
 │   ├── CLAUDE.md
 │   ├── SPEC.md
@@ -333,19 +359,34 @@ export const brandM2 = {
   }
 }
 
-// lib/brand/m3.brand.ts
+// lib/brand/m3.brand.ts (Pipeline Híbrido v1.0)
 import { brandBase } from './base.config'
 export const brandM3 = {
   ...brandBase,
-  fonts: {
-    text: 'Montserrat, system-ui, sans-serif',
-    family: 'Montserrat',
-  },
-  // Cores: definidas no template ou pela cor-tema da campanha (sem paleta fixa)
   dimensions: {
-    desktop: { width: 1920, height: 550 },  // ~3.49:1 — DEC-001
-    mobile:  { width: 800,  height: 600 },  // 4:3     — DEC-001
-  }
+    desktop: { width: 1920, height: 550 },   // ~3.49:1 — DEC-001
+    mobile:  { width: 800,  height: 600 },   // 4:3     — DEC-001
+  },
+  output: {
+    format: 'webp' as const,
+    quality: 90,
+  },
+  fonts: {
+    primary: 'Montserrat',                   // self-hosted, todos os pesos
+    weights: [600, 700, 800],
+  },
+  // Cores paramétricas — defaults pra Template Atual_Maio26
+  defaultColors: {
+    primary:   '#E91E63',                    // rosa magenta dominante
+    secondary: '#C2185B',                    // rosa escuro de gradient
+    accent:    '#7A1640',                    // bordô pra outlines/footer
+    cardBg:    '#FFEAF1',                    // rosa muito claro pra card de condições
+    cardBgEnd: '#FDD6E5',                    // rosa claro pra gradient do card
+  },
+  decoracoes: {
+    bancoDir: '/brand/m3/decoracoes/',
+    defaults: ['coracao-rosa', 'coracao-vermelho', 'coracao-balao', 'foguete'],
+  },
 }
 
 // lib/brand/m4.brand.ts
@@ -455,17 +496,18 @@ Dois componentes globais de texto (usados em M2, M3, M4, M5 — não em M1):
 
 ---
 
-## 10. Estimativa de Custo Mensal (atualizada v0.2)
+## 10. Estimativa de Custo Mensal (atualizada v1.0)
 
 | Item | Custo estimado |
 |---|---|
 | Vercel Hobby | $0/mês |
 | Vercel Pro (só se necessário pro M3) | $0–$20/mês |
-| Flux Kontext Pro — M1 (9–18 imagens) | ~$0.40–0.75/mês |
-| GPT Image 2 — M3 (estimativa baixa) | ~$2–8/mês (depende do tier de qualidade) |
-| M2 e M4 (compositing puro) | $0 |
+| M1 — Flux Kontext (~9-18 imgs) | ~$0.45-0.90 |
+| M2 T1 — gpt-image-1 high (~30-120 posts) | ~$6-24 |
+| **M3 — Pipeline Híbrido (~1-2 banners)** | **~$0.30-1.00** |
+| M4 — Compositing puro | $0 |
 | Vercel Blob (buffer temporário) | ~$0–2/mês |
-| **Total estimado** | **~$3–30/mês** |
+| **Total estimado** | **~$7-28/mês** |
 
 **Economia vs v0.1 (~$35–45):**
 - Flux mais barato e previsível que GPT-4o Image Edit no M1
@@ -519,20 +561,30 @@ Dois componentes globais de texto (usados em M2, M3, M4, M5 — não em M1):
 
 ## 13. Ordem de Implementação
 
-| Fase | Módulo | Motivo |
+| Fase | Módulo | Status |
 |---|---|---|
-| 1 | Brand config + estrutura base + Auth | Base para tudo |
-| 2 | **M4 Thumbnails** | Mais simples, valida stack e deploy no Vercel |
-| 3 | **M2 Posts** | Maior ROI imediato (alto volume, custo zero, libera equipe) |
-| 4 | **M1 Foto Produto** | Maior complexidade técnica — Flux Kontext + 6 cenários |
-| 5 | **M3 Banners** | Aproveita aprendizado do M1 + GPT Image 2 |
-| 6 | **Template Creator** | Depende dos outros módulos funcionando |
-| 7 | **M5 Banners Emails** | Penúltimo — a especificar antes de iniciar |
-| 8 | **M6 Imagens Ads** | Último — 100% a especificar |
+| 1-2 | Base + M4 | ✅ Em prod |
+| 3 | M2 V1 | ✅ Em prod (T1 only) |
+| 4 | M1 V1 | ✅ Em prod |
+| **5** | **M3 V1** | ⏳ **A iniciar** |
+| 6 | M5 Email | ⏳ Aguardando definição |
+| 7 | M6 Ads | ⏳ Aguardando definição |
+| 8 | M2 T2 (Pipeline Híbrido) | ⏳ Após M3 V1 |
+| 9 | Template Creator | ⏳ Após módulos principais |
 
 ---
 
 ## 14. Changelog
+
+### v1.0 — 19/05/2026 (M3 V1 spec completo)
+- M3 detalhado: Pipeline Híbrido fechado (SVG/Satori + gpt-image-1 título + Flux atriz + Fluent Emoji decorações).
+- Estrutura `lib/m3/` definida (templates/, fal-client, render, post-process, schema, decoracoes-banco, titulo-cache, types).
+- Brand M3: dimensões 1920×550 desktop + 800×600 mobile WEBP, Montserrat fonte primary, cores paramétricas.
+- Auditoria `m4.brand.ts` resolvida: NÃO é órfão, é o brand ativo do M4 Thumbnails (mantido sem ação).
+- Custos M3 estimados ~$0.30-1.00/mês (volume base 1-2 banners).
+- Wireframes desktop+mobile pixel-precisos validados visualmente (v2 final).
+- Smoke do título isolado validado (5 textos, fidelidade PT-BR 100%).
+- Pipeline Híbrido vira padrão arquitetural pra novos templates (substitui compositing puro + fal-prompt-puro em casos com tipografia user-provided + composição rica).
 
 ### v0.9 — 18/05/2026 (M2 V1 fechado · background-check no tree)
 - **`lib/m2/background-check.ts`** adicionado ao tree (hotfix v8 — revisor HSL de fundo + retry wrapper `generateWithBgCheck`). Validador conhecidamente descalibrado: ver [BUG-M2-001] em DIVIDAS.
