@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8" />
+<title>Smoke M3 Sub-Fase 2.1 — generateAtriz() end-to-end</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #1a1a1a; color: #eee; margin: 0; padding: 24px; }
+  h1 { font-size: 18px; margin: 0 0 8px; }
+  .sub { font-size: 13px; color: #888; margin-bottom: 8px; }
+  .meta { font-size: 12px; color: #6fcf6f; margin-bottom: 24px; font-family: monospace; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; max-width: 1800px; }
+  .card { background: #222; border-radius: 8px; padding: 16px; }
+  .card h2 { font-size: 14px; margin: 0 0 4px; }
+  .card .tag { font-size: 11px; color: #6fcf6f; margin-bottom: 12px; }
+  .card .label { font-size: 10px; color: #888; margin: 12px 0 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .preview-cream { background: #FFE0B0; padding: 16px; border-radius: 4px; }
+  .preview-gradient { background: linear-gradient(135deg, #C2185B 0%, #E91E63 50%, #7A1640 100%); padding: 16px; border-radius: 4px; }
+  .preview-checker { background-image:
+    linear-gradient(45deg, #333 25%, transparent 25%),
+    linear-gradient(-45deg, #333 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #333 75%),
+    linear-gradient(-45deg, transparent 75%, #333 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, 10px 0;
+    background-color: #555;
+    padding: 16px; border-radius: 4px; }
+  img { width: 100%; height: auto; display: block; }
+  a { color: #6ab7ff; font-size: 11px; word-break: break-all; }
+  .full { grid-column: 1 / -1; }
+</style>
+</head>
+<body>
+<h1>Smoke M3 Sub-Fase 2.1 — pipeline atriz (Flux + rembg)</h1>
+<div class="sub">lib/m3/atriz.ts → callFluxAtriz (Flux Pro v1.1 Ultra, 3:4) → callRembg</div>
+<div class="meta">v2 (prompt reforço idade + expressão animada) · Custo: $0.30 · transparência real ✓ · 2026-05-17</div>
+
+<div class="grid">
+
+  <div class="card">
+    <h2>Atriz 1 — prompt base puro</h2>
+    <div class="tag">✓ 21.1s · 2840 KB · alpha real</div>
+    <div class="label">Sobre BG gradient M3 (uso real)</div>
+    <div class="preview-gradient"><img src="https://v3b.fal.media/files/b/0a9a9d2a/_yJSjwNe4h25zP-QbkaYO_8206aa946a074e61b82af3782f512679.png" /></div>
+    <div class="label">Sobre creme</div>
+    <div class="preview-cream"><img src="https://v3b.fal.media/files/b/0a9a9d2a/_yJSjwNe4h25zP-QbkaYO_8206aa946a074e61b82af3782f512679.png" /></div>
+    <div class="label">Sobre xadrez (prova alpha)</div>
+    <div class="preview-checker"><img src="https://v3b.fal.media/files/b/0a9a9d2a/_yJSjwNe4h25zP-QbkaYO_8206aa946a074e61b82af3782f512679.png" /></div>
+    <div class="label">FAL URL pós-rembg</div>
+    <a href="https://v3b.fal.media/files/b/0a9a9d2a/_yJSjwNe4h25zP-QbkaYO_8206aa946a074e61b82af3782f512679.png" target="_blank">abrir</a>
+  </div>
+
+  <div class="card">
+    <h2>Atriz 2 — cabelo longo castanho ondulado</h2>
+    <div class="tag">✓ 24.5s · 3896 KB · alpha real</div>
+    <div class="label">Sobre BG gradient M3</div>
+    <div class="preview-gradient"><img src="https://v3b.fal.media/files/b/0a9a9d2d/Ur6rB0x2-j7trG15J5Bsk_53198246e9844ffb956cedd9300e3e83.png" /></div>
+    <div class="label">Sobre creme</div>
+    <div class="preview-cream"><img src="https://v3b.fal.media/files/b/0a9a9d2d/Ur6rB0x2-j7trG15J5Bsk_53198246e9844ffb956cedd9300e3e83.png" /></div>
+    <div class="label">Sobre xadrez (prova alpha)</div>
+    <div class="preview-checker"><img src="https://v3b.fal.media/files/b/0a9a9d2d/Ur6rB0x2-j7trG15J5Bsk_53198246e9844ffb956cedd9300e3e83.png" /></div>
+    <div class="label">FAL URL pós-rembg</div>
+    <a href="https://v3b.fal.media/files/b/0a9a9d2d/Ur6rB0x2-j7trG15J5Bsk_53198246e9844ffb956cedd9300e3e83.png" target="_blank">abrir</a>
+  </div>
+
+  <div class="card">
+    <h2>Atriz 3 — negra, afro cacheado natural</h2>
+    <div class="tag">✓ 24.4s · 4706 KB · alpha real</div>
+    <div class="label">Sobre BG gradient M3</div>
+    <div class="preview-gradient"><img src="https://v3b.fal.media/files/b/0a9a9d2f/73w94hcEjYx5gaTQGDGNt_94cb7b15413f4820a2448e20ad7929e8.png" /></div>
+    <div class="label">Sobre creme</div>
+    <div class="preview-cream"><img src="https://v3b.fal.media/files/b/0a9a9d2f/73w94hcEjYx5gaTQGDGNt_94cb7b15413f4820a2448e20ad7929e8.png" /></div>
+    <div class="label">Sobre xadrez (prova alpha)</div>
+    <div class="preview-checker"><img src="https://v3b.fal.media/files/b/0a9a9d2f/73w94hcEjYx5gaTQGDGNt_94cb7b15413f4820a2448e20ad7929e8.png" /></div>
+    <div class="label">FAL URL pós-rembg</div>
+    <a href="https://v3b.fal.media/files/b/0a9a9d2f/73w94hcEjYx5gaTQGDGNt_94cb7b15413f4820a2448e20ad7929e8.png" target="_blank">abrir</a>
+  </div>
+
+</div>
+</body>
+</html>

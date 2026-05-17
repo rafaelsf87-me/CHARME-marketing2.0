@@ -34,6 +34,13 @@
 
 ## ⚠️ Limitações Aceitas
 
+### [LIMIT-M3-002] Flux ignora reforço de idade no prompt da atriz — DOCUMENTADA em 19/05/2026
+- **Onde:** `lib/m3/atriz.ts`, `buildAtrizPrompt()`
+- **Sintoma:** mesmo com "mature", "late 30s to mid 40s", "laugh lines", "Brazilian mother in her 40s — not young", Flux Pro v1.1 Ultra gera atrizes aparentando 25-32 anos. Validado em 2 smokes consecutivos (~$0.60 testando prompts).
+- **Bias** do modelo pra "younger faces by default" é mais forte que prompt engineering. Limitação inerente do Flux.
+- **Decisão:** aceito como está no V1. Atriz jovem-adulta funciona pro segmento. Modo Upload (UI Fase 3) permite override com foto própria.
+- **Workaround futuro:** trocar pra modelo Imagen4 ou usar image-to-image com reference image. Pra V2 do M3.
+
 ### [LIMIT-M2-001] T1 Atual_Maio26 — limitações inerentes do gpt-image-1 (carrossel)
 - Pipeline T1 = `fal-prompt-puro` via gpt-image-1 tier high. Desde v8: text-to-image (sem PNGs) ou edit-image (com PNGs do user).
 - Limitações estruturais que reforços de prompt mitigam mas NÃO eliminam:
