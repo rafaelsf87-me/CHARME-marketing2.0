@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
-import { M1RenderSchema } from '@/lib/m1/schema'
+import { M1RenderSchema, m1KeywordFallbackSource } from '@/lib/m1/schema'
 import { renderM1 } from '@/lib/m1/render'
+import { slugifyKeyword } from '@/lib/filename'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -47,7 +48,16 @@ export async function POST(req: NextRequest) {
     console.log(
       `[M1] regerar OK em ${tookMs}ms · ${inputFinal.movel}/${inputFinal.tipoFoto}/${inputFinal.tipoCapa}/set${inputFinal.set} · ajuste="${ajusteLimpo.slice(0, 60)}"`
     )
-    return NextResponse.json({ url, tookMs })
+    const fallbackSource =
+      inputFinal.keyword ??
+      m1KeywordFallbackSource({
+        tipoCapa: inputFinal.tipoCapa,
+        corHex: inputFinal.corHex,
+        fotoSofa: inputFinal.fotoSofa,
+      })
+    const normalizedKeyword = slugifyKeyword(fallbackSource)
+    const generatedAt = new Date().toISOString()
+    return NextResponse.json({ url, tookMs, normalizedKeyword, generatedAt })
   } catch (err) {
     console.error('[M1] regerar error:', err)
     const msg = err instanceof Error ? err.message : 'Falha ao regerar foto'

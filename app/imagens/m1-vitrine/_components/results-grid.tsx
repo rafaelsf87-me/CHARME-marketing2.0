@@ -2,11 +2,18 @@
 
 import { ImageIcon, Loader2, RotateCcw, RefreshCw } from 'lucide-react'
 import { DownloadButton } from '@/components/download-button'
+import { buildDownloadFilename } from '@/lib/filename'
 import type { M1RenderInput, M1TipoFoto } from '@/lib/m1/schema'
 
 export type SlotState =
   | { state: 'loading' }
-  | { state: 'ready'; url: string; tookMs: number }
+  | {
+      state: 'ready'
+      url: string
+      tookMs: number
+      normalizedKeyword: string | null
+      generatedAt: string | null
+    }
   | { state: 'error'; message: string }
 
 export interface ResultSlot {
@@ -121,7 +128,12 @@ function ResultCard({
           )}
           <DownloadButton
             url={slot.status.url}
-            filename={`m1-${slot.tipoFoto}.webp`}
+            filename={buildDownloadFilename({
+              slide: { kind: 'm1', tipoFoto: slot.tipoFoto },
+              keyword: slot.status.normalizedKeyword,
+              extension: 'webp',
+              date: slot.status.generatedAt ? new Date(slot.status.generatedAt) : new Date(),
+            })}
           />
         </div>
       )}

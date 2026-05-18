@@ -7,6 +7,7 @@ import { PreviewArea } from './preview-area'
 import { UploadField } from '@/components/upload-field'
 import { TextFieldWithCounter } from '@/components/text-field-with-counter'
 import { TooltipInfo } from '@/components/tooltip-info'
+import { KeywordField } from '@/components/shared/keyword-field'
 import { brandM4 } from '@/lib/brand/m4.brand'
 import {
   M4RenderSchema,
@@ -27,11 +28,14 @@ export function M4Form() {
   const [line3, setLine3] = React.useState('')
   const [iconUrl, setIconUrl] = React.useState<string | null>(null)
   const [customization, setCustomization] = React.useState('')
+  const [keyword, setKeyword] = React.useState('')
 
   const [previewState, setPreviewState] = React.useState<PreviewState>('empty')
   const [resultUrl, setResultUrl] = React.useState<string | null>(null)
   const [stubFlag, setStubFlag] = React.useState(false)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
+  const [normalizedKeyword, setNormalizedKeyword] = React.useState<string | null>(null)
+  const [generatedAt, setGeneratedAt] = React.useState<string | null>(null)
 
   const has3 = template ? templateHas3Linhas(template) : false
 
@@ -52,6 +56,8 @@ export function M4Form() {
     setErrorMsg(null)
     setResultUrl(null)
     setStubFlag(false)
+    setNormalizedKeyword(null)
+    setGeneratedAt(null)
 
     const payload: M4RenderInput = {
       template,
@@ -61,6 +67,7 @@ export function M4Form() {
       line3: has3 ? line3.trim() : undefined,
       iconUrl: iconUrl ?? undefined,
       customization: customization.trim() || undefined,
+      keyword: keyword.trim() || undefined,
     }
 
     const localCheck = M4RenderSchema.safeParse(payload)
@@ -84,6 +91,8 @@ export function M4Form() {
       }
       setResultUrl(json.url)
       setStubFlag(Boolean(json.stub))
+      setNormalizedKeyword(typeof json.normalizedKeyword === 'string' ? json.normalizedKeyword : null)
+      setGeneratedAt(typeof json.generatedAt === 'string' ? json.generatedAt : null)
       setPreviewState('ready')
     } catch (err) {
       setPreviewState('error')
@@ -159,6 +168,13 @@ export function M4Form() {
           />
         </div>
 
+      <KeywordField
+        value={keyword}
+        onChange={setKeyword}
+        fallbackHint={line1.trim().split(/\s+/)[0] || 'ex.: novidade, descontao'}
+        disabled={previewState === 'loading'}
+      />
+
       <div className="flex items-center justify-end gap-3">
         {!isValid && (
           <div className="text-[11.5px] text-[color:var(--text-tertiary)]">
@@ -178,7 +194,14 @@ export function M4Form() {
 
       {previewState !== 'empty' && (
         <div className="max-w-[420px]">
-          <PreviewArea state={previewState} url={resultUrl} isStub={stubFlag} errorMsg={errorMsg} />
+          <PreviewArea
+            state={previewState}
+            url={resultUrl}
+            isStub={stubFlag}
+            errorMsg={errorMsg}
+            normalizedKeyword={normalizedKeyword}
+            generatedAt={generatedAt}
+          />
         </div>
       )}
     </div>

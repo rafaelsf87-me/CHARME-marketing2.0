@@ -1,9 +1,10 @@
 'use client'
 
-import * as React from 'react'
 import Image from 'next/image'
-import { Download, RotateCcw } from 'lucide-react'
+import { RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { DownloadButton } from '@/components/download-button'
+import { buildDownloadFilename } from '@/lib/filename'
 import type { M3Output } from '@/lib/m3/schema'
 
 interface PreviewBannersProps {
@@ -12,9 +13,19 @@ interface PreviewBannersProps {
 }
 
 export function PreviewBanners({ output, onReset }: PreviewBannersProps) {
-  const timestamp = React.useMemo(() => Date.now(), [])
-  const desktopFilename = `banner-desktop-${timestamp}.webp`
-  const mobileFilename = `banner-mobile-${timestamp}.webp`
+  const generatedDate = output.generatedAt ? new Date(output.generatedAt) : new Date()
+  const desktopFilename = buildDownloadFilename({
+    slide: { kind: 'm3', formato: 'desktop' },
+    keyword: output.normalizedKeyword,
+    extension: 'webp',
+    date: generatedDate,
+  })
+  const mobileFilename = buildDownloadFilename({
+    slide: { kind: 'm3', formato: 'mobile' },
+    keyword: output.normalizedKeyword,
+    extension: 'webp',
+    date: generatedDate,
+  })
 
   return (
     <section className="flex flex-col gap-5 rounded-lg border border-[#16A34A]/30 bg-[#F0FDF4] p-5">
@@ -45,15 +56,11 @@ export function PreviewBanners({ output, onReset }: PreviewBannersProps) {
               unoptimized
             />
           </div>
-          <a
-            href={output.desktopUrl}
-            download={desktopFilename}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center justify-center gap-2 rounded-md bg-[#553679] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#46295F]"
-          >
-            <Download size={14} /> Download desktop (.webp)
-          </a>
+          <DownloadButton
+            url={output.desktopUrl}
+            filename={desktopFilename}
+            label="Download desktop (.webp)"
+          />
         </div>
 
         {/* Mobile card */}
@@ -73,15 +80,11 @@ export function PreviewBanners({ output, onReset }: PreviewBannersProps) {
               unoptimized
             />
           </div>
-          <a
-            href={output.mobileUrl}
-            download={mobileFilename}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center justify-center gap-2 rounded-md bg-[#553679] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#46295F]"
-          >
-            <Download size={14} /> Download mobile (.webp)
-          </a>
+          <DownloadButton
+            url={output.mobileUrl}
+            filename={mobileFilename}
+            label="Download mobile (.webp)"
+          />
         </div>
       </div>
 

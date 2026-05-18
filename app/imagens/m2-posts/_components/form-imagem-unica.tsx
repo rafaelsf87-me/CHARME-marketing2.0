@@ -9,6 +9,7 @@ import { LogoSelector } from './logo-selector'
 import { ModoGeracaoSelector } from './modo-geracao-selector'
 import { PngUploadList } from './png-upload-list'
 import { PreviewImagemUnica } from './preview-imagem-unica'
+import { KeywordField } from '@/components/shared/keyword-field'
 import type { M2LogoOption, M2ModoGeracao, M2TemplateId } from '@/lib/m2/schema'
 
 interface FormImagemUnicaProps {
@@ -18,7 +19,7 @@ interface FormImagemUnicaProps {
 type PreviewState =
   | { state: 'empty' }
   | { state: 'loading' }
-  | { state: 'ready'; url: string }
+  | { state: 'ready'; url: string; normalizedKeyword: string | null; generatedAt: string | null }
   | { state: 'error'; errorMsg: string }
 
 const COPY_MIN = 10
@@ -33,6 +34,7 @@ export function FormImagemUnica({ templateId }: FormImagemUnicaProps) {
   const [instrucoesExtras, setInstrucoesExtras] = React.useState('')
   const [instrucoesUsoImagens, setInstrucoesUsoImagens] = React.useState('')
   const [pngSlots, setPngSlots] = React.useState<(string | null)[]>([])
+  const [keyword, setKeyword] = React.useState('')
   const [preview, setPreview] = React.useState<PreviewState>({ state: 'empty' })
 
   const generating = preview.state === 'loading'
@@ -61,13 +63,19 @@ export function FormImagemUnica({ templateId }: FormImagemUnicaProps) {
           instrucoesUsoImagens: isUpload && instrucoesUsoImagens.trim()
             ? instrucoesUsoImagens.trim()
             : undefined,
+          keyword: keyword.trim() || undefined,
         }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || !Array.isArray(json.urls) || !json.urls[0]) {
         throw new Error(json.error || `Falha (${res.status})`)
       }
-      setPreview({ state: 'ready', url: json.urls[0] })
+      setPreview({
+        state: 'ready',
+        url: json.urls[0],
+        normalizedKeyword: typeof json.normalizedKeyword === 'string' ? json.normalizedKeyword : null,
+        generatedAt: typeof json.generatedAt === 'string' ? json.generatedAt : null,
+      })
     } catch (err) {
       setPreview({
         state: 'error',
@@ -192,6 +200,13 @@ export function FormImagemUnica({ templateId }: FormImagemUnicaProps) {
         </>
       )}
 
+      <KeywordField
+        value={keyword}
+        onChange={setKeyword}
+        fallbackHint={copyTexto.trim().split(/\s+/)[0] || 'ex.: bucha, floral'}
+        disabled={generating}
+      />
+
       <div>
         <Button
           type="button"
@@ -217,6 +232,8 @@ export function FormImagemUnica({ templateId }: FormImagemUnicaProps) {
           state={preview.state}
           url={preview.state === 'ready' ? preview.url : undefined}
           errorMsg={preview.state === 'error' ? preview.errorMsg : undefined}
+          normalizedKeyword={preview.state === 'ready' ? preview.normalizedKeyword : null}
+          generatedAt={preview.state === 'ready' ? preview.generatedAt : null}
         />
       )}
     </div>

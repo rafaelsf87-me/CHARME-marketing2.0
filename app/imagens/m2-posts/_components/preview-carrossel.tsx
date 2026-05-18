@@ -5,6 +5,7 @@ import { Loader2, ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react'
 import { DownloadButton } from '@/components/download-button'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { buildDownloadFilename } from '@/lib/filename'
 
 export type CarrosselSlotState = 'loading' | 'ready' | 'error'
 
@@ -16,12 +17,24 @@ export interface CarrosselSlot {
 
 interface PreviewCarrosselProps {
   slots: CarrosselSlot[]
+  normalizedKeyword?: string | null
+  generatedAt?: string | null
 }
 
-export function PreviewCarrossel({ slots }: PreviewCarrosselProps) {
+export function PreviewCarrossel({ slots, normalizedKeyword, generatedAt }: PreviewCarrosselProps) {
   const [active, setActive] = React.useState(0)
   const safeActive = Math.min(active, Math.max(0, slots.length - 1))
   const current = slots[safeActive]
+  const generatedDate = generatedAt ? new Date(generatedAt) : new Date()
+
+  function filenameForSlide(slideIndex: number): string {
+    return buildDownloadFilename({
+      slide: { kind: 'm2', variant: `slide${slideIndex + 1}` as `slide${number}` },
+      keyword: normalizedKeyword,
+      extension: 'png',
+      date: generatedDate,
+    })
+  }
 
   async function baixarTudo() {
     for (let i = 0; i < slots.length; i++) {
@@ -33,7 +46,7 @@ export function PreviewCarrossel({ slots }: PreviewCarrosselProps) {
         const objectUrl = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = objectUrl
-        a.download = `m2-carrossel-${Date.now()}-slide-${i + 1}.png`
+        a.download = filenameForSlide(i)
         document.body.appendChild(a)
         a.click()
         a.remove()
@@ -127,7 +140,7 @@ export function PreviewCarrossel({ slots }: PreviewCarrosselProps) {
         <div className="flex flex-wrap gap-2">
           <DownloadButton
             url={current.url}
-            filename={`m2-carrossel-${Date.now()}-slide-${safeActive + 1}.png`}
+            filename={filenameForSlide(safeActive)}
             label={`Baixar Slide ${safeActive + 1}`}
           />
           {todosProntos && (

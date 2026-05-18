@@ -97,6 +97,7 @@ export const M3InputSchema = z.object({
     .default(CONDICOES_DEFAULT),
   atriz: M3AtrizSchema,
   decoracoes: M3DecoracoesSchema,
+  keyword: z.string().max(40).optional(),
 })
 export type M3Input = z.infer<typeof M3InputSchema>
 
@@ -107,6 +108,7 @@ export const M3OutputSchema = z.object({
   mobileUrl: z.string().url(),
   generatedAt: z.string().datetime(),
   custoEstimado: z.number().nonnegative(),
+  normalizedKeyword: z.string().min(1).optional(),
 })
 export type M3Output = z.infer<typeof M3OutputSchema>
 

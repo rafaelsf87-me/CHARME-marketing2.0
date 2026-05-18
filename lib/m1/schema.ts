@@ -33,6 +33,7 @@ export const M1RenderSchema = z
     // Lisa: cor em hex (substitui as fotos).
     corHex: z.string().regex(HEX_REGEX, 'Cor deve ser hex #RGB ou #RRGGBB').optional(),
     customization: z.string().max(500).optional(),
+    keyword: z.string().max(40).optional(),
   })
   .superRefine((data, ctx) => {
     // Vestindo a Capa: apenas sofá (não cadeira).
@@ -65,3 +66,31 @@ export const M1RenderSchema = z
   })
 
 export type M1RenderInput = z.infer<typeof M1RenderSchema>
+
+/**
+ * Source pro slugifyKeyword quando o usuário não preencheu keyword.
+ *  - Lisa: "cor-{hex sem #}"
+ *  - Estampada/Alto Relevo: nome do arquivo (sem extensão) da fotoSofa
+ *  - Default: "sem-tema"
+ */
+export function m1KeywordFallbackSource(input: {
+  tipoCapa: M1TipoCapa | null
+  corHex?: string | null
+  fotoSofa?: string | null
+}): string {
+  if (input.tipoCapa === 'lisa' && input.corHex) {
+    return `cor-${input.corHex.replace('#', '').toLowerCase()}`
+  }
+  if (input.fotoSofa) {
+    try {
+      const url = new URL(input.fotoSofa)
+      const last = url.pathname.split('/').filter(Boolean).pop() ?? ''
+      const noExt = last.replace(/\.[a-z0-9]+$/i, '')
+      if (noExt) return noExt
+    } catch {
+      // ignora URLs inválidas
+    }
+    return 'estampa'
+  }
+  return 'sem-tema'
+}

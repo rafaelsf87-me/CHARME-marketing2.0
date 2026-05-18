@@ -2,14 +2,30 @@
 
 import { Loader2, ImageIcon } from 'lucide-react'
 import { DownloadButton } from '@/components/download-button'
+import { buildDownloadFilename } from '@/lib/filename'
 
 interface PreviewImagemUnicaProps {
   state: 'empty' | 'loading' | 'ready' | 'error'
   url?: string
   errorMsg?: string
+  normalizedKeyword?: string | null
+  generatedAt?: string | null
 }
 
-export function PreviewImagemUnica({ state, url, errorMsg }: PreviewImagemUnicaProps) {
+export function PreviewImagemUnica({
+  state,
+  url,
+  errorMsg,
+  normalizedKeyword,
+  generatedAt,
+}: PreviewImagemUnicaProps) {
+  const filename = buildDownloadFilename({
+    slide: { kind: 'm2', variant: 'imagem-unica' },
+    keyword: normalizedKeyword,
+    extension: 'png',
+    date: generatedAt ? new Date(generatedAt) : new Date(),
+  })
+
   return (
     <div className="flex flex-col gap-3">
       <div className="text-xs font-medium">Preview</div>
@@ -39,7 +55,7 @@ export function PreviewImagemUnica({ state, url, errorMsg }: PreviewImagemUnicaP
       </div>
       {state === 'ready' && url && (
         <div>
-          <DownloadButton url={url} filename={`m2-post-${Date.now()}.png`} />
+          <DownloadButton url={url} filename={filename} />
         </div>
       )}
     </div>

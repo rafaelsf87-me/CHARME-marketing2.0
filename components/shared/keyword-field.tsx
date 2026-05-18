@@ -2,7 +2,7 @@
 
 import { TooltipInfo } from '@/components/tooltip-info'
 
-interface T2KeywordFieldProps {
+interface KeywordFieldProps {
   value: string
   onChange: (next: string) => void
   /** Helper de fallback exibido como hint. */
@@ -11,19 +11,21 @@ interface T2KeywordFieldProps {
 }
 
 const MAX_LEN = 20
+const TOOLTIP_TEXT =
+  'Palavra-chave do arquivo (opcional). 1 palavra, max 20 chars. Fallback: primeira palavra do conteúdo.'
 
-export function T2KeywordField({
+export function KeywordField({
   value,
   onChange,
   fallbackHint,
   disabled,
-}: T2KeywordFieldProps) {
+}: KeywordFieldProps) {
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
         <label className="flex items-center gap-2 text-xs font-medium">
           Palavra-chave do arquivo (opcional)
-          <TooltipInfo text="Palavra-chave do arquivo (opcional). Mín 1 palavra, max 20 chars. Usado no nome do arquivo de download. Fallback: primeira palavra do tema/copy." />
+          <TooltipInfo text={TOOLTIP_TEXT} />
         </label>
         <span className="tabular-nums text-[11px] text-[color:var(--text-tertiary)]">
           {value.length}/{MAX_LEN}

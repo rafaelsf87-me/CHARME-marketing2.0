@@ -25,6 +25,7 @@ export const M4RenderSchema = z
     line3: z.string().max(18).optional(),
     iconUrl: z.string().url().optional(),
     customization: z.string().max(500).optional(),
+    keyword: z.string().max(40).optional(),
   })
   .refine(
     (data) => {

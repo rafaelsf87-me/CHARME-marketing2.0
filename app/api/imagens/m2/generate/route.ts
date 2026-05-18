@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { m2GenerateSchema } from '@/lib/m2/schema'
 import { renderM2 } from '@/lib/m2/render'
+import { slugifyKeyword } from '@/lib/filename'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -31,7 +32,19 @@ export async function POST(req: NextRequest) {
     console.log(
       `[M2] generate OK em ${tookMs}ms · ${parsed.data.modo} · ${parsed.data.templateId} · ${qtd} img(s)`
     )
-    return NextResponse.json({ urls: result.urls, tookMs })
+    const fallbackKeywordSource =
+      parsed.data.keyword ??
+      (parsed.data.modo === 'imagem-unica'
+        ? parsed.data.copyTexto
+        : parsed.data.contextoGeral || parsed.data.slides[0]?.copyTexto)
+    const normalizedKeyword = slugifyKeyword(fallbackKeywordSource)
+    const generatedAt = new Date().toISOString()
+    return NextResponse.json({
+      urls: result.urls,
+      tookMs,
+      normalizedKeyword,
+      generatedAt,
+    })
   } catch (err) {
     console.error('[M2] generate error:', err)
     const msg = err instanceof Error ? err.message : 'Falha ao gerar'

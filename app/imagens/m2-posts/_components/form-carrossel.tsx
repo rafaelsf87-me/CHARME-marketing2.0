@@ -15,6 +15,7 @@ import { LogoSelector } from './logo-selector'
 import { ModoGeracaoSelector } from './modo-geracao-selector'
 import { SlideBlock, type SlideState } from './slide-block'
 import { PreviewCarrossel, type CarrosselSlot } from './preview-carrossel'
+import { KeywordField } from '@/components/shared/keyword-field'
 import { brandM2 } from '@/lib/brand/m2.brand'
 import type { M2LogoOption, M2ModoGeracao, M2TemplateId } from '@/lib/m2/schema'
 
@@ -38,8 +39,11 @@ export function FormCarrossel({ templateId }: FormCarrosselProps) {
   const [slides, setSlides] = React.useState<SlideState[]>(() =>
     Array.from({ length: DEFAULT_QTD }, emptySlide)
   )
+  const [keyword, setKeyword] = React.useState('')
   const [generating, setGenerating] = React.useState(false)
   const [previewSlots, setPreviewSlots] = React.useState<CarrosselSlot[]>([])
+  const [normalizedKeyword, setNormalizedKeyword] = React.useState<string | null>(null)
+  const [generatedAt, setGeneratedAt] = React.useState<string | null>(null)
 
   const isUpload = modoGeracao === 'upload'
   const showLogoSelector = templateId !== 'atual-maio26'
@@ -76,6 +80,8 @@ export function FormCarrossel({ templateId }: FormCarrosselProps) {
     if (!isValid) return
     setGenerating(true)
     setPreviewSlots(slides.map(() => ({ state: 'loading' })))
+    setNormalizedKeyword(null)
+    setGeneratedAt(null)
 
     try {
       const res = await fetch('/api/imagens/m2/generate', {
@@ -92,6 +98,7 @@ export function FormCarrossel({ templateId }: FormCarrosselProps) {
             pngUrl: s.pngUrl ?? undefined,
             promptImagem: s.promptImagem.trim() || undefined,
           })),
+          keyword: keyword.trim() || undefined,
         }),
       })
       const json = await res.json().catch(() => ({}))
@@ -107,6 +114,8 @@ export function FormCarrossel({ templateId }: FormCarrosselProps) {
             : { state: 'error', errorMsg: 'Slide sem URL no retorno.' }
         })
       )
+      setNormalizedKeyword(typeof json.normalizedKeyword === 'string' ? json.normalizedKeyword : null)
+      setGeneratedAt(typeof json.generatedAt === 'string' ? json.generatedAt : null)
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Falha ao gerar'
       setPreviewSlots(slides.map(() => ({ state: 'error', errorMsg })))
@@ -189,6 +198,16 @@ export function FormCarrossel({ templateId }: FormCarrosselProps) {
         ))}
       </div>
 
+      <KeywordField
+        value={keyword}
+        onChange={setKeyword}
+        fallbackHint={
+          (contextoGeral.trim() || slides[0]?.copyTexto.trim() || '').split(/\s+/)[0] ||
+          'ex.: bucha, floral'
+        }
+        disabled={generating}
+      />
+
       {/* 5. Botão Gerar — com tooltip de pendências quando disabled */}
       <div>
         {isValid ? (
@@ -233,7 +252,13 @@ export function FormCarrossel({ templateId }: FormCarrosselProps) {
       </div>
 
       {/* Preview só aparece após gerar (hotfix v6) */}
-      {previewSlots.length > 0 && <PreviewCarrossel slots={previewSlots} />}
+      {previewSlots.length > 0 && (
+        <PreviewCarrossel
+          slots={previewSlots}
+          normalizedKeyword={normalizedKeyword}
+          generatedAt={generatedAt}
+        />
+      )}
     </div>
   )
 }

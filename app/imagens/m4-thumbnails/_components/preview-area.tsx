@@ -2,6 +2,7 @@
 
 import { ImageIcon, Loader2 } from 'lucide-react'
 import { DownloadButton } from '@/components/download-button'
+import { buildDownloadFilename } from '@/lib/filename'
 
 interface PreviewAreaProps {
   state: 'empty' | 'loading' | 'ready' | 'error'
@@ -9,9 +10,25 @@ interface PreviewAreaProps {
   message?: string
   errorMsg?: string | null
   isStub?: boolean
+  normalizedKeyword?: string | null
+  generatedAt?: string | null
 }
 
-export function PreviewArea({ state, url, message, errorMsg, isStub }: PreviewAreaProps) {
+export function PreviewArea({
+  state,
+  url,
+  message,
+  errorMsg,
+  isStub,
+  normalizedKeyword,
+  generatedAt,
+}: PreviewAreaProps) {
+  const filename = buildDownloadFilename({
+    slide: { kind: 'm4' },
+    keyword: normalizedKeyword,
+    extension: 'png',
+    date: generatedAt ? new Date(generatedAt) : new Date(),
+  })
   return (
     <div className="rounded-lg border border-[color:var(--border-subtle)] bg-white p-5">
       <div className="mb-2.5 flex items-center justify-between">
@@ -49,7 +66,7 @@ export function PreviewArea({ state, url, message, errorMsg, isStub }: PreviewAr
 
       {state === 'ready' && url && (
         <div className="mt-3 flex justify-end">
-          <DownloadButton url={url} filename="thumbnail-m4.png" />
+          <DownloadButton url={url} filename={filename} />
         </div>
       )}
     </div>

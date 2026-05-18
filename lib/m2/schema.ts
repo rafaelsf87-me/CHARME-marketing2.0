@@ -38,6 +38,7 @@ export const imagemUnicaSchema = z.object({
   instrucoesExtras: z.string().max(500).optional(),
   pngUrls: pngUrlsField,
   instrucoesUsoImagens: z.string().max(800).optional(),
+  keyword: z.string().max(40).optional(),
 })
 
 // Carrossel: 1 imagem por slide (hotfix UX pós-validação prod, 18/05/2026).
@@ -62,6 +63,7 @@ export const carrosselSchema = z.object({
     .array(slideSchema)
     .min(brandM2.pipeline.carouselSlidesRange.min)
     .max(brandM2.pipeline.carouselSlidesRange.max),
+  keyword: z.string().max(40).optional(),
 })
 
 // Regras cross-field:

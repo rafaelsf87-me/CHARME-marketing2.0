@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { TabSwitcher, type M2Tab } from '../tab-switcher'
 import { TooltipInfo } from '@/components/tooltip-info'
 import { Textarea } from '@/components/ui/textarea'
-import { T2KeywordField } from './t2-keyword-field'
+import { KeywordField } from '@/components/shared/keyword-field'
 import { T2SlideBlock, type T2SlideState } from './t2-slide-block'
 import { T2PreviewCard } from './t2-preview-card'
 import { T2RegerarDialog } from './t2-regerar-dialog'
@@ -286,7 +286,7 @@ export function T2Form() {
           })}
         </div>
 
-        <T2KeywordField
+        <KeywordField
           value={keyword}
           onChange={setKeyword}
           fallbackHint={fallbackKeywordHint()}

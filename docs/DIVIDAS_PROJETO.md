@@ -267,6 +267,18 @@ Pontos onde uma decisão de produto é necessária antes de avançar.
 
 Quando uma dívida é resolvida ou descartada, mover para cá com nota curta. Manter os últimos 20 itens, depois limpar.
 
+### [REF-M2-004] Retrofit padrão de nome `img-{modulo}-{slide}-{keyword}-{mes}{ano}` em M1/M2T1/M3/M4 (Fase 4.5) — RESOLVIDA em 18/05/2026
+- **Escopo:** aplicar `lib/filename.ts` (criada na Fase 4) em todos os módulos pré-existentes. Tarefa mecânica e isolada por módulo — não tocar em pipeline IA, prompts ou render.
+- **Mudanças por módulo:**
+  - **M1:** campo `keyword` no `M1RenderSchema`; `KeywordField` no form antes do `GenerateButton`; helper `m1KeywordFallbackSource` (Lisa → `cor-{hex sem #}`; Estampada/Alto-Relevo → primeira palavra do nome do arquivo da `fotoSofa`); API `/render` e `/regerar` retornam `normalizedKeyword` + `generatedAt`; `ResultSlot.status.ready` carrega esses campos pra montar filename via `buildDownloadFilename({ kind: 'm1', tipoFoto, ... })`.
+  - **M2 T1:** campo `keyword` em `imagemUnicaSchema` e `carrosselSchema`; `KeywordField` em `form-imagem-unica.tsx` e `form-carrossel.tsx` antes do botão Gerar; API `/m2/generate` retorna `normalizedKeyword` + `generatedAt` (fallback: imagem-única → `copyTexto`; carrossel → `contextoGeral || slides[0].copyTexto`); `preview-imagem-unica.tsx` e `preview-carrossel.tsx` usam `buildDownloadFilename`.
+  - **M3:** campo `keyword` em `M3InputSchema`; `normalizedKeyword` em `M3OutputSchema`; `KeywordField` na page antes do botão Gerar (via `form.watch/setValue`); API `/m3/render` calcula `normalizedKeyword` (fallback `textos.nomePromocao`) e propaga junto do output; `preview-banners.tsx` troca `<a download>` direto por `DownloadButton` + `buildDownloadFilename({ kind: 'm3', formato })`.
+  - **M4:** campo `keyword` em `M4RenderSchema`; `KeywordField` em `m4-form.tsx` antes do botão Gerar; API `/m4/render` retorna `normalizedKeyword` + `generatedAt` (fallback `line1`); `preview-area.tsx` usa `buildDownloadFilename({ kind: 'm4', ... })`.
+- **Refatoração compartilhada:** `app/imagens/m2-posts/_components/t2-form/t2-keyword-field.tsx` movido pra `components/shared/keyword-field.tsx` (export `KeywordField`); T2 atualizado pra importar do shared sem regressão. Tooltip padronizado: `"Palavra-chave do arquivo (opcional). 1 palavra, max 20 chars. Fallback: primeira palavra do conteúdo."`.
+- **Smoke programático Fase 4.5:** `scripts/smoke-fase4-5-filename/run.ts` com 8 asserts (4 por módulo: padrão correto com keyword preenchido; 4 por módulo: fallback funciona com keyword vazio). Todos passam (8/8). Sem custo IA.
+- **Validação:** typecheck + lint + `next build` verdes. T2 segue usando o mesmo padrão sem regressão (mesmo `buildDownloadFilename`, mesma utility).
+- **Origem:** [DEC-M2-012] (decisão original); reabriu Fase 4.5 pra cobrir M1/M2T1/M3/M4 (apenas T2 entregue na Fase 4).
+
 ### [DEC-M2-016] Exceção à regra de validação visual na Fase 4 — RESOLVIDA em 19/05/2026
 - **Decisão executiva do CEO:** Fase 4 (UI + API /render + /regerar + T2Form isolado) fechada **sem validação visual end-to-end manual**. Smoke programático Fase 4 ($0 — Planner + buildDownloadFilename + slugifyKeyword + classifyAjusteIntent + applyAjusteToPlan) passou todos os asserts. Build verde (typecheck + lint + next build).
 - **Risco assumido:** UI T2 ainda não foi clicada por humano em dev local — fluxos `Gerar Posts` (com Submit + 4 cards de preview), `Download` (com filename `img-m2-...`), `Regerar` (dialog + loading isolado + atualização do card único) confirmados apenas via build estático + smoke programático das partes novas.
