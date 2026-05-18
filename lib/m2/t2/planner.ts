@@ -253,25 +253,49 @@ function buildComparisonPlan(args: {
           ]
         : []),
     ],
+    // imageSlots resolvidos por prioridade:
+    //   1. imageMainUploadUrl (DEC-M2-014: upload é asset pronto) → image-before
+    //   2. slots.imagePromptBefore / slots.imagePromptAfter → ai_generated
+    //   3. fallback: placeholders neutros
     imageSlots: [
-      {
-        id: 'image-before',
-        source: args.input.imageMainUploadUrl ? 'uploaded' : 'static-asset',
-        slotRef: { kind: 'subtemplate-slot', id: 'image-before' },
-        uploadedUrl: args.input.imageMainUploadUrl,
-        // Static placeholder. Em Fase 3 vai virar ai_generated.
-        staticPath: args.input.imageMainUploadUrl
-          ? undefined
-          : '/brand/m2/placeholders/neutral-1.png',
-        treatment: 'rounded',
-      },
-      {
-        id: 'image-after',
-        source: 'static-asset',
-        slotRef: { kind: 'subtemplate-slot', id: 'image-after' },
-        staticPath: '/brand/m2/placeholders/neutral-2.png',
-        treatment: 'rounded',
-      },
+      args.input.imageMainUploadUrl
+        ? {
+            id: 'image-before',
+            source: 'uploaded' as const,
+            slotRef: { kind: 'subtemplate-slot' as const, id: 'image-before' },
+            uploadedUrl: args.input.imageMainUploadUrl,
+            treatment: 'rounded' as const,
+          }
+        : slots.imagePromptBefore
+          ? {
+              id: 'image-before',
+              source: 'ai_generated' as const,
+              slotRef: { kind: 'subtemplate-slot' as const, id: 'image-before' },
+              ai: { prompt: slots.imagePromptBefore, assetType: 'product' as const },
+              treatment: 'rounded' as const,
+            }
+          : {
+              id: 'image-before',
+              source: 'static-asset' as const,
+              slotRef: { kind: 'subtemplate-slot' as const, id: 'image-before' },
+              staticPath: '/brand/m2/placeholders/neutral-1.png',
+              treatment: 'rounded' as const,
+            },
+      slots.imagePromptAfter
+        ? {
+            id: 'image-after',
+            source: 'ai_generated' as const,
+            slotRef: { kind: 'subtemplate-slot' as const, id: 'image-after' },
+            ai: { prompt: slots.imagePromptAfter, assetType: 'product' as const },
+            treatment: 'rounded' as const,
+          }
+        : {
+            id: 'image-after',
+            source: 'static-asset' as const,
+            slotRef: { kind: 'subtemplate-slot' as const, id: 'image-after' },
+            staticPath: '/brand/m2/placeholders/neutral-2.png',
+            treatment: 'rounded' as const,
+          },
     ],
     footer: defaultFooter(),
   }
@@ -287,7 +311,10 @@ function buildCtaFinalPlan(args: {
   const lines = args.input.copyTexto.split(/\n+/).map((l) => l.trim()).filter(Boolean)
   const title = slots.title ?? lines[0] ?? ''
   const subtitle = slots.subtitle ?? lines.slice(1, 2).join(' ')
-  const cta = slots.cta ?? '@charmedodetalhe'
+  // DEC-M2-015: footer embutido no background já carrega @handle. CTA agora
+  // é call-to-action de ação (ex: "CONHEÇA NA LOJA"), não duplica @handle.
+  // Texto livre, max 30 chars enforced pelo schema (slots: max 500 → ok).
+  const cta = (slots.cta ?? 'CONHEÇA NA LOJA').slice(0, 30)
 
   return {
     slideId: args.isSingle ? 'imagem-unica' : `slide-${args.index + 1}`,

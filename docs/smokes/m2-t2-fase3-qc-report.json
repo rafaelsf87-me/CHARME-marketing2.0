@@ -1,0 +1,98 @@
+{
+  "results": [
+    {
+      "slideIndex": 0,
+      "slideId": "slide-1",
+      "url": "file:///Users/rafaelsfreitas/Desktop/Claude-IA/Charme Marketing 2.0/scripts/smoke-t2-fase3/output/m2-t2_1779138657155-slide-1.png",
+      "qc": {
+        "pass": true,
+        "qualityScore": 100,
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "slideIndex": 1,
+      "slideId": "slide-2",
+      "url": "file:///Users/rafaelsfreitas/Desktop/Claude-IA/Charme Marketing 2.0/scripts/smoke-t2-fase3/output/m2-t2_1779138657327-slide-2.png",
+      "qc": {
+        "pass": true,
+        "qualityScore": 100,
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "slideIndex": 2,
+      "slideId": "slide-3",
+      "url": "file:///Users/rafaelsfreitas/Desktop/Claude-IA/Charme Marketing 2.0/scripts/smoke-t2-fase3/output/m2-t2_1779138691982-slide-3.png",
+      "qc": {
+        "pass": true,
+        "qualityScore": 95,
+        "errors": [],
+        "warnings": [
+          {
+            "code": "BACKGROUND_LUMA_VS_TEXT",
+            "severity": "warning",
+            "message": "Contraste WCAG 2.71:1 abaixo de 4.5:1 (text=#FFFFFF, bg luma média=86)",
+            "bgLuma": 86.01204613281243,
+            "textLuma": 254.99999999999997,
+            "ratio": 2.7110616930712155
+          }
+        ]
+      }
+    },
+    {
+      "slideIndex": 3,
+      "slideId": "slide-4",
+      "url": "file:///Users/rafaelsfreitas/Desktop/Claude-IA/Charme Marketing 2.0/scripts/smoke-t2-fase3/output/m2-t2_1779138692154-slide-4.png",
+      "qc": {
+        "pass": true,
+        "qualityScore": 100,
+        "errors": [],
+        "warnings": []
+      }
+    }
+  ],
+  "pack": {
+    "packHash": "395c9d52007eac2b",
+    "createdAt": "2026-05-18T21:10:56.951Z",
+    "assets": {
+      "slot-image-before": {
+        "url": "",
+        "promptHash": "4a5836c997f5e0c1",
+        "assetType": "product",
+        "transparent": true
+      },
+      "slot-image-after": {
+        "url": "",
+        "promptHash": "d021018176057ccb",
+        "assetType": "product",
+        "transparent": true
+      }
+    }
+  },
+  "summary": {
+    "allPass": true,
+    "avgScore": 98.75,
+    "totalMs": 35217,
+    "renderMs": 35206
+  },
+  "cost": {
+    "totalUsd": 0.5,
+    "assets": {
+      "slot-image-before": {
+        "url": "",
+        "promptHash": "4a5836c997f5e0c1",
+        "assetType": "product",
+        "transparent": true
+      },
+      "slot-image-after": {
+        "url": "",
+        "promptHash": "d021018176057ccb",
+        "assetType": "product",
+        "transparent": true
+      }
+    }
+  }
+}

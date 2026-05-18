@@ -21,11 +21,16 @@ const SAFE_LEFT = 80
 const SAFE_WIDTH = 920
 
 const TITLE_BOX: Rect = { x: SAFE_LEFT, y: 130, w: SAFE_WIDTH, h: 200 }
+// Densificado pós-Fase 2: gap menor + altura ligeiramente menor + setinhas
+// maiores ocupam melhor a safe area vertical até a footer zone (1190).
+// 6 boxes × 130 alt + 5 gaps × 18 = 870. Inicia em y=370 → termina y=1240.
+// Como cta-final-bg-01 e starfields têm safe area bottom 180-250, vou
+// começar em 360 e terminar 1230 (ainda dentro da safe area).
 const BOX_HEIGHT = 130
-const BOX_GAP = 24
-const BOXES_START_Y = 380
-const ARROW_W = 60
-const BOX_X = SAFE_LEFT + ARROW_W + 20 // 80 + 60 + 20 = 160
+const BOX_GAP = 18
+const BOXES_START_Y = 360
+const ARROW_W = 70
+const BOX_X = SAFE_LEFT + ARROW_W + 20
 const BOX_W = SAFE_WIDTH - ARROW_W - 20
 
 function boxRect(i: number): Rect {
@@ -105,7 +110,8 @@ function renderTree(args: SubtemplateRenderArgs): React.ReactElement {
               display: 'flex',
               fontFamily: 'Montserrat',
               fontWeight: 800,
-              fontSize: 48,
+              // Densificado pós-Fase 2: setinha mais pesada (36→56 → 64).
+              fontSize: 64,
               color: accentColor,
               lineHeight: 1,
             }}

@@ -275,6 +275,9 @@ export async function validateSlide(args: ValidateSlideArgs): Promise<QCReport> 
 
     const bleedIssues = await checkBleed(args.buffer)
     issues.push(...bleedIssues)
+
+    const uploadLeakWarnings = await checkUploadLeakHeuristic(args.buffer, args.plan)
+    issues.push(...uploadLeakWarnings)
   }
 
   const errors = issues.filter((i) => i.severity === 'error')
@@ -289,7 +292,70 @@ export async function validateSlide(args: ValidateSlideArgs): Promise<QCReport> 
 }
 
 /**
- * OCR check stub. Implementação na Fase 3.
+ * Heurística V1 (Fase 3) pra detectar vazamento de upload referência
+ * (DEC-M2-014).
+ *
+ * Pra cada imageSlot com source='uploaded', amostra o bounding box
+ * renderizado. Se >40% dos pixels forem cinza homogêneo (placeholder não
+ * substituído) OU se variance de luma for muito alta indicando texto
+ * sobreposto, emite warning UPLOAD_LEAKED_REFERENCE.
+ *
+ * V2 futuro: tesseract.js OCR no bounding box.
+ */
+async function checkUploadLeakHeuristic(buffer: Buffer, plan: SlidePlan): Promise<QCIssue[]> {
+  const issues: QCIssue[] = []
+  const uploadedSlots = plan.imageSlots.filter((s) => s.source === 'uploaded')
+  if (uploadedSlots.length === 0) return issues
+
+  const { getSubtemplate } = await import('./subtemplates')
+  let subtemplate
+  try {
+    subtemplate = getSubtemplate(plan.subtemplateId)
+  } catch {
+    return issues
+  }
+
+  for (const slot of uploadedSlots) {
+    const def = subtemplate.config.imageSlots.find((d) => d.id === slot.id)
+    if (!def) continue
+    const { box } = def
+    if (box.x < 0 || box.y < 0) continue
+
+    const { data, info } = await extractRegion(buffer, box.x, box.y, box.w, box.h)
+    let homogeneousGray = 0
+    let sumLuma = 0
+    let sumLumaSq = 0
+    let count = 0
+    for (let i = 0; i < data.length; i += info.channels) {
+      const r = data[i] ?? 0
+      const g = data[i + 1] ?? 0
+      const b = data[i + 2] ?? 0
+      const luma = pixelLuma(r, g, b)
+      sumLuma += luma
+      sumLumaSq += luma * luma
+      count++
+      // Cinza homogêneo: canais aproximadamente iguais e mid-tone.
+      const maxC = Math.max(r, g, b)
+      const minC = Math.min(r, g, b)
+      if (maxC - minC < 10 && luma > 80 && luma < 200) homogeneousGray++
+    }
+    const grayRatio = homogeneousGray / count
+    if (grayRatio > 0.4) {
+      issues.push({
+        code: 'UPLOAD_LEAKED_REFERENCE',
+        severity: 'warning',
+        message: `Slot ${slot.id} com source=uploaded tem ${(grayRatio * 100).toFixed(1)}% pixels cinza homogêneo — possível placeholder não substituído`,
+        slotId: slot.id,
+        detectedTextLength: 0,
+      })
+    }
+  }
+
+  return issues
+}
+
+/**
+ * OCR check stub. Implementação V2 futura.
  */
 export async function checkUploadLeak(_args: ValidateSlideArgs): Promise<QCReport['warnings']> {
   return []
