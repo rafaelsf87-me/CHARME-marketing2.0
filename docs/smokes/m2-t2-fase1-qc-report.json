@@ -1,0 +1,52 @@
+{
+  "plan": {
+    "slideId": "smoke-cover-1",
+    "slideIndex": 0,
+    "slideType": "cover",
+    "backgroundId": "starfield-01",
+    "subtemplateId": "cover",
+    "textSlots": [
+      {
+        "id": "title",
+        "content": "SUA BUCHA PODE ESTAR SUJANDO MAIS",
+        "slotRef": {
+          "kind": "subtemplate-slot",
+          "id": "title"
+        },
+        "alignment": "center",
+        "overflowStrategy": "shrink"
+      },
+      {
+        "id": "subtitle",
+        "content": "Veja quando trocar a esponja de lavar louça",
+        "slotRef": {
+          "kind": "subtemplate-slot",
+          "id": "subtitle"
+        },
+        "alignment": "center",
+        "overflowStrategy": "shrink"
+      }
+    ],
+    "imageSlots": [],
+    "footer": {
+      "enabled": true,
+      "logo": "casinha",
+      "position": "bottom-center"
+    }
+  },
+  "qc": {
+    "pass": true,
+    "qualityScore": 100,
+    "errors": [],
+    "warnings": []
+  },
+  "timings": {
+    "composeMs": 126,
+    "qcMs": 16,
+    "totalMs": 144
+  },
+  "output": {
+    "path": "/Users/rafaelsfreitas/Desktop/Claude-IA/Charme Marketing 2.0/scripts/smoke-t2-fase1/output/smoke-cover.png",
+    "bytes": 2501130
+  }
+}
