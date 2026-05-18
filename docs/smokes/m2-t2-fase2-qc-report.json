@@ -1,0 +1,300 @@
+{
+  "ctaFinalBgAvailable": true,
+  "plansPlanned": 4,
+  "plansRendered": 4,
+  "plans": [
+    {
+      "slideId": "slide-1",
+      "slideIndex": 0,
+      "slideType": "cover",
+      "backgroundId": "starfield-01",
+      "subtemplateId": "cover",
+      "textSlots": [
+        {
+          "id": "title",
+          "content": "SUA BUCHA PODE ESTAR SUJANDO MAIS DO QUE LIMPANDO",
+          "slotRef": {
+            "kind": "subtemplate-slot",
+            "id": "title"
+          },
+          "overflowStrategy": "shrink"
+        },
+        {
+          "id": "subtitle",
+          "content": "Veja quando trocar a esponja de lavar louça",
+          "slotRef": {
+            "kind": "subtemplate-slot",
+            "id": "subtitle"
+          },
+          "overflowStrategy": "shrink"
+        }
+      ],
+      "imageSlots": [],
+      "footer": {
+        "enabled": false,
+        "logo": "casinha",
+        "position": "bottom-center"
+      }
+    },
+    {
+      "slideId": "slide-2",
+      "slideIndex": 1,
+      "slideType": "content_6",
+      "backgroundId": "starfield-03",
+      "subtemplateId": "content-6-boxes",
+      "textSlots": [
+        {
+          "id": "title",
+          "content": "TROQUE QUANDO ELA ESTIVER ASSIM:",
+          "slotRef": {
+            "kind": "subtemplate-slot",
+            "id": "title"
+          },
+          "overflowStrategy": "shrink"
+        },
+        {
+          "id": "box-1",
+          "content": "Amarelada, escura ou com manchas",
+          "slotRef": {
+            "kind": "subtemplate-slot",
+            "id": "box-1"
+          },
+          "overflowStrategy": "shrink"
+        },
+        {
+          "id": "box-2",
+          "content": "Com cheiro ruim",
+          "slotRef": {
+            "kind": "subtemplate-slot",
+            "id": "box-2"
+          },
+          "overflowStrategy": "shrink"
+        },
+        {
+          "id": "box-3",
+          "content": "Mole demais ou esfarelando",
+          "slotRef": {
+            "kind": "subtemplate-slot",
+            "id": "box-3"
+          },
+          "overflowStrategy": "shrink"
+        },
+        {
+          "id": "box-4",
+          "content": "Com restos de comida presos",
+          "slotRef": {
+            "kind": "subtemplate-slot",
+            "id": "box-4"
+          },
+          "overflowStrategy": "shrink"
+        },
+        {
+          "id": "box-5",
+          "content": "Gordurosa ou grudenta ao toque",
+          "slotRef": {
+            "kind": "subtemplate-slot",
+            "id": "box-5"
+          },
+          "overflowStrategy": "shrink"
+        },
+        {
+          "id": "box-6",
+          "content": "Com aparência velha e deformada",
+          "slotRef": {
+            "kind": "subtemplate-slot",
+            "id": "box-6"
+          },
+          "overflowStrategy": "shrink"
+        }
+      ],
+      "imageSlots": [],
+      "footer": {
+        "enabled": false,
+        "logo": "casinha",
+        "position": "bottom-center"
+      }
+    },
+    {
+      "slideId": "slide-3",
+      "slideIndex": 2,
+      "slideType": "comparison",
+      "backgroundId": "starfield-04",
+      "subtemplateId": "comparison-before-after",
+      "textSlots": [
+        {
+          "id": "title",
+          "content": "BUCHA NOVA MUDA A SENSAÇÃO DA COZINHA",
+          "slotRef": {
+            "kind": "subtemplate-slot",
+            "id": "title"
+          },
+          "overflowStrategy": "shrink"
+        },
+        {
+          "id": "label-before",
+          "content": "ANTES",
+          "slotRef": {
+            "kind": "subtemplate-slot",
+            "id": "label-before"
+          },
+          "overflowStrategy": "shrink"
+        },
+        {
+          "id": "label-after",
+          "content": "DEPOIS",
+          "slotRef": {
+            "kind": "subtemplate-slot",
+            "id": "label-after"
+          },
+          "overflowStrategy": "shrink"
+        },
+        {
+          "id": "caption",
+          "content": "Trocar a bucha com frequência ajuda a deixar a louça mais limpa e a cozinha mais higiênica",
+          "slotRef": {
+            "kind": "subtemplate-slot",
+            "id": "caption"
+          },
+          "overflowStrategy": "shrink"
+        }
+      ],
+      "imageSlots": [
+        {
+          "id": "image-before",
+          "source": "static-asset",
+          "slotRef": {
+            "kind": "subtemplate-slot",
+            "id": "image-before"
+          },
+          "treatment": "rounded",
+          "staticPath": "/brand/m2/placeholders/neutral-1.png"
+        },
+        {
+          "id": "image-after",
+          "source": "static-asset",
+          "slotRef": {
+            "kind": "subtemplate-slot",
+            "id": "image-after"
+          },
+          "treatment": "rounded",
+          "staticPath": "/brand/m2/placeholders/neutral-2.png"
+        }
+      ],
+      "footer": {
+        "enabled": false,
+        "logo": "casinha",
+        "position": "bottom-center"
+      }
+    },
+    {
+      "slideId": "slide-4",
+      "slideIndex": 3,
+      "slideType": "cta_final",
+      "backgroundId": "cta-final-bg-01",
+      "subtemplateId": "cta-final",
+      "textSlots": [
+        {
+          "id": "title",
+          "content": "TROQUE COM FREQUÊNCIA",
+          "slotRef": {
+            "kind": "subtemplate-slot",
+            "id": "title"
+          },
+          "overflowStrategy": "shrink"
+        },
+        {
+          "id": "subtitle",
+          "content": "A cada 7 a 15 dias",
+          "slotRef": {
+            "kind": "subtemplate-slot",
+            "id": "subtitle"
+          },
+          "overflowStrategy": "shrink"
+        },
+        {
+          "id": "cta",
+          "content": "@charmedodetalhe",
+          "slotRef": {
+            "kind": "subtemplate-slot",
+            "id": "cta"
+          },
+          "overflowStrategy": "shrink"
+        }
+      ],
+      "imageSlots": [],
+      "footer": {
+        "enabled": false,
+        "logo": "casinha",
+        "position": "bottom-center"
+      }
+    }
+  ],
+  "results": [
+    {
+      "slideId": "slide-1",
+      "file": "/Users/rafaelsfreitas/Desktop/Claude-IA/Charme Marketing 2.0/scripts/smoke-t2-fase2/output/smoke-slide-1.png",
+      "bytes": 2568790,
+      "composeMs": 115,
+      "qcMs": 91,
+      "qc": {
+        "pass": true,
+        "qualityScore": 100,
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "slideId": "slide-2",
+      "file": "/Users/rafaelsfreitas/Desktop/Claude-IA/Charme Marketing 2.0/scripts/smoke-t2-fase2/output/smoke-slide-2.png",
+      "bytes": 2728043,
+      "composeMs": 83,
+      "qcMs": 90,
+      "qc": {
+        "pass": true,
+        "qualityScore": 100,
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "slideId": "slide-3",
+      "file": "/Users/rafaelsfreitas/Desktop/Claude-IA/Charme Marketing 2.0/scripts/smoke-t2-fase2/output/smoke-slide-3.png",
+      "bytes": 2588726,
+      "composeMs": 102,
+      "qcMs": 84,
+      "qc": {
+        "pass": true,
+        "qualityScore": 95,
+        "errors": [],
+        "warnings": [
+          {
+            "code": "BACKGROUND_LUMA_VS_TEXT",
+            "severity": "warning",
+            "message": "Contraste WCAG 2.71:1 abaixo de 4.5:1 (text=#FFFFFF, bg luma média=86)",
+            "bgLuma": 86.01204613281243,
+            "textLuma": 254.99999999999997,
+            "ratio": 2.7110616930712155
+          }
+        ]
+      }
+    },
+    {
+      "slideId": "slide-4",
+      "file": "/Users/rafaelsfreitas/Desktop/Claude-IA/Charme Marketing 2.0/scripts/smoke-t2-fase2/output/smoke-slide-4.png",
+      "bytes": 2436589,
+      "composeMs": 72,
+      "qcMs": 95,
+      "qc": {
+        "pass": true,
+        "qualityScore": 100,
+        "errors": [],
+        "warnings": []
+      }
+    }
+  ],
+  "summary": {
+    "allPass": true,
+    "avgScore": 98.75,
+    "totalMs": 736
+  }
+}

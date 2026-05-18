@@ -342,6 +342,16 @@ export type T2Modo = 'imagem-unica' | 'carrossel'
 export interface T2SlideInput {
   /** Texto base do slide (10..2000 chars). Planner deriva textSlots. */
   copyTexto: string
+  /** Forçar tipo do slide. Se omitido, Planner infere por heurística. */
+  slideType?: T2SlideType
+  /** Forçar subtemplate. Se omitido, Planner resolve via slideType + densidade. */
+  subtemplateId?: T2SubtemplateId
+  /** Bloco extra de dados estruturados pro slide. Pra slides "comparison":
+   *  { labelBefore: 'ANTES', labelAfter: 'DEPOIS', caption: '...' }
+   *  Pra "cta_final": { subtitle: '...', cta: '...' } */
+  slots?: Record<string, string>
+  /** Lista de bullets pra subtemplates content-* (substitui parsing de copyTexto). */
+  bullets?: string[]
   /** Upload opcional pro slot image-main. Compose direto, NÃO vai pra IA. */
   imageMainUploadUrl?: string
   /** Prompt explícito para asset IA, opcional. Se ausente, Planner infere. */

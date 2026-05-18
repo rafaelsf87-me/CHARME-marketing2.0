@@ -151,6 +151,20 @@ export const T2_BACKGROUNDS: BackgroundConfig[] = [
     density: 'sparse',
     allowedFormats: ['imagem-unica'],
   },
+  {
+    // cta-final-bg-01: footer (logo casinha + @charmedodetalhe) já EMBUTIDO
+    // visualmente no PNG (DEC-M2-015). Safe area ajustada com bottom 250
+    // pra preservar a faixa do footer embutido durante render dos textos.
+    id: 'cta-final-bg-01',
+    file: `${BG_DIR}/cta-final-bg-01.png`,
+    family: 'cta-final',
+    position: 'centered',
+    palette: STARFIELD_PALETTE,
+    safeAreas: { top: 60, right: 60, bottom: 250, left: 60 },
+    contrast: 'light-text',
+    density: 'busy',
+    allowedFormats: ['carrossel', 'imagem-unica'],
+  },
 ]
 
 export function getBackground(id: string): BackgroundConfig {

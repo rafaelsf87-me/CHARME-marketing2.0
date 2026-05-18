@@ -4,14 +4,21 @@
  * Pipeline:
  *   1. Carrega background do disco (`/public/brand/m2/backgrounds/...`)
  *   2. Resize/cover fit pra 1080×1350 caso difira
- *   3. Renderiza subtemplate via Satori → SVG → resvg → PNG buffer transparente
- *   4. Composite subtemplate sobre background
- *   5. Composite footer transparente nos 120px reservados
+ *   3. Resolve imageSlots: monta Map<id, Buffer> a partir de:
+ *      - source='ai_generated' → Fase 3 (stub: throw)
+ *      - source='uploaded' → fetch uploadedUrl (DEC-M2-014: asset pronto)
+ *      - source='static-asset' → fs.readFile staticPath
+ *      - source='reused-from-pack' → CarouselAssetPack (Fase 3)
+ *   4. Renderiza subtemplate via Satori → SVG → resvg → PNG transparente
+ *   5. Composite na ordem: bg → satori overlay → imageSlots (sobre boxes) → footer
  *   6. Encode PNG final 1080×1350
  *
- * Política DEC-M2-014: quando imageSlot.source === 'uploaded', bypassa
- * `assets/` e baixa direto. Branch é tratado em `render.ts` ao construir
- * o `imageBuffers` que chega aqui.
+ * Política DEC-M2-014 (upload é asset pronto): branch explícito em
+ * resolveImageBuffers() — uploaded NÃO vai pra IA, baixa direto.
+ *
+ * Política DEC-M2-015 (footer programático aposentado): footer.enabled
+ * vem default false do Planner. compose.ts só renderiza footer programático
+ * quando flag explícita — mantido como fallback técnico (REF-M2-003).
  */
 
 import path from 'node:path'
@@ -24,7 +31,7 @@ import { getSubtemplate } from './subtemplates'
 import { renderFooter } from './footer'
 import { fitTextToBox } from './text-renderer'
 import { T2_CANVAS_HEIGHT, T2_CANVAS_WIDTH } from './types'
-import type { SlidePlan, TextSlot } from './types'
+import type { ImageSlot, SlidePlan, TextSlot } from './types'
 
 // Footer geometria (alinha com lib/m2/footer-gen.ts: FOOTER_HEIGHT=120, MARGIN_BOTTOM=40).
 const FOOTER_HEIGHT = 120
@@ -76,6 +83,79 @@ async function loadBackgroundBuffer(filePath: string): Promise<Buffer> {
     .toBuffer()
 }
 
+// ─── Image slots loader (DEC-M2-014: upload é asset pronto) ─────────────────
+
+async function loadStaticAsset(staticPath: string): Promise<Buffer> {
+  const cleanRel = staticPath.replace(/^\/+/, '')
+  const fullPath = path.join(process.cwd(), 'public', cleanRel)
+  return fs.readFile(fullPath)
+}
+
+async function fetchUploadedAsset(url: string): Promise<Buffer> {
+  const res = await fetch(url)
+  if (!res.ok) {
+    throw new Error(`[T2] failed to fetch upload ${url}: ${res.status}`)
+  }
+  const arr = await res.arrayBuffer()
+  return Buffer.from(arr)
+}
+
+async function resolveImageBuffers(plan: SlidePlan, override: Map<string, Buffer>): Promise<Map<string, Buffer>> {
+  const result = new Map<string, Buffer>()
+  for (const slot of plan.imageSlots) {
+    // Override pré-carregado tem precedência (caller injeta — ex: Fase 3 com IA).
+    const pre = override.get(slot.id)
+    if (pre) {
+      result.set(slot.id, pre)
+      continue
+    }
+    switch (slot.source) {
+      case 'uploaded':
+        if (!slot.uploadedUrl) throw new Error(`[T2] slot ${slot.id} source=uploaded sem uploadedUrl`)
+        result.set(slot.id, await fetchUploadedAsset(slot.uploadedUrl))
+        break
+      case 'static-asset':
+        if (!slot.staticPath) throw new Error(`[T2] slot ${slot.id} source=static-asset sem staticPath`)
+        result.set(slot.id, await loadStaticAsset(slot.staticPath))
+        break
+      case 'ai_generated':
+        throw new Error(`[T2] slot ${slot.id} source=ai_generated — Fase 3 (assets/) não implementada`)
+      case 'reused-from-pack':
+        throw new Error(`[T2] slot ${slot.id} source=reused-from-pack — Fase 3 (cache) não implementada`)
+    }
+  }
+  return result
+}
+
+async function compositeImageSlot(slot: ImageSlot, buffer: Buffer, subtemplateConfig: ReturnType<typeof getSubtemplate>['config']): Promise<sharp.OverlayOptions> {
+  const def = subtemplateConfig.imageSlots.find((d) => d.id === slot.id)
+  if (!def) throw new Error(`[T2] imageSlot ${slot.id} sem def no subtemplate`)
+  const { box } = def
+
+  let processed = sharp(buffer).resize(box.w, box.h, { fit: 'cover', position: 'center' })
+
+  if (slot.treatment === 'rounded' || (slot.treatment === undefined && def.defaultTreatment === 'rounded')) {
+    const radius = 16
+    const maskSvg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="${box.w}" height="${box.h}">
+        <rect x="0" y="0" width="${box.w}" height="${box.h}" rx="${radius}" ry="${radius}" fill="white"/>
+      </svg>
+    `.trim()
+    processed = processed.composite([{ input: Buffer.from(maskSvg), blend: 'dest-in' }])
+  } else if (slot.treatment === 'circle') {
+    const r = Math.min(box.w, box.h) / 2
+    const maskSvg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="${box.w}" height="${box.h}">
+        <circle cx="${box.w / 2}" cy="${box.h / 2}" r="${r}" fill="white"/>
+      </svg>
+    `.trim()
+    processed = processed.composite([{ input: Buffer.from(maskSvg), blend: 'dest-in' }])
+  }
+
+  const out = await processed.png().toBuffer()
+  return { input: out, top: box.y, left: box.x }
+}
+
 // ─── Satori → PNG transparente ──────────────────────────────────────────────
 
 async function renderSatoriOverlay(tree: unknown): Promise<Buffer> {
@@ -93,7 +173,7 @@ async function renderSatoriOverlay(tree: unknown): Promise<Buffer> {
   return Buffer.from(resvg.render().asPng())
 }
 
-// ─── Resolve fontSizes pelos slots do subtemplate ───────────────────────────
+// ─── Resolve fontSizes + lines pelos slots ──────────────────────────────────
 
 interface ResolvedTextLayout {
   fontSizes: Map<string, number>
@@ -135,39 +215,54 @@ function resolveTextLayoutForSlots(
 
 export interface ComposeSlideArgs {
   plan: SlidePlan
-  /** Map de imageSlot.id → Buffer. Vazio na Fase 1 (sem IA). */
-  imageBuffers: Map<string, Buffer>
+  /** Map de imageSlot.id → Buffer pré-resolvido. Caller pode injetar
+   *  buffers (ex: IA Fase 3) que têm precedência. Se vazio, compose
+   *  resolve via uploadedUrl / staticPath / pack key. */
+  imageBuffers?: Map<string, Buffer>
 }
 
 export async function composeSlide(args: ComposeSlideArgs): Promise<Buffer> {
   const { plan } = args
+  const override = args.imageBuffers ?? new Map()
 
   // 1. Background
   const bgConfig = getBackground(plan.backgroundId)
   const bgBuffer = await loadBackgroundBuffer(bgConfig.file)
 
-  // 2. Subtemplate Satori
+  // 2. ImageSlots resolvidos (uploads, static, pack — DEC-M2-014)
+  const imageBuffers = await resolveImageBuffers(plan, override)
+
+  // 3. Subtemplate Satori (renderiza placeholders de boxes — as imagens vão
+  //    por composite Sharp depois pra fidelidade).
   const subtemplate = getSubtemplate(plan.subtemplateId)
   const layout = resolveTextLayoutForSlots(plan.textSlots, subtemplate.config)
   const tree = subtemplate.render({
     background: bgConfig,
     textSlots: plan.textSlots,
     imageSlots: plan.imageSlots,
-    imageBuffers: args.imageBuffers,
+    imageBuffers,
     resolvedFontSizes: layout.fontSizes,
     resolvedLines: layout.lines,
   })
   const subtemplateBuffer = await renderSatoriOverlay(tree)
 
-  // 3. Footer (se habilitado)
+  // 4. Composites
   const composites: sharp.OverlayOptions[] = []
   composites.push({ input: subtemplateBuffer, top: 0, left: 0 })
 
+  // 4a. Image slots (Sharp composite por cima do Satori overlay)
+  for (const slot of plan.imageSlots) {
+    const buf = imageBuffers.get(slot.id)
+    if (!buf) continue
+    composites.push(await compositeImageSlot(slot, buf, subtemplate.config))
+  }
+
+  // 4b. Footer programático (só se plan.footer.enabled — DEC-M2-015 default false)
   if (plan.footer.enabled) {
     const footerBuffer = await renderFooter({ logo: plan.footer.logo })
     composites.push({ input: footerBuffer, top: FOOTER_TOP, left: 0 })
   }
 
-  // 4. Composite final + PNG encode
+  // 5. Composite final + PNG encode
   return sharp(bgBuffer).composite(composites).png().toBuffer()
 }

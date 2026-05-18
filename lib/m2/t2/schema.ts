@@ -177,6 +177,10 @@ export const carouselAssetPackSchema = z.object({
 
 export const t2SlideInputSchema = z.object({
   copyTexto: z.string().min(10).max(2000),
+  slideType: z.enum(T2_SLIDE_TYPES).optional(),
+  subtemplateId: z.enum(T2_SUBTEMPLATE_IDS).optional(),
+  slots: z.record(z.string(), z.string().max(500)).optional(),
+  bullets: z.array(z.string().max(200)).max(8).optional(),
   imageMainUploadUrl: z.string().url().optional(),
   imageMainPrompt: z.string().max(500).optional(),
   ajustesExtras: z.string().max(500).optional(),

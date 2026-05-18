@@ -111,6 +111,25 @@ Ideias que surgiram mas estão **fora do escopo atual**. Não implementar agora.
 
 Código que funciona mas precisa ser melhorado antes da próxima feature relacionada.
 
+### [REF-M2-003] Aposentar footer programático após DEC-M2-015
+- **Onde:** `lib/m2/footer-gen.ts` e `lib/m2/t2/footer.ts`.
+- **Descrição:** [DEC-M2-015] estabelece que footer no T2 é **embutido no background do cta-final**. O footer programático fica como fallback técnico mas não é mais o caminho de produção. Remover (ou marcar como `@deprecated`) após T2 estabilizar em prod.
+- **Bloqueia:** nada agora — código permanece e não é chamado em pipeline de produção.
+- **Esforço estimado:** baixo (1 arquivo `lib/m2/footer-gen.ts` removido + remover `lib/m2/t2/footer.ts` + ajustar compose.ts pra remover branch `plan.footer.enabled`).
+- **Identificado em:** Sessão M2 T2 Fase 2, 19/05/2026.
+
+### [REF-M2-002] Validar widthFactor 0.66 do text-renderer em textos extremos
+- **Onde:** `lib/m2/t2/text-renderer.ts` (função `widthFactorFor`).
+- **Descrição:** widthFactor conservador (ExtraBold 0.66) funcionou no smoke Fase 1 com texto "SUA BUCHA PODE ESTAR SUJANDO MAIS" (33 chars). Validar com textos extremos antes de fechar V1:
+  - Textos curtos (5-15 chars) — pode estar reservando largura demais
+  - Textos longos (>60 chars com palavras compostas)
+  - Diacríticos densos pt-BR (ação, coração, sensação, percepção)
+  - Palavras compostas/grandes (LIMPEZA, ARMARINHO)
+- Se algum cenário regredir (overflow visual no Satori ou desperdício de fontSize), recalibrar factor ou substituir heurística por measureText real via Resvg/canvas.
+- **Bloqueia:** nada agora.
+- **Esforço estimado:** baixo (smoke parametrizado com 5-10 textos diferentes).
+- **Identificado em:** Sessão M2 T2 Fase 1, 19/05/2026.
+
 ### [REF-M2-001] Limpar gradient-base.png após T2 em prod
 - **Onde:** `public/brand/m2/backgrounds/gradient-base.png`
 - **Descrição:** arquivo usado pelo T1 (`render.ts:78-81`, hotfix v8 retry com background-check.ts). Deve ser removido junto com a descontinuação do T1 quando T2 estabilizar em prod. T2 não usa esse asset — catálogo T2 (`lib/m2/t2/backgrounds/catalog.ts`) referencia os 10 backgrounds curados manualmente (starfield-01..08, solid-purple-01..02).
@@ -247,6 +266,16 @@ Pontos onde uma decisão de produto é necessária antes de avançar.
 ## 🗑️ Resolvidas / Descartadas
 
 Quando uma dívida é resolvida ou descartada, mover para cá com nota curta. Manter os últimos 20 itens, depois limpar.
+
+### [DEC-M2-015] Footer apenas no cta-final, embutido no background — RESOLVIDA em 19/05/2026
+- **Decisão:** footer (logo + @handle) aparece **apenas no slide de fechamento** (`subtemplateId='cta-final'`), **embutido visualmente** no PNG do background `cta-final-bg-01.png` (curadoria manual do Rafael, pixel-perfect, ~150px inferiores). Slides `cover`/`content-*`/`comparison-before-after` **NÃO carregam footer**.
+- **Restrições estruturais:**
+  - Carrossel com ≥2 slides obriga último slide = subtemplate `cta-final`.
+  - Imagem única usa `cta-final` como subtemplate base (compartilha o background com footer embutido).
+- **Implicações no QC:** check `FOOTER_MISSING` aplica **só** quando `subtemplateId === 'cta-final'`. Slides cover/content/comparison não emitem erro de footer ausente.
+- **Footer programático (`lib/m2/footer-gen.ts` + `lib/m2/t2/footer.ts`)** vira fallback técnico, não usado em produção V1. Ver [REF-M2-003].
+- **Asset bloqueante:** Rafael cria `public/brand/m2/backgrounds/cta-final-bg-01.png` em paralelo. Smoke Fase 2 roda 3 slides (cover + content + comparison) enquanto o asset não está disponível.
+- **Implementado:** Planner Fase 2 força slide N-1 = cta-final pro carrossel; subtemplate `cta-final.tsx` posiciona texto na safe area 60..1190 (top 60..bottom 1100 deixa 250px inferiores pro footer já embutido no PNG).
 
 ### [DEC-M2-014] Upload tratado como ASSET PRONTO no T2 — RESOLVIDA em 18/05/2026
 - **Decisão:** quando `imageSlot.source === 'uploaded'`, o arquivo é **asset pronto**. Compose Sharp direto sobre o background do catálogo. **NÃO enviar pro GPT Image.** Upload do user nunca define background, layout, tipografia, cores, marca d'água, texto ou contexto visual ao redor.

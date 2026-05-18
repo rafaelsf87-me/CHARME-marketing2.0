@@ -1,23 +1,27 @@
 /**
- * Subtemplate: cover (Fase 1)
+ * Subtemplate: cover (Fase 2 — ajustes pós-validação Fase 1)
  *
  * Layout cover (capa do carrossel):
- *   - Title slot: top, Montserrat ExtraBold 60-140, alignment center, maxLines 3
- *   - Subtitle slot: centro, Montserrat SemiBold 28-48, alignment center, maxLines 2
+ *   - Title slot: top, Montserrat ExtraBold 60-140, maxLines 3
+ *   - Subtitle slot: logo abaixo do title (gap 40), SemiBold 28-48, maxLines 2
  *
- * Slots seguem o template SVG de safeAreas (60..1020 × 60..1190).
- *
- * Renderiza Satori tree consumindo `resolvedFontSizes` calculados via
- * fitTextToBox antes de chamar `render`.
+ * Ajustes Fase 2:
+ *   - Centralizado verticalmente na safe area útil 60..1190
+ *     (sem footer programático mais — DEC-M2-015)
+ *   - Gap reduzido: title e subtitle ficam num bloco vertical centralizado
  */
 
 import * as React from 'react'
 import type { Rect, TextSlotDef } from '../types'
+import { renderTextLines } from './_shared'
 import type { SubtemplateModule, SubtemplateRenderArgs } from './types'
 
 // Coords absolutas no canvas 1080×1350.
-const TITLE_BOX: Rect = { x: 80, y: 200, w: 920, h: 460 }
-const SUBTITLE_BOX: Rect = { x: 80, y: 720, w: 920, h: 260 }
+// Safe area útil em cover sem footer programático: 60..1190 = 1130 px alt.
+// Bloco central de texto: title 460h + gap 40 + subtitle 260h = 760h.
+// Centro vertical 60..1190 → começa em y=235 ((1130-760)/2 + 60 = 245).
+const TITLE_BOX: Rect = { x: 80, y: 280, w: 920, h: 420 }
+const SUBTITLE_BOX: Rect = { x: 80, y: 740, w: 920, h: 220 }
 
 const TITLE_SLOT_DEF: TextSlotDef = {
   id: 'title',
@@ -41,56 +45,8 @@ const SUBTITLE_SLOT_DEF: TextSlotDef = {
   maxLines: 2,
 }
 
-/**
- * Cor de texto inferida do contrast do background.
- * light-text → branco com leve tint. dark-text → primary palette (escuro).
- */
 function inferTextColor(args: SubtemplateRenderArgs): string {
   return args.background.contrast === 'light-text' ? '#FFFFFF' : args.background.palette.primary
-}
-
-function renderLines(
-  lines: string[],
-  fontWeight: number,
-  fontSize: number,
-  lineHeight: number,
-  color: string,
-  opacity: number,
-): React.ReactElement {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '100%',
-      }}
-    >
-      {lines.map((ln, i) => (
-        <div
-          key={i}
-          style={{
-            display: 'flex',
-            fontFamily: 'Montserrat',
-            fontWeight,
-            fontSize,
-            lineHeight,
-            color,
-            opacity,
-            textAlign: 'center',
-            justifyContent: 'center',
-            letterSpacing: '-0.02em',
-            // Linhas já foram quebradas pelo text-renderer — Satori não pode
-            // re-quebrar uma linha individual (forçaria divergência).
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {ln}
-        </div>
-      ))}
-    </div>
-  )
 }
 
 function renderCoverTree(args: SubtemplateRenderArgs): React.ReactElement {
@@ -124,19 +80,19 @@ function renderCoverTree(args: SubtemplateRenderArgs): React.ReactElement {
             top: TITLE_BOX.y,
             width: TITLE_BOX.w,
             height: TITLE_BOX.h,
-            alignItems: 'center',
+            alignItems: 'flex-end',
             justifyContent: 'center',
-            textTransform: 'uppercase',
           }}
         >
-          {renderLines(
-            titleLines.map((l) => l.toUpperCase()),
-            TITLE_SLOT_DEF.fontWeight,
-            titleFontSize,
-            TITLE_SLOT_DEF.lineHeight,
-            textColor,
-            1,
-          )}
+          {renderTextLines({
+            lines: titleLines.map((l) => l.toUpperCase()),
+            fontWeight: TITLE_SLOT_DEF.fontWeight,
+            fontSize: titleFontSize,
+            lineHeight: TITLE_SLOT_DEF.lineHeight,
+            color: textColor,
+            opacity: 1,
+            letterSpacing: '-0.02em',
+          })}
         </div>
       )}
 
@@ -153,14 +109,14 @@ function renderCoverTree(args: SubtemplateRenderArgs): React.ReactElement {
             justifyContent: 'center',
           }}
         >
-          {renderLines(
-            subtitleLines,
-            SUBTITLE_SLOT_DEF.fontWeight,
-            subtitleFontSize,
-            SUBTITLE_SLOT_DEF.lineHeight,
-            textColor,
-            0.92,
-          )}
+          {renderTextLines({
+            lines: subtitleLines,
+            fontWeight: SUBTITLE_SLOT_DEF.fontWeight,
+            fontSize: subtitleFontSize,
+            lineHeight: SUBTITLE_SLOT_DEF.lineHeight,
+            color: textColor,
+            opacity: 0.92,
+          })}
         </div>
       )}
     </div>
