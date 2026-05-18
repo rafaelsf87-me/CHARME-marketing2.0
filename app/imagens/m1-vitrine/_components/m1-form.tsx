@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { toast } from 'sonner'
 import { TabTipoMovel } from './tab-tipo-movel'
 import { StepSet } from './step-set'
 import { StepTipoCapa } from './step-tipo-capa'
@@ -11,6 +12,7 @@ import { StepCustomizacao } from './step-customizacao'
 import { GenerateButton } from './generate-button'
 import { CostConfirmDialog } from './cost-confirm-dialog'
 import { NoRoloWarningDialog } from './no-rolo-warning-dialog'
+import { RegerarDialog } from './regerar-dialog'
 import { ResultsGrid, type ResultSlot } from './results-grid'
 import type { M1Movel, M1TipoCapa, M1TipoFoto, M1RenderInput } from '@/lib/m1/schema'
 import type { M1Set } from '@/lib/m1/templates'
@@ -36,6 +38,10 @@ export function M1Form() {
   const [generating, setGenerating] = React.useState(false)
   const [costDialogOpen, setCostDialogOpen] = React.useState(false)
   const [noRoloDialogOpen, setNoRoloDialogOpen] = React.useState(false)
+
+  // Regeração individual: dialog aberto pra um slot específico + submitting.
+  const [regerarIndex, setRegerarIndex] = React.useState<number | null>(null)
+  const [regerarSubmitting, setRegerarSubmitting] = React.useState(false)
 
   function onChangeTipoCapa(novo: M1TipoCapa) {
     setTipoCapa(novo)
@@ -70,7 +76,7 @@ export function M1Form() {
     }
   }
 
-  async function renderOne(tipo: M1TipoFoto): Promise<{ url: string; tookMs: number }> {
+  async function renderOne(tipo: M1TipoFoto): Promise<{ url: string; tookMs: number; payload: M1RenderInput }> {
     const payload = buildPayload(tipo)
     const startedAt = Date.now()
     const res = await fetch('/api/imagens/m1/render', {
@@ -83,13 +89,13 @@ export function M1Form() {
       throw new Error(json.error || `Falha (${res.status})`)
     }
     const tookMs = typeof json.tookMs === 'number' ? json.tookMs : Date.now() - startedAt
-    return { url: json.url, tookMs }
+    return { url: json.url, tookMs, payload }
   }
 
-  function updateSlot(index: number, status: ResultSlot['status']) {
+  function updateSlot(index: number, patch: Partial<ResultSlot>) {
     setSlots((prev) => {
       const next = [...prev]
-      if (next[index]) next[index] = { ...next[index], status }
+      if (next[index]) next[index] = { ...next[index], ...patch }
       return next
     })
   }
@@ -101,14 +107,19 @@ export function M1Form() {
         const i = cursor++
         const slotIdx = indices[i]
         const tipo = tipos[i]
-        updateSlot(slotIdx, { state: 'loading' })
+        updateSlot(slotIdx, { status: { state: 'loading' } })
         try {
-          const { url, tookMs } = await renderOne(tipo)
-          updateSlot(slotIdx, { state: 'ready', url, tookMs })
+          const { url, tookMs, payload } = await renderOne(tipo)
+          updateSlot(slotIdx, {
+            status: { state: 'ready', url, tookMs },
+            contextoOriginal: payload,
+          })
         } catch (err) {
           updateSlot(slotIdx, {
-            state: 'error',
-            message: err instanceof Error ? err.message : 'Falha ao gerar',
+            status: {
+              state: 'error',
+              message: err instanceof Error ? err.message : 'Falha ao gerar',
+            },
           })
         }
       }
@@ -165,6 +176,53 @@ export function M1Form() {
     }
   }
 
+  function onRegerar(index: number) {
+    const slot = slots[index]
+    if (!slot || !slot.contextoOriginal) return
+    setRegerarIndex(index)
+  }
+
+  async function confirmRegerar(ajustePrompt: string) {
+    if (regerarIndex === null) return
+    const slot = slots[regerarIndex]
+    if (!slot || !slot.contextoOriginal) return
+
+    const contextoOriginal = slot.contextoOriginal
+    const targetIndex = regerarIndex
+
+    setRegerarSubmitting(true)
+    // Card vai pra loading isolado; outros permanecem.
+    updateSlot(targetIndex, { status: { state: 'loading' } })
+
+    try {
+      const startedAt = Date.now()
+      const res = await fetch('/api/imagens/m1/regerar', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ contextoOriginal, ajustePrompt }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.url) {
+        throw new Error(json.error || `Falha (${res.status})`)
+      }
+      const tookMs = typeof json.tookMs === 'number' ? json.tookMs : Date.now() - startedAt
+      updateSlot(targetIndex, {
+        status: { state: 'ready', url: json.url, tookMs },
+      })
+      setRegerarIndex(null)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Falha ao regerar'
+      toast.error(message)
+      // Volta ao estado original: tentar lembrar que era ready — o contexto continua válido.
+      // Marcamos como erro contextualizado pra o usuário.
+      updateSlot(targetIndex, {
+        status: { state: 'error', message },
+      })
+    } finally {
+      setRegerarSubmitting(false)
+    }
+  }
+
   return (
     <>
       <div className="flex flex-col gap-6">
@@ -193,7 +251,7 @@ export function M1Form() {
           onClick={onGenerate}
         />
 
-        <ResultsGrid slots={slots} onRetry={onRetry} />
+        <ResultsGrid slots={slots} onRetry={onRetry} onRegerar={onRegerar} />
       </div>
 
       <CostConfirmDialog
@@ -208,6 +266,13 @@ export function M1Form() {
         open={noRoloDialogOpen}
         onOpenChange={setNoRoloDialogOpen}
         onConfirm={proceedAfterRoloCheck}
+      />
+
+      <RegerarDialog
+        open={regerarIndex !== null}
+        onOpenChange={(o) => !regerarSubmitting && setRegerarIndex(o ? regerarIndex : null)}
+        onConfirm={(prompt) => void confirmRegerar(prompt)}
+        submitting={regerarSubmitting}
       />
     </>
   )

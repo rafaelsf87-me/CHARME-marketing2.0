@@ -1,8 +1,8 @@
 'use client'
 
-import { ImageIcon, Loader2, RotateCcw } from 'lucide-react'
+import { ImageIcon, Loader2, RotateCcw, RefreshCw } from 'lucide-react'
 import { DownloadButton } from '@/components/download-button'
-import type { M1TipoFoto } from '@/lib/m1/schema'
+import type { M1RenderInput, M1TipoFoto } from '@/lib/m1/schema'
 
 export type SlotState =
   | { state: 'loading' }
@@ -12,6 +12,7 @@ export type SlotState =
 export interface ResultSlot {
   tipoFoto: M1TipoFoto
   status: SlotState
+  contextoOriginal?: M1RenderInput
 }
 
 const LABELS: Record<M1TipoFoto, string> = {
@@ -27,9 +28,10 @@ const LABELS: Record<M1TipoFoto, string> = {
 interface ResultsGridProps {
   slots: ResultSlot[]
   onRetry: (index: number) => void
+  onRegerar: (index: number) => void
 }
 
-export function ResultsGrid({ slots, onRetry }: ResultsGridProps) {
+export function ResultsGrid({ slots, onRetry, onRegerar }: ResultsGridProps) {
   if (slots.length === 0) return null
 
   // 1 → 1 coluna; 2+ → grid 2 colunas; ≥3 → grid 2 colunas (1 quebra em linha).
@@ -45,6 +47,7 @@ export function ResultsGrid({ slots, onRetry }: ResultsGridProps) {
             slot={slot}
             label={LABELS[slot.tipoFoto]}
             onRetry={() => onRetry(idx)}
+            onRegerar={() => onRegerar(idx)}
           />
         ))}
       </div>
@@ -56,10 +59,12 @@ function ResultCard({
   slot,
   label,
   onRetry,
+  onRegerar,
 }: {
   slot: ResultSlot
   label: string
   onRetry: () => void
+  onRegerar: () => void
 }) {
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-[color:var(--border-subtle)] bg-white p-3">
@@ -103,7 +108,17 @@ function ResultCard({
       </div>
 
       {slot.status.state === 'ready' && (
-        <div className="flex justify-end">
+        <div className="flex items-center justify-end gap-2">
+          {slot.contextoOriginal && (
+            <button
+              type="button"
+              onClick={onRegerar}
+              className="inline-flex items-center gap-1 rounded-md border border-[color:var(--border-default)] px-2.5 py-1.5 text-[11.5px] font-medium text-[color:var(--text-primary)] transition hover:bg-black/[0.04]"
+            >
+              <RefreshCw size={12} />
+              Regerar
+            </button>
+          )}
           <DownloadButton
             url={slot.status.url}
             filename={`m1-${slot.tipoFoto}.webp`}
