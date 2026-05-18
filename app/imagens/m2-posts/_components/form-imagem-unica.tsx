@@ -111,7 +111,7 @@ export function FormImagemUnica({ templateId }: FormImagemUnicaProps) {
         />
       </div>
 
-      {/* Modo IA: instruções extras + PNGs opcionais (0-3) */}
+      {/* Modo IA: instruções extras → Modo de geração → PNGs opcionais (0-3) */}
       {!isUpload && (
         <>
           <div className="flex flex-col gap-1.5">
@@ -134,6 +134,8 @@ export function FormImagemUnica({ templateId }: FormImagemUnicaProps) {
             />
           </div>
 
+          <ModoGeracaoSelector value={modoGeracao} onChange={setModoGeracao} disabled={generating} />
+
           <div className="flex flex-col gap-1.5">
             <label className="flex items-center gap-2 text-xs font-medium">
               PNGs de referência (opcional · até 3)
@@ -149,9 +151,11 @@ export function FormImagemUnica({ templateId }: FormImagemUnicaProps) {
         </>
       )}
 
-      {/* Modo Upload: 1-8 PNGs obrigatórios + instruções de uso */}
+      {/* Modo Upload: Modo de geração → 1-8 PNGs obrigatórios → instruções de uso */}
       {isUpload && (
         <>
+          <ModoGeracaoSelector value={modoGeracao} onChange={setModoGeracao} disabled={generating} />
+
           <div className="flex flex-col gap-1.5">
             <label className="flex items-center gap-2 text-xs font-medium">
               Upload de imagens (1-8 · obrigatório)
@@ -187,9 +191,6 @@ export function FormImagemUnica({ templateId }: FormImagemUnicaProps) {
           </div>
         </>
       )}
-
-      {/* Modo de geração — movido pra após o bloco de instruções/upload */}
-      <ModoGeracaoSelector value={modoGeracao} onChange={setModoGeracao} disabled={generating} />
 
       <div>
         <Button
