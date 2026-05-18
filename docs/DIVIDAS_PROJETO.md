@@ -267,6 +267,13 @@ Pontos onde uma decisão de produto é necessária antes de avançar.
 
 Quando uma dívida é resolvida ou descartada, mover para cá com nota curta. Manter os últimos 20 itens, depois limpar.
 
+### [DEC-M2-016] Exceção à regra de validação visual na Fase 4 — RESOLVIDA em 19/05/2026
+- **Decisão executiva do CEO:** Fase 4 (UI + API /render + /regerar + T2Form isolado) fechada **sem validação visual end-to-end manual**. Smoke programático Fase 4 ($0 — Planner + buildDownloadFilename + slugifyKeyword + classifyAjusteIntent + applyAjusteToPlan) passou todos os asserts. Build verde (typecheck + lint + next build).
+- **Risco assumido:** UI T2 ainda não foi clicada por humano em dev local — fluxos `Gerar Posts` (com Submit + 4 cards de preview), `Download` (com filename `img-m2-...`), `Regerar` (dialog + loading isolado + atualização do card único) confirmados apenas via build estático + smoke programático das partes novas.
+- **Mitigação:** T2 disponível em prod com badge **"beta"** no template-selector. T1 (`atual-maio26`) permanece como ATIVO default. Equipe pode optar por não usar T2 até estabilizar.
+- **Validação real consolidada na Fase 5 (smoke prod oficial):** primeiro carrossel real gerado em prod via UI servirá como gate definitivo de UX + API + regerar.
+- **Razão da exceção:** smoke da Fase 3 já validou pipeline end-to-end com IA real (4 slides, 2 assets gpt-image-1 high, $0.50, all pass, score 98.8). Fase 4 adiciona apenas API surface + UI surface — mudanças cosméticas vs comportamentais. Custo de simular UI via tooling vs valor agregado não compensa.
+
 ### [DEC-M2-015] Footer apenas no cta-final, embutido no background — RESOLVIDA em 19/05/2026
 - **Decisão:** footer (logo + @handle) aparece **apenas no slide de fechamento** (`subtemplateId='cta-final'`), **embutido visualmente** no PNG do background `cta-final-bg-01.png` (curadoria manual do Rafael, pixel-perfect, ~150px inferiores). Slides `cover`/`content-*`/`comparison-before-after` **NÃO carregam footer**.
 - **Restrições estruturais:**
