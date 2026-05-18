@@ -26,16 +26,17 @@ type SubmoduleItem = {
   href: string
   label: string
   icon: LucideIcon
+  code: string
   disabled?: boolean
 }
 
 const submodules: SubmoduleItem[] = [
-  { href: '/imagens/m1-vitrine', label: 'Produtos Vitrine', icon: Sofa },
-  { href: '/imagens/m2-posts', label: 'Post Instagram', icon: Instagram },
-  { href: '/imagens/m3-banners', label: 'Banner Home', icon: LayoutTemplate },
-  { href: '/imagens/m4-thumbnails', label: 'Thumb Vídeo Insta', icon: PlaySquare },
-  { href: '/imagens/m5-email', label: 'Banners Emails', icon: Mail, disabled: true },
-  { href: '/imagens/template-creator', label: 'Template Creator', icon: Wand2, disabled: true },
+  { href: '/imagens/m1-vitrine', label: 'Produtos Vitrine', icon: Sofa, code: 'M1' },
+  { href: '/imagens/m2-posts', label: 'Post Instagram', icon: Instagram, code: 'M2' },
+  { href: '/imagens/m3-banners', label: 'Banner Home', icon: LayoutTemplate, code: 'M3' },
+  { href: '/imagens/m4-thumbnails', label: 'Thumb Vídeo Insta', icon: PlaySquare, code: 'M4' },
+  { href: '/imagens/m5-email', label: 'Banners Emails', icon: Mail, code: 'M5', disabled: true },
+  { href: '/imagens/template-creator', label: 'Template Creator', icon: Wand2, code: 'TC', disabled: true },
 ]
 
 export function Sidebar() {
@@ -113,6 +114,7 @@ export function Sidebar() {
                 href={m.href}
                 active={isActive(m.href)}
                 icon={<m.icon size={15} className="shrink-0" />}
+                code={m.code}
                 disabled={m.disabled}
               >
                 {m.label}
@@ -192,12 +194,14 @@ function SubNavLink({
   href,
   active,
   icon,
+  code,
   disabled,
   children,
 }: {
   href: string
   active: boolean
   icon: React.ReactNode
+  code: string
   disabled?: boolean
   children: React.ReactNode
 }) {
@@ -213,9 +217,16 @@ function SubNavLink({
         : ''
   )
 
+  const badge = (
+    <span className="inline-flex h-[18px] min-w-[22px] shrink-0 items-center justify-center rounded-full bg-[color:var(--text-tertiary)] px-1 text-[9px] font-semibold uppercase tracking-[0.04em] text-white">
+      {code}
+    </span>
+  )
+
   if (disabled) {
     return (
       <div className={baseClass} aria-disabled="true">
+        {badge}
         {icon}
         <span className="truncate">{children}</span>
         <span className="ml-auto rounded bg-black/[0.04] px-1.5 py-px text-[9px] uppercase tracking-[0.06em] opacity-70">
@@ -227,6 +238,7 @@ function SubNavLink({
 
   return (
     <Link href={href} className={baseClass}>
+      {badge}
       {icon}
       <span className="truncate">{children}</span>
     </Link>

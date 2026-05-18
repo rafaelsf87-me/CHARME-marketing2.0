@@ -84,40 +84,32 @@ export function FormAtriz({ form, disabled }: FormAtrizProps) {
         <TooltipInfo text="IA gera atriz a partir de prompt OU usa Upload de PNG sua." />
       </h2>
 
-      <div className="flex gap-3">
-        <label className="flex flex-1 cursor-pointer items-center gap-3 rounded-md border p-3 transition">
-          <input
-            type="radio"
-            name="atriz-modo"
-            checked={atriz.modo === 'ia'}
-            disabled={disabled}
-            onChange={() => setModo('ia')}
-            className="h-4 w-4 text-[#E91E63] focus:ring-[#E91E63]"
-          />
-          <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-medium text-[color:var(--text-primary)]">IA</span>
-            <span className="text-[11px] text-[color:var(--text-tertiary)]">
-              Flux gera atriz baseada no prompt base. ~$0.07/banner.
-            </span>
-          </div>
-        </label>
-
-        <label className="flex flex-1 cursor-pointer items-center gap-3 rounded-md border p-3 transition">
-          <input
-            type="radio"
-            name="atriz-modo"
-            checked={atriz.modo === 'upload'}
-            disabled={disabled}
-            onChange={() => setModo('upload')}
-            className="h-4 w-4 text-[#E91E63] focus:ring-[#E91E63]"
-          />
-          <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-medium text-[color:var(--text-primary)]">Upload</span>
-            <span className="text-[11px] text-[color:var(--text-tertiary)]">
-              Envie um PNG/JPG sua. Fundo será removido automaticamente.
-            </span>
-          </div>
-        </label>
+      <div className="flex flex-col gap-1.5">
+        <span className="text-[11px] text-[color:var(--text-tertiary)]">
+          {atriz.modo === 'ia'
+            ? 'Flux gera atriz a partir do prompt base. ~$0.07/banner.'
+            : 'Envie um PNG/JPG seu. Fundo é removido automaticamente.'}
+        </span>
+        <div className="inline-flex w-fit rounded-md border border-[color:var(--border-default)] bg-white p-0.5">
+          {(['ia', 'upload'] as const).map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => setModo(opt)}
+              disabled={disabled}
+              aria-pressed={atriz.modo === opt}
+              className={[
+                'rounded px-3 py-1.5 text-xs font-medium transition-colors',
+                atriz.modo === opt
+                  ? 'bg-[#553679] text-white'
+                  : 'text-[color:var(--text-secondary)] hover:bg-[#F4F4F2]',
+                disabled ? 'cursor-not-allowed opacity-50' : '',
+              ].join(' ')}
+            >
+              {opt === 'ia' ? 'IA (automático)' : 'Upload'}
+            </button>
+          ))}
+        </div>
       </div>
 
       {atriz.modo === 'ia' && (
@@ -151,7 +143,7 @@ export function FormAtriz({ form, disabled }: FormAtrizProps) {
             <label
               className={[
                 'flex h-32 cursor-pointer items-center justify-center gap-2 rounded-md border-2 border-dashed border-[color:var(--border-default)] bg-[color:var(--bg-tertiary)] text-sm text-[color:var(--text-secondary)] transition',
-                disabled ? 'cursor-not-allowed opacity-50' : 'hover:border-[#E91E63] hover:text-[#E91E63]',
+                disabled ? 'cursor-not-allowed opacity-50' : 'hover:border-[#553679] hover:text-[#553679]',
               ].join(' ')}
             >
               <input

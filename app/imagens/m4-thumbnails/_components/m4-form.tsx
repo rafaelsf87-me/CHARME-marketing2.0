@@ -92,9 +92,8 @@ export function M4Form() {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-7 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="flex flex-col gap-6">
-        <TemplateGrid value={template} onChange={setTemplate} />
+    <div className="flex flex-col gap-6">
+      <TemplateGrid value={template} onChange={setTemplate} />
 
         <UploadField
           label="Envie o frame do vídeo"
@@ -160,27 +159,28 @@ export function M4Form() {
           />
         </div>
 
-        <div className="flex items-center justify-end gap-3">
-          {!isValid && (
-            <div className="text-[11.5px] text-[color:var(--text-tertiary)]">
-              Preencha template, frame e linhas obrigatórias.
-            </div>
-          )}
-          <button
-            type="button"
-            onClick={onGenerate}
-            disabled={!isValid || previewState === 'loading'}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#553679] px-5 py-2.5 text-[13.5px] font-medium text-white transition hover:bg-[#46295F] disabled:cursor-not-allowed disabled:bg-[#C7BCD6] disabled:text-white/90"
-          >
-            <Sparkles size={14} />
-            {previewState === 'loading' ? 'Gerando...' : 'Gerar thumbnail'}
-          </button>
-        </div>
+      <div className="flex items-center justify-end gap-3">
+        {!isValid && (
+          <div className="text-[11.5px] text-[color:var(--text-tertiary)]">
+            Preencha template, frame e linhas obrigatórias.
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={onGenerate}
+          disabled={!isValid || previewState === 'loading'}
+          className="inline-flex items-center gap-2 rounded-lg bg-[#553679] px-5 py-2.5 text-[13.5px] font-medium text-white transition hover:bg-[#46295F] disabled:cursor-not-allowed disabled:bg-[#C7BCD6] disabled:text-white/90"
+        >
+          <Sparkles size={14} />
+          {previewState === 'loading' ? 'Gerando...' : 'Gerar thumbnail'}
+        </button>
       </div>
 
-      <div className="lg:sticky lg:top-6 lg:self-start">
-        <PreviewArea state={previewState} url={resultUrl} isStub={stubFlag} errorMsg={errorMsg} />
-      </div>
+      {previewState !== 'empty' && (
+        <div className="max-w-[420px]">
+          <PreviewArea state={previewState} url={resultUrl} isStub={stubFlag} errorMsg={errorMsg} />
+        </div>
+      )}
     </div>
   )
 }

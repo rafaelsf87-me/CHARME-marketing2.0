@@ -69,7 +69,7 @@ export function FormCondicoes({ form, disabled }: FormCondicoesProps) {
               className={[
                 'flex cursor-pointer items-start gap-3 rounded-md border p-3 transition',
                 isOn
-                  ? 'border-[#E91E63] bg-[#FDF2F8]'
+                  ? 'border-[#553679] bg-[#EEEDFE]'
                   : 'border-[color:var(--border-default)] hover:bg-[color:var(--bg-tertiary)]',
                 isDisabled ? 'cursor-not-allowed opacity-50 hover:bg-transparent' : '',
               ].join(' ')}
@@ -79,7 +79,7 @@ export function FormCondicoes({ form, disabled }: FormCondicoesProps) {
                 checked={isOn}
                 disabled={isDisabled}
                 onChange={() => toggle(c.id)}
-                className="mt-0.5 h-4 w-4 rounded border-[color:var(--border-default)] text-[#E91E63] focus:ring-[#E91E63]"
+                className="mt-0.5 h-4 w-4 rounded border-[color:var(--border-default)] text-[#553679] focus:ring-[#553679]"
               />
               <div className="flex flex-col gap-0.5">
                 <span className="text-sm font-medium text-[color:var(--text-primary)]">{c.label}</span>
