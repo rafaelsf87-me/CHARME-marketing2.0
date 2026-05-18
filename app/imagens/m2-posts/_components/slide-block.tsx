@@ -110,45 +110,48 @@ export function SlideBlock({
           />
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="flex items-center gap-2 text-xs font-medium">
-            Imagem do Slide {isUpload ? '(obrigatória)' : '(opcional)'}
-            <TooltipInfo
-              text={
-                isUpload
-                  ? 'Modo upload: 1 PNG/JPG obrigatório por slide. IA usa como referência visual.'
-                  : 'Opcional. PNG/JPG que a IA usa como referência. Sem imagem, IA compõe livre a partir do copy.'
-              }
-            />
-          </label>
-          <UploadField
-            label=""
-            hint="PNG/JPG · até 10MB"
-            value={value.pngUrl}
-            onChange={(next) => onChange({ ...value, pngUrl: next })}
-            disabled={disabled}
-            className="max-w-[260px]"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center justify-between">
+        {/* Linha lado-a-lado: upload da imagem (esquerda) + prompt (direita).
+            Mesma altura (h-40) pra economizar espaço vertical. */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[220px_minmax(0,1fr)]">
+          <div className="flex flex-col gap-1.5">
             <label className="flex items-center gap-2 text-xs font-medium">
-              Prompt da imagem (opcional)
-              <TooltipInfo text="Instrução de como a IA deve usar a imagem deste slide. Ex.: 'elemento central, escala 60%', 'fundo translúcido', 'manter cores originais'. Máx. 500." />
+              Imagem do Slide {isUpload ? '(obrigatória)' : '(opcional)'}
+              <TooltipInfo
+                text={
+                  isUpload
+                    ? 'Modo upload: 1 PNG/JPG obrigatório por slide. IA usa como referência visual.'
+                    : 'Opcional. PNG/JPG que a IA usa como referência. Sem imagem, IA compõe livre a partir do copy.'
+                }
+              />
             </label>
-            <span className="tabular-nums text-[11px] text-[color:var(--text-tertiary)]">
-              {value.promptImagem.length}/{PROMPT_IMAGEM_MAX}
-            </span>
+            <UploadField
+              label=""
+              hint="PNG/JPG · até 10MB"
+              value={value.pngUrl}
+              onChange={(next) => onChange({ ...value, pngUrl: next })}
+              disabled={disabled}
+            />
           </div>
-          <Textarea
-            value={value.promptImagem}
-            onChange={(e) => onChange({ ...value, promptImagem: e.target.value })}
-            maxLength={PROMPT_IMAGEM_MAX}
-            placeholder="Ex.: usar como elemento central, escala 60%, sem alterar cores."
-            rows={3}
-            disabled={disabled}
-          />
+
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-xs font-medium">
+                Prompt da imagem (opcional)
+                <TooltipInfo text="Instrução de como a IA deve usar a imagem deste slide. Ex.: 'elemento central, escala 60%', 'fundo translúcido', 'manter cores originais'. Máx. 500." />
+              </label>
+              <span className="tabular-nums text-[11px] text-[color:var(--text-tertiary)]">
+                {value.promptImagem.length}/{PROMPT_IMAGEM_MAX}
+              </span>
+            </div>
+            <Textarea
+              value={value.promptImagem}
+              onChange={(e) => onChange({ ...value, promptImagem: e.target.value })}
+              maxLength={PROMPT_IMAGEM_MAX}
+              placeholder="Ex.: usar como elemento central, escala 60%, sem alterar cores."
+              disabled={disabled}
+              className="h-40 resize-none"
+            />
+          </div>
         </div>
       </div>
     </div>
