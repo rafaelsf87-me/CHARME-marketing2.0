@@ -73,10 +73,15 @@ interface ResolvedImageBuffers {
  * - 'ai_generated': gera (product ou scene conforme assetType), salva no pack
  *   se vier com packKey (pra reuso entre slides), senão só retorna buffer.
  * - 'uploaded' / 'static-asset': não toca aqui — compose.ts resolve.
+ *
+ * Quando `uploadFn` está disponível, o buffer do asset também sobe pro Blob
+ * (URL pública). Isso permite que /regerar receba pack com URLs persistidas
+ * e reuse assets sem re-gerar (DEC-M2-013).
  */
 async function resolveAssetsForPlan(
   plan: SlidePlan,
   pack: CarouselAssetPackRuntime,
+  uploadFn: NonNullable<RenderM2T2Opts['uploadFn']>,
 ): Promise<ResolvedImageBuffers> {
   const byId = new Map<string, Buffer>()
 
@@ -107,10 +112,17 @@ async function resolveAssetsForPlan(
           }
           const generator = slot.ai.assetType === 'scene' ? generateSceneAsset : generateProductAsset
           const result = await generator({ prompt: slot.ai.prompt })
+          // DEC-M2-013: faz upload do asset pro Blob pra URL persistida,
+          // permitindo reuso em /regerar.
+          const assetKey = `m2-t2/assets/${pack.packHash}-${packKey}-${Date.now()}.png`
+          const assetUrl = await uploadFn(result.buffer, assetKey).catch((err) => {
+            console.warn(`[T2/render] upload asset falhou (sem URL persistida): ${err}`)
+            return ''
+          })
           addAsset(pack, {
             packKey,
             entry: {
-              url: '', // não usamos URL — buffer in-memory
+              url: assetUrl,
               promptHash: result.promptHash,
               assetType: slot.ai.assetType,
               transparent: slot.ai.assetType === 'product',
@@ -130,6 +142,28 @@ async function resolveAssetsForPlan(
   )
 
   return { byId }
+}
+
+/**
+ * Rehydrate pack do payload (regerar): baixa URLs dos assets e popula
+ * buffers na memória. Pula entries sem URL (falha graciosa).
+ */
+async function rehydratePackBuffers(
+  pack: CarouselAssetPackRuntime,
+): Promise<void> {
+  await Promise.all(
+    Object.entries(pack.assets).map(async ([packKey, entry]) => {
+      if (!entry.url || pack.buffers.has(packKey)) return
+      try {
+        const res = await fetch(entry.url)
+        if (!res.ok) return
+        const arr = await res.arrayBuffer()
+        pack.buffers.set(packKey, Buffer.from(arr))
+      } catch (err) {
+        console.warn(`[T2/render] rehydrate pack key=${packKey} falhou: ${err}`)
+      }
+    }),
+  )
 }
 
 // ─── Default upload ─────────────────────────────────────────────────────────
@@ -154,7 +188,7 @@ async function renderOneSlideWithRetry(args: {
   const { plan, pack, uploadFn, attempt = 1 } = args
 
   // Resolve assets do plan
-  const resolved = await resolveAssetsForPlan(plan, pack)
+  const resolved = await resolveAssetsForPlan(plan, pack, uploadFn)
 
   // Compose
   const buffer = await composeSlide({ plan, imageBuffers: resolved.byId })
@@ -228,11 +262,35 @@ export interface RenderSlideRegerarResult {
 
 export async function renderSlideRegerar(
   input: RegerarSlideInput,
-  _opts?: RenderM2T2Opts,
+  opts?: RenderM2T2Opts,
 ): Promise<RenderSlideRegerarResult> {
   regerarSlideInputSchema.parse(input)
-  // Fase 4: implementa applyAjusteToPlan + regen do slide isolado.
-  throw new Error('[T2] render.renderSlideRegerar — Fase 4 não implementada')
+
+  // 1. Aplica ajustePrompt no plan
+  const ajustedPlan = _applyAjuste(input)
+
+  // 2. Reusa o pack original e rehydrata buffers a partir das URLs persistidas
+  //    (DEC-M2-013). Quando applyAjusteToPlan limpou packKey (regenerateAssets
+  //    intent), a busca por packKey vai miss e regenera novo asset.
+  const pack: CarouselAssetPackRuntime = input.packAssets
+    ? {
+        packHash: input.packAssets.packHash,
+        createdAt: input.packAssets.createdAt,
+        assets: { ...input.packAssets.assets },
+        buffers: new Map(),
+        totalCostUsd: 0,
+      }
+    : newPack(`regerar-${Date.now()}`)
+  await rehydratePackBuffers(pack)
+
+  const uploadFn = opts?.uploadFn ?? defaultUpload
+
+  const result = await renderOneSlideWithRetry({ plan: ajustedPlan, pack, uploadFn })
+
+  return {
+    result,
+    pack: serializePack(pack),
+  }
 }
 
 // Re-export pra tooling externo se necessário.

@@ -22,11 +22,12 @@ export function TemplateSelector({ value, onChange }: TemplateSelectorProps) {
   return (
     <div className="flex flex-col gap-2">
       <div className="text-xs font-medium">Template</div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {templates.map((tpl) => {
           const disabled = tpl.status !== 'ativo'
           const selected = !disabled && tpl.id === value
           const badge = STATUS_BADGE[tpl.status]
+          const isBeta = tpl.id === 'pipeline-hibrido-v2'
           return (
             <button
               key={tpl.id}
@@ -46,14 +47,21 @@ export function TemplateSelector({ value, onChange }: TemplateSelectorProps) {
             >
               <div className="flex w-full items-center justify-between gap-2">
                 <span className="text-[13px] font-medium">{tpl.nome}</span>
-                <span
-                  className={cn(
-                    'rounded-full px-2 py-0.5 text-[10px] font-medium',
-                    badge.className
+                <div className="flex items-center gap-1">
+                  {isBeta && (
+                    <span className="rounded-full bg-[#EEEDFE] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[#553679]">
+                      beta
+                    </span>
                   )}
-                >
-                  {badge.label}
-                </span>
+                  <span
+                    className={cn(
+                      'rounded-full px-2 py-0.5 text-[10px] font-medium',
+                      badge.className,
+                    )}
+                  >
+                    {badge.label}
+                  </span>
+                </div>
               </div>
               <p
                 className="line-clamp-1 w-full truncate text-[11.5px] leading-snug text-[color:var(--text-secondary)]"

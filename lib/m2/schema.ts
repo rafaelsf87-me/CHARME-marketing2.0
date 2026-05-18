@@ -1,7 +1,12 @@
 import { z } from 'zod'
 import { brandM2 } from '@/lib/brand/m2.brand'
 
-export const M2_TEMPLATE_IDS = ['atual-maio26', 'atual-maio26-new', 'novo-teste-1'] as const
+export const M2_TEMPLATE_IDS = [
+  'atual-maio26',
+  'atual-maio26-new',
+  'novo-teste-1',
+  'pipeline-hibrido-v2',
+] as const
 export type M2TemplateId = (typeof M2_TEMPLATE_IDS)[number]
 
 // Opções de logo do footer-overlay (Adendo §3.1).

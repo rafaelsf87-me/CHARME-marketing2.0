@@ -431,9 +431,96 @@ export function buildSlidePlan(input: T2Input): SlidePlan[] {
   return plans
 }
 
+// ─── Regerar (DEC-M2-013) ───────────────────────────────────────────────────
+
 /**
- * Aplica ajustePrompt no regerar. Stub Fase 4.
+ * Tags semânticas derivadas do ajustePrompt. Determinam o que muda no plan.
  */
-export function applyAjusteToPlan(_input: RegerarSlideInput): SlidePlan {
-  throw new Error('[T2] planner.applyAjusteToPlan — Fase 4 não implementada')
+export interface AjusteIntent {
+  changeBackground: boolean
+  regenerateAssets: boolean
+  reduceText: boolean
+  rawNote: string
+}
+
+const BG_KEYWORDS = /\b(fundo|background|cor|colors?|paleta|claro|escuro|gradient)\b/i
+const ASSET_KEYWORDS = /\b(imagem|imagens|produto|asset|foto|figura|bucha|esponja|objeto|ilustra[cç][aã]o)\b/i
+const REDUCE_TEXT_KEYWORDS = /\b(diminuir|encurtar|menor|menos\s+texto|menos\s+linhas|reduzir|trim)\b/i
+
+export function classifyAjusteIntent(ajustePrompt: string): AjusteIntent {
+  const text = ajustePrompt.trim()
+  return {
+    changeBackground: BG_KEYWORDS.test(text),
+    regenerateAssets: ASSET_KEYWORDS.test(text),
+    reduceText: REDUCE_TEXT_KEYWORDS.test(text),
+    rawNote: text,
+  }
+}
+
+/**
+ * Escolhe outra variant da mesma family. Usa rotação determinística sobre
+ * o índice atual pra evitar repetir o mesmo bgId.
+ */
+function pickNextVariantSameFamily(currentBgId: string): string {
+  const current = T2_BACKGROUNDS.find((b) => b.id === currentBgId)
+  if (!current) return currentBgId
+  const sameFamily = T2_BACKGROUNDS.filter(
+    (b) => b.family === current.family && b.id !== currentBgId,
+  )
+  if (sameFamily.length === 0) return currentBgId
+  return sameFamily[0].id
+}
+
+/**
+ * Aplica ajustePrompt no SlidePlan retornado. Heurística V1:
+ *  - "fundo"/"cor" → troca backgroundId pra outra variant da mesma family
+ *  - menciona produto/imagem → marca imageSlots ai_generated com prompt
+ *    enriquecido (Sharp Sharp + adendo do usuário)
+ *  - "diminuir/encurtar" → adiciona hint via overflowStrategy='truncate-ellipsis'
+ *    (text-renderer trunca em vez de shrink)
+ *  - default: re-render do mesmo plan
+ *
+ * cta-final mantém backgroundId fixo (não troca family — DEC-M2-015 exige).
+ */
+export function applyAjusteToPlan(input: RegerarSlideInput): SlidePlan {
+  const intent = classifyAjusteIntent(input.ajustePrompt)
+  const original = input.slidePlanOriginal
+  let next: SlidePlan = { ...original }
+
+  // 1. Background swap (não aplica em cta-final por causa do footer embutido)
+  if (intent.changeBackground && next.subtemplateId !== 'cta-final') {
+    next = { ...next, backgroundId: pickNextVariantSameFamily(next.backgroundId) }
+  }
+
+  // 2. Regen assets — enriquece o prompt com o ajuste do user
+  if (intent.regenerateAssets) {
+    next = {
+      ...next,
+      imageSlots: next.imageSlots.map((slot) => {
+        if (slot.source !== 'ai_generated' || !slot.ai) return slot
+        return {
+          ...slot,
+          ai: {
+            ...slot.ai,
+            prompt: `${slot.ai.prompt}. Additional adjustment: ${intent.rawNote}`,
+          },
+          // Limpa packKey pra forçar regen no resolveAssets.
+          packKey: undefined,
+        }
+      }),
+    }
+  }
+
+  // 3. Reduce text — text-renderer trunca em vez de shrink
+  if (intent.reduceText) {
+    next = {
+      ...next,
+      textSlots: next.textSlots.map((slot) => ({
+        ...slot,
+        overflowStrategy: 'truncate-ellipsis',
+      })),
+    }
+  }
+
+  return next
 }
