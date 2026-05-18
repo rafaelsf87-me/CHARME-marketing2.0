@@ -78,14 +78,12 @@ export function FormImagemUnica({ templateId }: FormImagemUnicaProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Linha 1: Modo de geração | Logo */}
-      {/* LogoSelector só aparece em T2/T3 — T1 não aplica footer programático */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <ModoGeracaoSelector value={modoGeracao} onChange={setModoGeracao} disabled={generating} />
-        {templateId !== 'atual-maio26' && (
+      {/* Linha 1: Logo (em T2/T3) — Modo de geração foi movido pra depois das instruções */}
+      {templateId !== 'atual-maio26' && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <LogoSelector value={logo} onChange={setLogo} disabled={generating} />
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
@@ -189,6 +187,9 @@ export function FormImagemUnica({ templateId }: FormImagemUnicaProps) {
           </div>
         </>
       )}
+
+      {/* Modo de geração — movido pra após o bloco de instruções/upload */}
+      <ModoGeracaoSelector value={modoGeracao} onChange={setModoGeracao} disabled={generating} />
 
       <div>
         <Button
