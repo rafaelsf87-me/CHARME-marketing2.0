@@ -3,9 +3,10 @@
 import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Loader2 } from 'lucide-react'
+import { Loader2, LayoutTemplate } from 'lucide-react'
 import { toast } from 'sonner'
 import { Breadcrumb } from '@/components/layout/breadcrumb'
+import { ModuleHeader } from '@/components/layout/module-header'
 import { Button } from '@/components/ui/button'
 import { M3InputSchema, type M3Input, type M3Output } from '@/lib/m3/schema'
 import { brandM3 } from '@/lib/brand/m3.brand'
@@ -82,14 +83,15 @@ export default function M3Page() {
 
   return (
     <div className="px-10 py-9">
-      <Breadcrumb items={[{ label: 'Geração de Imagens' }, { label: 'M3 · Banners' }]} />
-      <h1 className="m-0 text-[26px] font-medium tracking-[-0.025em]">Banners Website</h1>
-      <p className="mt-2 text-sm text-[color:var(--text-secondary)]">
-        Par desktop (1920×550) + mobile (800×600) gerado via Pipeline Híbrido.
-        Título 3D balão pela IA, atriz isolada, layout pixel-preciso.
-      </p>
+      <Breadcrumb items={[{ label: 'Geração de Imagens' }, { label: 'Banner Home' }]} />
 
-      <div className="mt-8 flex flex-col gap-8">
+      <ModuleHeader
+        icon={LayoutTemplate}
+        title="Banner Home"
+        description="Par desktop (1920×550) + mobile (800×600) gerado via Pipeline Híbrido. Título 3D balão pela IA, atriz isolada, layout pixel-preciso."
+      />
+
+      <div className="flex flex-col gap-8">
         <TemplateSelector
           value={form.watch('template')}
           onChange={(v) => form.setValue('template', v)}

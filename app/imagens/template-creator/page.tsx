@@ -1,13 +1,16 @@
+import { Wand2 } from 'lucide-react'
 import { Breadcrumb } from '@/components/layout/breadcrumb'
+import { ModuleHeader } from '@/components/layout/module-header'
 
 export default function TemplateCreatorPage() {
   return (
     <div className="px-10 py-9">
       <Breadcrumb items={[{ label: 'Geração de Imagens' }, { label: 'Template Creator' }]} />
-      <h1 className="m-0 text-[26px] font-medium tracking-[-0.025em]">Template Creator</h1>
-      <p className="mt-2 text-sm text-[color:var(--text-secondary)]">
-        Em desenvolvimento — disponível após M1 / M2 / M3.
-      </p>
+      <ModuleHeader
+        icon={Wand2}
+        title="Template Creator"
+        description="Em construção — disponível após M1 / M2 / M3."
+      />
     </div>
   )
 }

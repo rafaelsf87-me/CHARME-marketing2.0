@@ -4,7 +4,7 @@ import { Providers } from './providers'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Marketing IA · Charme do Detalhe',
+  title: 'Central Marketing - Charme do Detalhe',
   description: 'Painel interno de criação e padronização de imagens de marketing',
 }
 

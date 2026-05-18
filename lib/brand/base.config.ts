@@ -6,8 +6,9 @@ export const brandBase = {
     white: '#FEFEFC',
   },
   logo: '/brand/logo.svg',
+  logoSquare: '/brand/m2/logos/logo-quadrado.png',
   name: 'Charme do Detalhe',
-  systemName: 'Marketing IA',
+  systemName: 'Central Marketing - Charme do Detalhe',
   socialHandle: '@charmedodetalhe',
 } as const
 

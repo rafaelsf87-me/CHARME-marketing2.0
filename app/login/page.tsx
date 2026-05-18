@@ -44,10 +44,13 @@ function LoginForm() {
   return (
     <div className="relative flex min-h-screen items-center justify-center p-6">
       <div className="absolute left-8 top-7 flex items-center gap-2.5">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#553679] text-sm font-medium text-white">
-          M
-        </div>
-        <div className="text-[12.5px] font-medium">Marketing IA</div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/brand/m2/logos/logo-quadrado.png"
+          alt="Charme do Detalhe"
+          className="h-7 w-7 rounded-md object-cover"
+        />
+        <div className="text-[12.5px] font-medium">Central Marketing - Charme do Detalhe</div>
       </div>
 
       <div className="w-full max-w-[360px]">
@@ -107,7 +110,7 @@ function LoginForm() {
       </div>
 
       <div className="absolute inset-x-0 bottom-6 text-center text-[11px] text-black/35">
-        Charme do Detalhe · Marketing IA 2.0
+        Central Marketing - Charme do Detalhe
       </div>
     </div>
   )

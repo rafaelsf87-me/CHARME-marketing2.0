@@ -4,17 +4,38 @@ import * as React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
-import { Home, Image as ImageIcon, ChevronDown, ChevronRight, LogOut, Users } from 'lucide-react'
+import {
+  Home,
+  Image as ImageIcon,
+  ChevronDown,
+  ChevronRight,
+  LogOut,
+  Users,
+  Sofa,
+  Instagram,
+  LayoutTemplate,
+  PlaySquare,
+  Mail,
+  Wand2,
+  type LucideIcon,
+} from 'lucide-react'
 import { brandBase } from '@/lib/brand/base.config'
 import { cn } from '@/lib/utils'
 
-const submodules = [
-  { href: '/imagens/m1-vitrine', label: 'M1 · Vitrine' },
-  { href: '/imagens/m2-posts', label: 'M2 · Posts' },
-  { href: '/imagens/m3-banners', label: 'M3 · Banners' },
-  { href: '/imagens/m4-thumbnails', label: 'M4 · Thumbnails' },
-  { href: '/imagens/m5-email', label: 'M5 · Email' },
-  { href: '/imagens/template-creator', label: 'Template Creator' },
+type SubmoduleItem = {
+  href: string
+  label: string
+  icon: LucideIcon
+  disabled?: boolean
+}
+
+const submodules: SubmoduleItem[] = [
+  { href: '/imagens/m1-vitrine', label: 'Produtos Vitrine', icon: Sofa },
+  { href: '/imagens/m2-posts', label: 'Post Instagram', icon: Instagram },
+  { href: '/imagens/m3-banners', label: 'Banner Home', icon: LayoutTemplate },
+  { href: '/imagens/m4-thumbnails', label: 'Thumb Vídeo Insta', icon: PlaySquare },
+  { href: '/imagens/m5-email', label: 'Banners Emails', icon: Mail, disabled: true },
+  { href: '/imagens/template-creator', label: 'Template Creator', icon: Wand2, disabled: true },
 ]
 
 export function Sidebar() {
@@ -44,17 +65,14 @@ export function Sidebar() {
   return (
     <aside className="flex w-[260px] shrink-0 flex-col border-r border-[color:var(--border-subtle)] bg-white">
       <div className="flex items-center gap-3 px-5 pb-5 pt-[22px]">
-        <div
-          className="flex h-8 w-8 items-center justify-center rounded-md"
-          style={{ background: brandBase.colors.primaryDark }}
-        >
-          <Home size={17} color="white" />
-        </div>
-        <div className="leading-tight">
-          <div className="text-[13.5px] font-medium">{brandBase.systemName}</div>
-          <div className="mt-[3px] text-[11.5px] text-[color:var(--text-secondary)]">
-            {brandBase.name}
-          </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={brandBase.logoSquare}
+          alt={brandBase.name}
+          className="h-9 w-9 rounded-md object-cover"
+        />
+        <div className="min-w-0 leading-tight">
+          <div className="truncate text-[13px] font-medium">{brandBase.systemName}</div>
         </div>
       </div>
 
@@ -87,7 +105,13 @@ export function Sidebar() {
         {imagensOpen && (
           <div className="animate-fade-in pb-1 pl-7 pt-1">
             {submodules.map((m) => (
-              <SubNavLink key={m.href} href={m.href} active={isActive(m.href)}>
+              <SubNavLink
+                key={m.href}
+                href={m.href}
+                active={isActive(m.href)}
+                icon={<m.icon size={15} className="shrink-0" />}
+                disabled={m.disabled}
+              >
                 {m.label}
               </SubNavLink>
             ))}
@@ -164,21 +188,44 @@ function NavLink({
 function SubNavLink({
   href,
   active,
+  icon,
+  disabled,
   children,
 }: {
   href: string
   active: boolean
+  icon: React.ReactNode
+  disabled?: boolean
   children: React.ReactNode
 }) {
+  const baseClass = cn(
+    'flex items-center gap-2 rounded-md px-3 py-[7px] text-[12.5px] transition',
+    disabled
+      ? 'cursor-not-allowed text-[color:var(--text-tertiary)] opacity-60'
+      : 'hover:bg-black/[0.04]',
+    active && !disabled
+      ? 'font-medium text-[color:var(--text-primary)]'
+      : !disabled
+        ? 'text-[color:var(--text-secondary)]'
+        : ''
+  )
+
+  if (disabled) {
+    return (
+      <div className={baseClass} aria-disabled="true">
+        {icon}
+        <span className="truncate">{children}</span>
+        <span className="ml-auto rounded bg-black/[0.04] px-1.5 py-px text-[9px] uppercase tracking-[0.06em] opacity-70">
+          em construção
+        </span>
+      </div>
+    )
+  }
+
   return (
-    <Link
-      href={href}
-      className={cn(
-        'block rounded-md px-3 py-[7px] text-[12.5px] transition hover:bg-black/[0.04]',
-        active ? 'font-medium text-[color:var(--text-primary)]' : 'text-[color:var(--text-secondary)]'
-      )}
-    >
-      {children}
+    <Link href={href} className={baseClass}>
+      {icon}
+      <span className="truncate">{children}</span>
     </Link>
   )
 }
