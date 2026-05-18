@@ -57,7 +57,21 @@
 
 ## 🔧 Melhorias Pendentes
 
-*(nenhuma até o momento)*
+### [MEL-M2-002] Pesos tipográficos extras Montserrat
+- **Onde:** `public/fonts/`, consumidores em `lib/m2/t2/subtemplates/*` (futuros) e `lib/m3/templates/*`.
+- **Descrição:** se Fase 1/2 do T2 exigir Montserrat além de SemiBold (600), Bold (700) e ExtraBold (800) já presentes em `public/fonts/`, subir TTFs estáticos do JulietaUla/Montserrat (Light 300, Regular 400, Medium 500). Satori 0.11.3 não suporta variable fonts (LIMIT-M3 já documentada).
+- **Impacto esperado:** mais variedade tipográfica nos subtemplates T2 sem comprometer fidelidade visual.
+- **Esforço estimado:** baixo — download dos TTFs do repo open-source + registro em `next.config.mjs` (`outputFileTracingIncludes`).
+- **Identificado em:** Sessão M2 T2 Fase 0, 18/05/2026 (originalmente DIV-M2-011 no patch).
+
+### [MEL-M2-001] Criar 8 backgrounds T2 manuais — bloqueio Fase 1
+- **Onde:** `public/brand/m2/backgrounds/` (dir já existe, hoje só tem `gradient-base.png` do T1 hotfix v6).
+- **Descrição:** T2 Pipeline Híbrido depende de catálogo de backgrounds curados manualmente. Rafael cria 8 backgrounds usando template SVG entregue em `docs/m2-t2-background-template.svg` / `docs/m2-t2-background-template.png` (commit `8fb8972`) como guia visual.
+- **Names exatos:** `gradient-roxo-01.png` / `-02.png` / `-03.png`, `gradient-cyan-01.png` / `-02.png` / `-03.png`, `solid-purple-01.png`, `solid-white-01.png`. Dimensão **1080×1350** PNG ou WEBP qualidade 90. Sem texto, sem footer, sem logo embutido.
+- **Variants por family (gradient-*):** `-01` top-anchored, `-02` centered, `-03` bottom-anchored. Continuidade visual: slides do mesmo carrossel usam mesma family, variants alternam.
+- **Impacto esperado:** desbloqueia Fase 1 do T2 (background catalog populated → text-renderer + cover subtemplate + compose mínimo). Sem isso, Code não pode prosseguir.
+- **Esforço estimado:** médio — depende de ferramenta visual do Rafael (Figma/Canva/Photoshop). Sem código.
+- **Identificado em:** Sessão M2 T2 Fase 0, 18/05/2026 (originalmente DIV-M2-010 no patch).
 
 ### Template para entrada
 ```
@@ -75,7 +89,12 @@
 
 Ideias que surgiram mas estão **fora do escopo atual**. Não implementar agora.
 
-*(nenhuma até o momento)*
+### [FEAT-M2-001] Editor visual pixel-preciso pra T2
+- **Descrição:** editor visual permitindo ao user arrastar/redimensionar slots de texto e imagem dentro do canvas T2 (1080×1350), ajustar fontSize manualmente, escolher fonte por slot, alterar paleta de cores em runtime.
+- **Por que faz sentido:** complementa o pipeline programático (Planner + subtemplates) com ajuste fino quando o auto-fit não converge no resultado desejado.
+- **Estado V1:** **fora do escopo**. T2 V1 entrega via campos do form + comando textual "Regerar slide" ([DEC-M2-013]) com instrução em PT-BR ("trocar fundo", "diminuir fonte do título", etc).
+- **Quando reavaliar:** após validação prod do T2 V1. Se equipe relatar fricção alta com auto-fit / regerar, abrir RFC de editor visual.
+- **Identificado em:** Sessão M2 T2 Fase 0, 18/05/2026 (originalmente DIV-M2-009 no patch).
 
 ### Template para entrada
 ```
@@ -91,6 +110,15 @@ Ideias que surgiram mas estão **fora do escopo atual**. Não implementar agora.
 ## 🏗️ Refatoração Necessária
 
 Código que funciona mas precisa ser melhorado antes da próxima feature relacionada.
+
+### [REF-M1-006] Auditar prompts M1 vs política de "upload é asset pronto"
+- **Onde:** `lib/m1/render-pipeline-a.ts`, `lib/m1/render-pipeline-detalhe.ts`, `lib/m1/prompts.ts` (todos os builders que recebem `fotoSofa`/`fotoRolo` do user).
+- **Por que refatorar:** [DEC-M2-014] estabelece pra T2 que upload do user é **asset pronto** — IA não pode copiar background/layout/tipografia/contexto da referência. Política deve valer também pro M1, que hoje passa `fotoSofa` e `fotoRolo` pro nano-banana com instruções variadas dependendo do branch (Pipeline A, Pipeline Detalhe, Capa Lisa).
+- **Auditoria:** revisar cada prompt builder e identificar onde o modelo é instruído a usar a foto do user. Se algum bloco diz coisas tipo "use the reference image as full reference" ou similar (sem restrição explícita ao produto/objeto), reescrever pra:
+  - "produto/objeto isolado da referência, sem copiar background, layout, tipografia, marca d'água, texto ou contexto visual ao redor"
+- **Bloqueia:** nada agora — M1 funciona. Auditoria pode ser feita em paralelo a outras tarefas.
+- **Esforço estimado:** baixo (auditoria + ajuste de prompts; sem mudança de pipeline ou modelo).
+- **Identificado em:** Sessão M2 T2 Fase 0, 18/05/2026 (originalmente DIV-M1-001 no patch).
 
 ### [REF-M2-002] Footer overlay programático implementado mas desativado no T1
 - **Onde:** `lib/m2/footer-gen.ts` (função `generateFooterOverlay`), `app/imagens/m2-posts/_components/logo-selector.tsx` (escondido quando `templateId === 'atual-maio26'` nos forms).
@@ -212,6 +240,67 @@ Pontos onde uma decisão de produto é necessária antes de avançar.
 ## 🗑️ Resolvidas / Descartadas
 
 Quando uma dívida é resolvida ou descartada, mover para cá com nota curta. Manter os últimos 20 itens, depois limpar.
+
+### [DEC-M2-014] Upload tratado como ASSET PRONTO no T2 — RESOLVIDA em 18/05/2026
+- **Decisão:** quando `imageSlot.source === 'uploaded'`, o arquivo é **asset pronto**. Compose Sharp direto sobre o background do catálogo. **NÃO enviar pro GPT Image.** Upload do user nunca define background, layout, tipografia, cores, marca d'água, texto ou contexto visual ao redor.
+- **Implementação:** `compose.ts` tem branch explícito `source === 'uploaded'` → bypass `lib/m2/t2/assets/`.
+- **Prompt obrigatório** se algum subtemplate futuro precisar passar upload pra IA (perspectiva/luz): `"Use the uploaded image ONLY as the exact product/object to place in the composition. Do NOT copy its background, layout, typography, colors, watermark, brand style, text, or surrounding context. The product must be isolated, no text, no UI elements, no other objects from the reference."`
+- **QC novo:** `UPLOAD_LEAKED_REFERENCE` (warning) detecta vazamento via OCR no bbox do `imageSlot` quando `source === 'uploaded'` e texto longo é detectado.
+- **Reforço:** mesma política deve valer para M1 — ver [REF-M1-006].
+- **Implementado:** invariante I2 no `lib/m2/t2/README.md`, declarado em `lib/m2/t2/types.ts` (`ImageSlotSource`), branch `compose.ts` (stub Fase 0, ativo Fase 1). Commit `a46a309`.
+
+### [DEC-M2-013] Regerar slide individual no T2 — RESOLVIDA em 18/05/2026
+- **Decisão:** endpoint `POST /api/imagens/m2/t2/regerar` recebe `{ slideIndex, ajustePrompt, slidePlanOriginal, packAssets, contextoOriginal }` e re-roda renderM2T2 **apenas pro slideIndex**. Nunca regera carrossel inteiro.
+- **Planner interpreta `ajustePrompt`** e modifica SlidePlan daquele slide:
+  - "fundo"/"cor"/"claro"/"escuro" → troca `backgroundId` mantendo family
+  - menção a produto/objeto/"imagem" → regenera asset (marca pack key dirty)
+  - "diminuir fonte"/"encurtar"/"menos texto" → ajusta textSlots
+- **CarouselAssetPack reusado** — não regenera asset principal salvo quando ajuste explicitamente pede. Loading isolado por card no UI.
+- **Custo:** $0 se layout/texto/background apenas. ~$0.25 se regenera asset IA.
+- **Implementado:** stubs em `lib/m2/t2/render.ts` (`renderSlideRegerar`) + `lib/m2/t2/planner.ts` (`applyAjusteToPlan`). Ativo na Fase 4. Commit `a46a309`.
+
+### [DEC-M2-012] Padrão de nome de download `img-{modulo}-{slide}-{keyword}-{mes}{ano}` — RESOLVIDA em 18/05/2026
+- **Decisão:** padronizar nome de arquivo de download retroativo em M1/M2/M3/M4 via `lib/filename.ts` (utility novo). Inclui campo opcional `keyword` no schema de cada módulo. Fallback hierárquico: primeira palavra do tema/copy/promoção slugificada → `'sem-tema'`.
+- **Fragmento `slide` por módulo:** M1 (`capa`, `ambiente`, `elastico`, `detalhe`, `vestindo`), M2 (`imagem-unica`, `slide1`..`slide8`), M3 (`desktop`, `mobile`), M4 (`thumb`).
+- **Encurtamentos M1:** `detalhe-tecido` → `detalhe`, `vestindo-capa` → `vestindo`.
+- **Sem prefixo no M3:** só `desktop`/`mobile` (não `banner-desktop`).
+- **Retrofit M3:** trocar `<a download>` direto em `preview-banners.tsx` por `DownloadButton` centralizado.
+- **Exemplos:** `img-m2-slide3-bucha-mai26.png`, `img-m3-desktop-descontao-mai26.webp`, `img-m1-capa-floral-jun26.webp`.
+- **Implementação:** `lib/filename.ts` (pendente). Adicionar campo `keyword` em cada form (M1/M2/M3/M4), default = primeira palavra slugificada de tema/copy/promoção/line1.
+
+### [DEC-M2-008] QC programático com qualityScore 0-100 — RESOLVIDA em 18/05/2026
+- **Decisão:** T2 introduz validador programático em `lib/m2/t2/qc.ts`. `pass = errors.length === 0`. `qualityScore` calculado: 100 base, −20 por error, −5 por warning, floor 0.
+- **Política de retry:**
+  - **Errors estruturais** (`CANVAS_DIM_WRONG`, `FOOTER_MISSING`, `IMAGE_SLOT_EMPTY`): falha hard sem retry — Planner/Compose erraram, retry não resolve.
+  - **Errors visuais** (`TEXT_OUTSIDE_SAFE_AREA`, `BACKGROUND_LUMA_VS_TEXT`, `BLEED_CHECK_FAILED`): retry 1× só do asset/render desse slide. Se falhar de novo, entrega com warning visível.
+  - **Warnings** (`TEXT_TRUNCATED`, `FOOTER_PARTIAL`, `UPLOAD_LEAKED_REFERENCE`): emitidos no payload, UI mostra badge "QC: N alertas" sobre o slide. Não bloqueia download.
+- **Heurísticas:** canvas dim (1080×1350), safe areas, contraste WCAG AA (luma BG vs texto), footer present, bleed check (margens 60px/40px), upload leak (OCR no bbox de imageSlot uploaded).
+- **Implementado:** types em `lib/m2/t2/types.ts` (`QCReport`, `QCIssue`, `QCErrorCode`), stub em `lib/m2/t2/qc.ts`. Ativo Fase 1 (mínimo) → Fase 2 (expansão). Commit `a46a309`.
+
+### [DEC-M2-007] CarouselAssetPack — cache em memória por-request — RESOLVIDA em 18/05/2026
+- **Decisão:** T2 introduz `CarouselAssetPack` (estrutura `Record<packKey, AssetPackEntry>`) pra reusar produto principal entre slides do mesmo carrossel.
+- **Vida útil:** 1 request. Nunca persiste em disco, nunca em Vercel Blob (salvo URL da própria geração FAL). Cache é local à invocação da API route.
+- **Efeito:** carrossel de N slides com 1 produto principal custa ~$0.25 (1× gpt-image-1 high) em vez de N × $0.25.
+- **Continuidade visual:** resolve LIMIT-M2-001 (T1 gerava produtos visualmente diferentes entre slides). Slide 1 gera, slides 2..N referenciam via `imageSlot.source: 'reused-from-pack'`.
+- **Implementado:** types em `lib/m2/t2/types.ts` (`CarouselAssetPack`, `AssetPackEntry`), stub em `lib/m2/t2/assets/cache.ts` (`newPack`, `addAsset`, `findAsset`). Ativo Fase 3. Commit `a46a309`.
+
+### [DEC-M2-006] T2 layout-first, IA isolada — RESOLVIDA em 18/05/2026
+- **Decisão:** T2 segue padrão **layout-first** (mesma direção arquitetural do M3 — ver [DEC-M3-001]). Sharp/Satori controlam **100%** do texto, fundo, footer, margens, caixas, setas, hierarquia tipográfica, posição final dos elementos e composição completa.
+- **IA é restrita** a gerar elementos visuais isolados (produto, cena, ilustração), sempre como PNG sobre fundo neutro ou transparente. GPT Image **nunca** produz texto, footer, margens, caixas, setas, hierarquia, posição final, background final ou composição completa.
+- **Por que:** resolve estruturalmente LIMIT-M2-001 (T1 fal-prompt-puro tem variabilidade tipográfica + ausência de footer + layout inerente ao modelo). Replica direção do M3 que já foi validada em prod.
+- **Modelo IA escolhido pro asset isolado:** `gpt-image-1 high` (~$0.25/asset). Cache via [DEC-M2-007] reduz custo total por carrossel.
+- **Implementado:** invariante I1 no `lib/m2/t2/README.md`. Commit `a46a309`.
+
+### [DEC-M2-005] T2 isolado de T1 em `lib/m2/t2/` — RESOLVIDA em 18/05/2026
+- **Decisão:** T2 (Pipeline Híbrido v2) é módulo isolado em `lib/m2/t2/`. T1 permanece em prod intocado em `lib/m2/` raiz + `lib/m2/templates/atual-maio26/` + `app/api/imagens/m2/generate/route.ts`.
+- **Discriminação:** via `template.pipeline` (`fal-prompt-puro` para T1 | `hibrido-compositing` para T2). Tipo já presente em `lib/m2/templates/types.ts` — infraestrutura pronta.
+- **Cross-imports T1→T2 ou T2→T1 proibidos** exceto:
+  - T2 reusa `lib/m2/footer-gen.ts` (já preparado pra Híbrido — ver header do arquivo, [REF-M2-002])
+  - T2 reusa type `M2LogoOption` de `lib/m2/schema.ts`
+  - T2 lê `brandM2` de `lib/brand/m2.brand.ts`
+- **Rota T2 separada:** `app/api/imagens/m2/t2/render/route.ts` (Fase 4). UI T2 isolada em `app/imagens/m2-posts/_components/t2-form/`.
+- **Por que:** garante T1 em prod intocado durante todo o desenvolvimento T2; permite rollback granular; mantém pipelines comparáveis até validação.
+- **Implementado:** scaffolding Fase 0 — 23 arquivos em `lib/m2/t2/` + `lib/m2/t2/README.md` com invariantes I1..I8. Commit `a46a309`.
 
 ### [DEC-M3-005] Templates M3 V1 — 1 ativo + 2 placeholders — RESOLVIDA em 19/05/2026
 - **Decisão:** M3 V1 entrega apenas 1 template ativo (`atual-maio26` — "Descontão de Mãe"). Slots `novo-teste-1` e `novo-teste-2` ficam visíveis na UI como cards disabled com badges "em construção" / "a definir". Confirma pra equipe que mais templates virão sem prometer prazo.
