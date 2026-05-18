@@ -8,7 +8,7 @@ export const brandBase = {
   logo: '/brand/logo.svg',
   logoSquare: '/brand/m2/logos/logo-quadrado.png',
   name: 'Charme do Detalhe',
-  systemName: 'Central Marketing - Charme do Detalhe',
+  systemName: 'Central de Marketing',
   socialHandle: '@charmedodetalhe',
 } as const
 

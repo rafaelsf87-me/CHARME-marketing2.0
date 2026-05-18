@@ -50,7 +50,12 @@ function LoginForm() {
           alt="Charme do Detalhe"
           className="h-7 w-7 rounded-md object-cover"
         />
-        <div className="text-[12.5px] font-medium">Central Marketing - Charme do Detalhe</div>
+        <div className="leading-tight">
+          <div className="text-[12.5px] font-medium">Central de Marketing</div>
+          <div className="mt-[1px] text-[10.5px] text-[color:var(--text-secondary)]">
+            Charme do Detalhe
+          </div>
+        </div>
       </div>
 
       <div className="w-full max-w-[360px]">
@@ -110,7 +115,7 @@ function LoginForm() {
       </div>
 
       <div className="absolute inset-x-0 bottom-6 text-center text-[11px] text-black/35">
-        Central Marketing - Charme do Detalhe
+        Central de Marketing · Charme do Detalhe
       </div>
     </div>
   )

@@ -69,10 +69,13 @@ export function Sidebar() {
         <img
           src={brandBase.logoSquare}
           alt={brandBase.name}
-          className="h-9 w-9 rounded-md object-cover"
+          className="h-9 w-9 shrink-0 rounded-md object-cover"
         />
         <div className="min-w-0 leading-tight">
           <div className="truncate text-[13px] font-medium">{brandBase.systemName}</div>
+          <div className="mt-[3px] truncate text-[11.5px] text-[color:var(--text-secondary)]">
+            {brandBase.name}
+          </div>
         </div>
       </div>
 
