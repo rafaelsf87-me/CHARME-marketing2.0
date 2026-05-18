@@ -24,6 +24,10 @@ export interface SubtemplateRenderArgs {
   imageBuffers: Map<string, Buffer>
   /** Map de textSlot.id → fontSize final calculado pelo text-renderer. */
   resolvedFontSizes: Map<string, number>
+  /** Map de textSlot.id → linhas pré-quebradas pelo text-renderer.
+   * Subtemplate renderiza linha por linha pra preservar wrap calculado
+   * (evita discrepância entre cálculo heurístico e wrap real do Satori). */
+  resolvedLines: Map<string, string[]>
 }
 
 /**

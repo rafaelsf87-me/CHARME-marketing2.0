@@ -111,6 +111,13 @@ Ideias que surgiram mas estão **fora do escopo atual**. Não implementar agora.
 
 Código que funciona mas precisa ser melhorado antes da próxima feature relacionada.
 
+### [REF-M2-001] Limpar gradient-base.png após T2 em prod
+- **Onde:** `public/brand/m2/backgrounds/gradient-base.png`
+- **Descrição:** arquivo usado pelo T1 (`render.ts:78-81`, hotfix v8 retry com background-check.ts). Deve ser removido junto com a descontinuação do T1 quando T2 estabilizar em prod. T2 não usa esse asset — catálogo T2 (`lib/m2/t2/backgrounds/catalog.ts`) referencia os 10 backgrounds curados manualmente (starfield-01..08, solid-purple-01..02).
+- **Bloqueia:** nada — coexistência é zero-impacto.
+- **Esforço estimado:** baixo (1 arquivo removido + audit pra garantir que T1 foi descontinuado).
+- **Identificado em:** Sessão M2 T2 Fase 1, 19/05/2026.
+
 ### [REF-M1-006] Auditar prompts M1 vs política de "upload é asset pronto"
 - **Onde:** `lib/m1/render-pipeline-a.ts`, `lib/m1/render-pipeline-detalhe.ts`, `lib/m1/prompts.ts` (todos os builders que recebem `fotoSofa`/`fotoRolo` do user).
 - **Por que refatorar:** [DEC-M2-014] estabelece pra T2 que upload do user é **asset pronto** — IA não pode copiar background/layout/tipografia/contexto da referência. Política deve valer também pro M1, que hoje passa `fotoSofa` e `fotoRolo` pro nano-banana com instruções variadas dependendo do branch (Pipeline A, Pipeline Detalhe, Capa Lisa).

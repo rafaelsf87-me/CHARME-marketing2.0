@@ -1,13 +1,16 @@
 /**
  * T2 Subtemplate Registry
  *
- * Estado: STUB (Fase 0). Subtemplates implementados em Fases 1+2.
+ * Fase 1: apenas `cover`. Outros subtemplates entram na Fase 2.
  */
 
 import type { T2SubtemplateId } from '../types'
 import type { SubtemplateModule } from './types'
+import { coverModule } from './cover'
 
-export const T2_SUBTEMPLATES: Partial<Record<T2SubtemplateId, SubtemplateModule>> = {}
+export const T2_SUBTEMPLATES: Partial<Record<T2SubtemplateId, SubtemplateModule>> = {
+  cover: coverModule,
+}
 
 export function getSubtemplate(id: T2SubtemplateId): SubtemplateModule {
   const found = T2_SUBTEMPLATES[id]

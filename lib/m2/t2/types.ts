@@ -156,10 +156,18 @@ export interface BackgroundPalette {
   accent?: string
 }
 
+/**
+ * Formato visual onde o background pode ser usado.
+ * - `carrossel`: family precisa ter ≥3 variants. Slides do mesmo carrossel
+ *   usam mesma family (I7 — continuidade visual).
+ * - `imagem-unica`: qualquer family elegível, ≥1 variant.
+ */
+export type T2AllowedFormat = 'carrossel' | 'imagem-unica'
+
 export interface BackgroundConfig {
   id: string
   file: string
-  /** Family identifica grupo de continuidade visual (ex: 'gradient-roxo'). */
+  /** Family identifica grupo de continuidade visual (ex: 'starfield'). */
   family: string
   position: BackgroundPosition
   palette: BackgroundPalette
@@ -167,6 +175,8 @@ export interface BackgroundConfig {
   safeAreas: Inset
   contrast: BackgroundContrast
   density: BackgroundDensity
+  /** Formatos onde o background pode ser usado. Carrossel exige family com ≥3 variants. */
+  allowedFormats: T2AllowedFormat[]
 }
 
 // ============================================================================
@@ -183,6 +193,8 @@ export interface TextSlotDef {
   fontSizeMin: number
   fontSizeMax: number
   lineHeight: number
+  /** Máximo de linhas que o slot aceita antes de aplicar overflowStrategy. */
+  maxLines: number
   /** Se omitido, herda de background.contrast (light/dark) via render time. */
   color?: string
 }

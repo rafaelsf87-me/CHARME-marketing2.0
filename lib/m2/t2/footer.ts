@@ -1,14 +1,24 @@
 /**
  * T2 Footer — wrap fino sobre lib/m2/footer-gen.ts existente
  *
- * Estado: STUB (Fase 0). Implementação na Fase 1.
+ * footer-gen.ts já produz overlay PNG transparente com logo + @handle.
+ * T2 só decide qual M2LogoOption usar.
  *
- * Re-expõe `generateFooterOverlay` com canvas T2 (1080×1350) e logo do
- * SlidePlan. Sem novidade lógica — footer-gen.ts já está completo.
+ * Output: Buffer 1080×120 (footer height fixo no footer-gen.ts).
+ * Compose.ts posiciona em y=1190 (1350 - 40 margin bottom - 120 height).
  */
 
+import { generateFooterOverlay } from '../footer-gen'
+import { T2_CANVAS_WIDTH } from './types'
 import type { SlidePlanFooter } from './types'
 
-export async function buildFooterBuffer(_footer: SlidePlanFooter): Promise<Buffer> {
-  throw new Error('[T2] footer.buildFooterBuffer — Fase 1 não implementada')
+export interface RenderFooterArgs {
+  logo: SlidePlanFooter['logo']
+}
+
+export async function renderFooter(args: RenderFooterArgs): Promise<Buffer> {
+  return generateFooterOverlay({
+    logoOption: args.logo,
+    canvasWidth: T2_CANVAS_WIDTH,
+  })
 }

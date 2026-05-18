@@ -118,6 +118,7 @@ export const backgroundConfigSchema = z.object({
   safeAreas: insetSchema,
   contrast: z.enum(['light-text', 'dark-text']),
   density: z.enum(['sparse', 'busy']),
+  allowedFormats: z.array(z.enum(['carrossel', 'imagem-unica'])).min(1),
 })
 
 export const subtemplateConfigSchema = z.object({
@@ -137,6 +138,7 @@ export const subtemplateConfigSchema = z.object({
       fontSizeMin: z.number().positive(),
       fontSizeMax: z.number().positive(),
       lineHeight: z.number().positive(),
+      maxLines: z.number().int().positive(),
       color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
     }),
   ),

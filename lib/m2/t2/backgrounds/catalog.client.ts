@@ -1,28 +1,27 @@
 /**
  * T2 Backgrounds — versão client-safe
  *
- * Estado: STUB (Fase 0).
- *
- * Padrão M3 (decoracoes-banco split): server carrega bytes via fs, client
- * só vê metadata necessário pra renderizar thumbnails na UI.
- *
- * Bundle client NÃO importa `fs`/`sharp`/`path`. Garantir via lint rule
- * em Fase 4 (next.config: bundle analyzer ou eslint custom).
+ * Mirror serializável de catalog.ts. Sem imports de `fs`/`sharp`/`path`.
+ * Form do client usa pra exibir thumbnails + family info.
  */
 
-import type { BackgroundConfig } from '../types'
+import type { BackgroundConfig, T2AllowedFormat } from '../types'
+import { T2_BACKGROUNDS } from './catalog'
 
-/**
- * Subset client-safe: omite caminhos absolutos de fs, mantém só o que o form
- * precisa (preview thumbnail + family). Em Fase 1 popular com pares ao
- * catalog.ts server.
- */
 export interface BackgroundClientMeta {
   id: string
   publicPath: string
   family: string
   palette: BackgroundConfig['palette']
   contrast: BackgroundConfig['contrast']
+  allowedFormats: T2AllowedFormat[]
 }
 
-export const T2_BACKGROUNDS_CLIENT: BackgroundClientMeta[] = []
+export const T2_BACKGROUNDS_CLIENT: BackgroundClientMeta[] = T2_BACKGROUNDS.map((b) => ({
+  id: b.id,
+  publicPath: b.file,
+  family: b.family,
+  palette: b.palette,
+  contrast: b.contrast,
+  allowedFormats: b.allowedFormats,
+}))
