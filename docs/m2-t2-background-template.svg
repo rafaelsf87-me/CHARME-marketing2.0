@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
+  <defs>
+    <!-- Hachura diagonal pra zonas EVITAR (bleed externo) -->
+    <pattern id="bleedHatch" patternUnits="userSpaceOnUse" width="14" height="14" patternTransform="rotate(45)">
+      <rect width="14" height="14" fill="#FFEEEE"/>
+      <line x1="0" y1="0" x2="0" y2="14" stroke="#FFC8C8" stroke-width="3"/>
+    </pattern>
+    <!-- Grid sutil 60px -->
+    <pattern id="grid60" patternUnits="userSpaceOnUse" width="60" height="60">
+      <rect width="60" height="60" fill="none"/>
+      <line x1="60" y1="0" x2="60" y2="60" stroke="#EEEEEE" stroke-width="1"/>
+      <line x1="0" y1="60" x2="60" y2="60" stroke="#EEEEEE" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <!-- Canvas (fundo branco) -->
+  <rect x="0" y="0" width="1080" height="1350" fill="#FFFFFF"/>
+
+  <!-- Grid 60px overlay -->
+  <rect x="0" y="0" width="1080" height="1350" fill="url(#grid60)"/>
+
+  <!-- Bleed externo (hachura vermelho-claro) -->
+  <rect x="0" y="0" width="1080" height="60" fill="url(#bleedHatch)"/>
+  <rect x="0" y="1310" width="1080" height="40" fill="url(#bleedHatch)"/>
+  <rect x="0" y="0" width="60" height="1350" fill="url(#bleedHatch)"/>
+  <rect x="1020" y="0" width="60" height="1350" fill="url(#bleedHatch)"/>
+
+  <!-- Footer zone (faixa amarelo claro) -->
+  <rect x="60" y="1190" width="960" height="120" fill="#FFF3D6" fill-opacity="0.75"/>
+  <rect x="60" y="1190" width="960" height="120" fill="none" stroke="#C99A00" stroke-width="3" stroke-dasharray="10,6"/>
+
+  <!-- Safe area texto (dashed verde) -->
+  <rect x="60" y="60" width="960" height="1130" fill="none" stroke="#1F9E5A" stroke-width="3" stroke-dasharray="12,8"/>
+
+  <!-- Center axes (linhas guia pontilhadas) -->
+  <line x1="540" y1="60" x2="540" y2="1190" stroke="#A8A8A8" stroke-width="1.2" stroke-dasharray="5,5"/>
+  <line x1="60" y1="625" x2="1020" y2="625" stroke="#A8A8A8" stroke-width="1.2" stroke-dasharray="5,5"/>
+  <circle cx="540" cy="625" r="9" fill="none" stroke="#555555" stroke-width="2"/>
+  <text x="556" y="618" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-weight="500" font-size="14" fill="#555555">centro · 540 × 625</text>
+
+  <!-- Canvas corner coords -->
+  <text x="14" y="24" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="13" fill="#777777">0,0</text>
+  <text x="1066" y="24" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="13" fill="#777777" text-anchor="end">1080,0</text>
+  <text x="14" y="1343" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="13" fill="#777777">0,1350</text>
+  <text x="1066" y="1343" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="13" fill="#777777" text-anchor="end">1080,1350</text>
+
+  <!-- Labels: EVITAR (4 bordas) -->
+  <text x="540" y="40" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="22" fill="#A32D2D">EVITAR — margem visual 60px</text>
+  <text x="32" y="675" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="22" fill="#A32D2D" transform="rotate(-90, 32, 675)">EVITAR — 60px</text>
+  <text x="1048" y="675" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="22" fill="#A32D2D" transform="rotate(90, 1048, 675)">EVITAR — 60px</text>
+  <text x="540" y="1338" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="18" fill="#A32D2D">EVITAR — margem 40px</text>
+
+  <!-- Label: SAFE AREA TEXTO (top-left dentro da safe area) -->
+  <rect x="60" y="60" width="380" height="86" fill="#FFFFFF" fill-opacity="0.92"/>
+  <text x="80" y="100" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="30" fill="#1F9E5A">SAFE AREA TEXTO</text>
+  <text x="80" y="130" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="16" fill="#1F9E5A">960 × 1130 px · zona livre pra texto/IA isolada</text>
+
+  <!-- Label: FOOTER ZONE -->
+  <text x="540" y="1255" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="32" fill="#7A5A00">FOOTER ZONE — NÃO USAR</text>
+  <text x="540" y="1283" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="14" fill="#7A5A00">960 × 120 px · footer programático será sobreposto aqui</text>
+
+  <!-- Legenda canto inferior esquerdo (overlay branca sobre top da footer zone) -->
+  <g transform="translate(60, 1170)">
+    <rect x="0" y="0" width="520" height="20" fill="#1F9E5A" fill-opacity="0.95"/>
+    <text x="12" y="14" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="12" fill="#FFFFFF">M2 T2 · TEMPLATE DE BACKGROUND</text>
+  </g>
+
+  <!-- Bloco "Spec + Famílias" (canto inferior esquerdo dentro da safe area) -->
+  <g transform="translate(60, 1000)">
+    <rect x="0" y="0" width="520" height="170" fill="#FFFFFF" fill-opacity="0.95" stroke="#CCCCCC" stroke-width="1"/>
+    <text x="14" y="26" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="15" fill="#222222">Famílias visuais (criar 8 backgrounds)</text>
+    <text x="14" y="46" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="12" fill="#333333">·</text>
+    <text x="22" y="46" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="12" fill="#333333">gradient-roxo-01 / -02 / -03 (3)</text>
+    <text x="14" y="64" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="12" fill="#333333">·</text>
+    <text x="22" y="64" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="12" fill="#333333">gradient-cyan-01 / -02 / -03 (3)</text>
+    <text x="14" y="82" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="12" fill="#333333">·</text>
+    <text x="22" y="82" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="12" fill="#333333">solid-purple-01 (1)</text>
+    <text x="14" y="100" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="12" fill="#333333">·</text>
+    <text x="22" y="100" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="12" fill="#333333">solid-white-01 (1)</text>
+
+    <text x="14" y="124" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="13" fill="#222222">Spec</text>
+    <text x="14" y="142" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="12" fill="#333333">1080 × 1350 · PNG ou WEBP qualidade 90</text>
+    <text x="14" y="158" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="12" fill="#A32D2D">Sem texto, sem footer, sem logo embutido</text>
+  </g>
+
+  <!-- Bloco "Densidade" (canto inferior direito) -->
+  <g transform="translate(680, 1000)">
+    <rect x="0" y="0" width="340" height="170" fill="#FFFFFF" fill-opacity="0.95" stroke="#CCCCCC" stroke-width="1"/>
+    <text x="14" y="26" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="15" fill="#222222">Densidade visual</text>
+    <text x="14" y="48" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="12" fill="#333333">Baixa a média.</text>
+    <text x="14" y="64" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="12" fill="#333333">Não competir com conteúdo</text>
+    <text x="14" y="80" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="12" fill="#333333">sobreposto (texto + IA isolada).</text>
+
+    <text x="14" y="106" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="13" fill="#222222">Contraste</text>
+    <text x="14" y="124" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="12" fill="#333333">Definir light-text ou dark-text.</text>
+    <text x="14" y="140" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="12" fill="#333333">Code preenche em catalog.ts</text>
+    <text x="14" y="156" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="12" fill="#333333">junto com Rafael na Fase 1.</text>
+  </g>
+
+  <!-- Bloco "Posições recomendadas por family" (topo direito dentro da safe area) -->
+  <g transform="translate(580, 60)">
+    <rect x="0" y="0" width="440" height="120" fill="#FFFFFF" fill-opacity="0.92" stroke="#CCCCCC" stroke-width="1"/>
+    <text x="14" y="22" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="14" fill="#222222">Variants por family (gradient-*)</text>
+    <text x="14" y="42" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="12" fill="#333333">-01 · top-anchored (cor forte no topo)</text>
+    <text x="14" y="58" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="12" fill="#333333">-02 · centered (cor forte no meio)</text>
+    <text x="14" y="74" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="12" fill="#333333">-03 · bottom-anchored (cor forte abaixo)</text>
+    <text x="14" y="98" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="11" fill="#666666">Continuidade: todos os slides de um carrossel usam mesma family,</text>
+    <text x="14" y="112" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="11" fill="#666666">variants alternam pra evitar repetir igual entre slides adjacentes.</text>
+  </g>
+
+</svg>
