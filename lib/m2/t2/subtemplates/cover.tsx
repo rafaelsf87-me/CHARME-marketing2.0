@@ -1,31 +1,33 @@
 /**
- * Subtemplate: cover (Fase 2 — ajustes pós-validação Fase 1)
+ * Subtemplate: cover (Fase 6 — imageSlot opcional + alignItems center + overflow hidden)
  *
  * Layout cover (capa do carrossel):
- *   - Title slot: top, Montserrat ExtraBold 60-140, maxLines 3
- *   - Subtitle slot: logo abaixo do title (gap 40), SemiBold 28-48, maxLines 2
+ *   SEM imagem (default, retro-compat Fase 2/3):
+ *     - Title slot: top centralizado, ExtraBold 60-140, maxLines 3
+ *     - Subtitle slot: abaixo do title, SemiBold 28-48, maxLines 2
  *
- * Ajustes Fase 2:
- *   - Centralizado verticalmente na safe area útil 60..1190
- *     (sem footer programático mais — DEC-M2-015)
- *   - Gap reduzido: title e subtitle ficam num bloco vertical centralizado
+ *   COM imagem (BUG-M2-004 Fase 6):
+ *     - Title comprimido topo (h 200), SemiBold/ExtraBold
+ *     - Subtitle compacto (h 140)
+ *     - Image hero centralizado abaixo (600×680, rounded)
+ *
+ * BUG-M2-005: alignItems trocado de 'flex-end' pra 'center'; overflow hidden
+ * nos containers de title/subtitle pra evitar estouro visual do canvas.
  */
 
 import * as React from 'react'
-import type { Rect, TextSlotDef } from '../types'
+import type { ImageSlotDef, Rect, SlidePlan, TextSlotDef } from '../types'
 import { renderTextLines } from './_shared'
 import type { SubtemplateModule, SubtemplateRenderArgs } from './types'
 
-// Coords absolutas no canvas 1080×1350.
-// Safe area útil em cover sem footer programático: 60..1190 = 1130 px alt.
-// Bloco central de texto: title 460h + gap 40 + subtitle 260h = 760h.
-// Centro vertical 60..1190 → começa em y=235 ((1130-760)/2 + 60 = 245).
-const TITLE_BOX: Rect = { x: 80, y: 280, w: 920, h: 420 }
-const SUBTITLE_BOX: Rect = { x: 80, y: 740, w: 920, h: 220 }
+// ─── Layouts SEM imagem (atual) ────────────────────────────────────────────
 
-const TITLE_SLOT_DEF: TextSlotDef = {
+const TITLE_BOX_NO_IMG: Rect = { x: 80, y: 280, w: 920, h: 420 }
+const SUBTITLE_BOX_NO_IMG: Rect = { x: 80, y: 740, w: 920, h: 220 }
+
+const TITLE_SLOT_NO_IMG: TextSlotDef = {
   id: 'title',
-  box: TITLE_BOX,
+  box: TITLE_BOX_NO_IMG,
   fontStack: 'display',
   fontWeight: 800,
   fontSizeMin: 60,
@@ -34,9 +36,9 @@ const TITLE_SLOT_DEF: TextSlotDef = {
   maxLines: 3,
 }
 
-const SUBTITLE_SLOT_DEF: TextSlotDef = {
+const SUBTITLE_SLOT_NO_IMG: TextSlotDef = {
   id: 'subtitle',
-  box: SUBTITLE_BOX,
+  box: SUBTITLE_BOX_NO_IMG,
   fontStack: 'body',
   fontWeight: 600,
   fontSizeMin: 28,
@@ -45,19 +47,62 @@ const SUBTITLE_SLOT_DEF: TextSlotDef = {
   maxLines: 2,
 }
 
+// ─── Layouts COM imagem (Fase 6 BUG-M2-004) ────────────────────────────────
+
+const TITLE_BOX_WITH_IMG: Rect = { x: 80, y: 60, w: 920, h: 200 }
+const SUBTITLE_BOX_WITH_IMG: Rect = { x: 80, y: 280, w: 920, h: 140 }
+const IMAGE_BOX_WITH_IMG: Rect = { x: 240, y: 460, w: 600, h: 680 }
+
+const TITLE_SLOT_WITH_IMG: TextSlotDef = {
+  id: 'title',
+  box: TITLE_BOX_WITH_IMG,
+  fontStack: 'display',
+  fontWeight: 800,
+  fontSizeMin: 48,
+  fontSizeMax: 96, // teto menor que sem-img (cabe em h=200)
+  lineHeight: 1.05,
+  maxLines: 2,
+}
+
+const SUBTITLE_SLOT_WITH_IMG: TextSlotDef = {
+  id: 'subtitle',
+  box: SUBTITLE_BOX_WITH_IMG,
+  fontStack: 'body',
+  fontWeight: 600,
+  fontSizeMin: 24,
+  fontSizeMax: 40,
+  lineHeight: 1.25,
+  maxLines: 2,
+}
+
+const IMAGE_MAIN_DEF: ImageSlotDef = {
+  id: 'image-main',
+  box: IMAGE_BOX_WITH_IMG,
+  acceptsUpload: true,
+  defaultTreatment: 'rounded',
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────
+
 function inferTextColor(args: SubtemplateRenderArgs): string {
   return args.background.contrast === 'light-text' ? '#FFFFFF' : args.background.palette.primary
 }
 
+function hasImageMainSlot(args: SubtemplateRenderArgs): boolean {
+  return args.imageSlots.some((s) => s.id === 'image-main')
+}
+
 function renderCoverTree(args: SubtemplateRenderArgs): React.ReactElement {
+  const withImage = hasImageMainSlot(args)
+  const titleDef = withImage ? TITLE_SLOT_WITH_IMG : TITLE_SLOT_NO_IMG
+  const subtitleDef = withImage ? SUBTITLE_SLOT_WITH_IMG : SUBTITLE_SLOT_NO_IMG
+
   const titleSlot = args.textSlots.find((s) => s.id === 'title')
   const subtitleSlot = args.textSlots.find((s) => s.id === 'subtitle')
-  const titleFontSize = args.resolvedFontSizes.get('title') ?? TITLE_SLOT_DEF.fontSizeMin
-  const subtitleFontSize =
-    args.resolvedFontSizes.get('subtitle') ?? SUBTITLE_SLOT_DEF.fontSizeMin
+  const titleFontSize = args.resolvedFontSizes.get('title') ?? titleDef.fontSizeMin
+  const subtitleFontSize = args.resolvedFontSizes.get('subtitle') ?? subtitleDef.fontSizeMin
   const titleLines = args.resolvedLines.get('title') ?? (titleSlot ? [titleSlot.content] : [])
-  const subtitleLines =
-    args.resolvedLines.get('subtitle') ?? (subtitleSlot ? [subtitleSlot.content] : [])
+  const subtitleLines = args.resolvedLines.get('subtitle') ?? (subtitleSlot ? [subtitleSlot.content] : [])
 
   const textColor = inferTextColor(args)
 
@@ -76,19 +121,21 @@ function renderCoverTree(args: SubtemplateRenderArgs): React.ReactElement {
           style={{
             display: 'flex',
             position: 'absolute',
-            left: TITLE_BOX.x,
-            top: TITLE_BOX.y,
-            width: TITLE_BOX.w,
-            height: TITLE_BOX.h,
-            alignItems: 'flex-end',
+            left: titleDef.box.x,
+            top: titleDef.box.y,
+            width: titleDef.box.w,
+            height: titleDef.box.h,
+            // BUG-M2-005: center em vez de flex-end evita estouro pra cima
+            alignItems: 'center',
             justifyContent: 'center',
+            overflow: 'hidden',
           }}
         >
           {renderTextLines({
             lines: titleLines.map((l) => l.toUpperCase()),
-            fontWeight: TITLE_SLOT_DEF.fontWeight,
+            fontWeight: titleDef.fontWeight,
             fontSize: titleFontSize,
-            lineHeight: TITLE_SLOT_DEF.lineHeight,
+            lineHeight: titleDef.lineHeight,
             color: textColor,
             opacity: 1,
             letterSpacing: '-0.02em',
@@ -101,19 +148,20 @@ function renderCoverTree(args: SubtemplateRenderArgs): React.ReactElement {
           style={{
             display: 'flex',
             position: 'absolute',
-            left: SUBTITLE_BOX.x,
-            top: SUBTITLE_BOX.y,
-            width: SUBTITLE_BOX.w,
-            height: SUBTITLE_BOX.h,
-            alignItems: 'flex-start',
+            left: subtitleDef.box.x,
+            top: subtitleDef.box.y,
+            width: subtitleDef.box.w,
+            height: subtitleDef.box.h,
+            alignItems: 'center',
             justifyContent: 'center',
+            overflow: 'hidden',
           }}
         >
           {renderTextLines({
             lines: subtitleLines,
-            fontWeight: SUBTITLE_SLOT_DEF.fontWeight,
+            fontWeight: subtitleDef.fontWeight,
             fontSize: subtitleFontSize,
-            lineHeight: SUBTITLE_SLOT_DEF.lineHeight,
+            lineHeight: subtitleDef.lineHeight,
             color: textColor,
             opacity: 0.92,
           })}
@@ -123,18 +171,30 @@ function renderCoverTree(args: SubtemplateRenderArgs): React.ReactElement {
   )
 }
 
+function planHasImageMain(plan: SlidePlan): boolean {
+  return plan.imageSlots.some((s) => s.id === 'image-main')
+}
+
 export const coverModule: SubtemplateModule = {
   config: {
     id: 'cover',
-    textSlots: [TITLE_SLOT_DEF, SUBTITLE_SLOT_DEF],
-    imageSlots: [],
+    // Default usa layout NO-IMG. resolveTextSlotDefs sobrescreve com layout
+    // WITH-IMG quando o plan tiver image-main (BUG-M2-004 Fase 6).
+    textSlots: [TITLE_SLOT_NO_IMG, SUBTITLE_SLOT_NO_IMG],
+    imageSlots: [IMAGE_MAIN_DEF],
     density: 'sparse',
     compatibleBackgrounds: ['*'],
   },
   render: renderCoverTree,
+  resolveTextSlotDefs: (plan) =>
+    planHasImageMain(plan)
+      ? [TITLE_SLOT_WITH_IMG, SUBTITLE_SLOT_WITH_IMG]
+      : [TITLE_SLOT_NO_IMG, SUBTITLE_SLOT_NO_IMG],
 }
 
-export const COVER_TITLE_DEF = TITLE_SLOT_DEF
-export const COVER_SUBTITLE_DEF = SUBTITLE_SLOT_DEF
+export const COVER_TITLE_DEF = TITLE_SLOT_NO_IMG
+export const COVER_SUBTITLE_DEF = SUBTITLE_SLOT_NO_IMG
+export const COVER_TITLE_DEF_WITH_IMAGE = TITLE_SLOT_WITH_IMG
+export const COVER_SUBTITLE_DEF_WITH_IMAGE = SUBTITLE_SLOT_WITH_IMG
 
 export default coverModule

@@ -27,7 +27,7 @@
 import { put } from '@vercel/blob'
 import { composeSlide } from './compose'
 import { validateSlide } from './qc'
-import { buildSlidePlan, applyAjusteToPlan as _applyAjuste } from './planner'
+import { buildSlidePlanWithParser, applyAjusteToPlan as _applyAjuste } from './planner'
 import { generateProductAsset } from './assets/product'
 import { generateSceneAsset } from './assets/scene'
 import {
@@ -233,7 +233,8 @@ export async function renderM2T2(input: T2Input, opts?: RenderM2T2Opts): Promise
   const startedAt = Date.now()
 
   const parsed = t2InputSchema.parse(input)
-  const plans = buildSlidePlan(parsed)
+  // Fase 6 (BUG-M2-003 + BUG-M2-004): Planner async com LLM parser.
+  const { plans, parserResults } = await buildSlidePlanWithParser(parsed)
 
   const pack = newPack(parsed.contextoGeral ?? `t2-${Date.now()}`)
   const uploadFn = opts?.uploadFn ?? defaultUpload
@@ -250,6 +251,7 @@ export async function renderM2T2(input: T2Input, opts?: RenderM2T2Opts): Promise
     results,
     pack: serializePack(pack),
     tookMs: Date.now() - startedAt,
+    parserResults,
   }
 }
 

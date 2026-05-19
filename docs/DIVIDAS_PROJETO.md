@@ -57,6 +57,16 @@
 
 ## 🔧 Melhorias Pendentes
 
+### [MEL-M2-009] Validar legibilidade do cover.tsx title com imageSlot
+- **Onde:** `lib/m2/t2/subtemplates/cover.tsx`
+- **Descrição:** layout cover com imageSlot na Fase 6 comprime altura do title de ~420px (sem-img) → 200px (com-img). Smoke Fase 6 (19/05/2026) produziu title legível mas em fontSize médio (~96 max). Em textos mais longos pode ficar desproporcionalmente pequeno. Considerar se aparecer:
+  - (i) image menor (400×400 ao invés de 600×680) liberando vertical pra title
+  - (ii) image posicionada lateral em vez de abaixo
+  - (iii) ajustar fontSizeMin do title pra forçar wrap em mais linhas
+- **Impacto esperado:** legibilidade do hook principal do carrossel em textos extensos.
+- **Esforço estimado:** baixo (smoke parametrizado com 5 títulos de tamanhos diferentes).
+- **Identificado em:** 19/05/2026, pré-implementação Fase 6.
+
 ### [MEL-M2-002] Pesos tipográficos extras Montserrat
 - **Onde:** `public/fonts/`, consumidores em `lib/m2/t2/subtemplates/*` (futuros) e `lib/m3/templates/*`.
 - **Descrição:** se Fase 1/2 do T2 exigir Montserrat além de SemiBold (600), Bold (700) e ExtraBold (800) já presentes em `public/fonts/`, subir TTFs estáticos do JulietaUla/Montserrat (Light 300, Regular 400, Medium 500). Satori 0.11.3 não suporta variable fonts (LIMIT-M3 já documentada).
@@ -111,13 +121,14 @@ Ideias que surgiram mas estão **fora do escopo atual**. Não implementar agora.
 
 Código que funciona mas precisa ser melhorado antes da próxima feature relacionada.
 
-### [REF-M2-006] Subtemplates content-*/cover/cta-final precisam de slot `image-main`
-- **Onde:** `lib/m2/t2/subtemplates/cover.tsx`, `content-3-boxes.tsx`, `content-6-boxes.tsx`, `cta-final.tsx`, `lib/m2/t2/planner.ts` (`buildCoverPlan`, `buildContentPlan`, `buildCtaFinalPlan`).
-- **Descrição:** o toggle "Modo Upload" foi restaurado no T2 (19/05/2026), mas apenas o subtemplate `comparison-before-after` tem slots image-before/image-after definidos. Em cover, content-3-boxes, content-6-boxes e cta-final o campo `imageMainUploadUrl` (e o `imageMainPrompt` em modo IA) é **silenciosamente ignorado** pelo Planner — nenhum slot é criado e o asset não aparece no slide. UI mostra o campo, schema aceita o input, mas visualmente nada acontece.
-- **Trabalho:** (a) decidir layout do slot image-main em cada subtemplate (provavelmente reservar área inferior 600×480 pra produto isolado). (b) adicionar `ImageSlotDef` com `acceptsUpload: true` no config de cada subtemplate. (c) Planner cria `imageSlots: [{ id: 'image-main', ... }]` quando `imageMainUploadUrl` (modo upload) OU `imageMainPrompt` (modo IA) presentes. (d) compose.ts já lida com source='uploaded' (DEC-M2-014 bypass GPT Image) — não muda nada lá.
-- **Bloqueia:** entrega visual completa do toggle Upload. Hoje funciona só em slides com `slideType='comparison'`.
-- **Esforço estimado:** médio (1 dia: design + 4 subtemplates + Planner + smoke visual).
-- **Identificado em:** Sessão consolidação T2, 19/05/2026.
+### [REF-M2-007] Migração off do fal-ai/any-llm deprecated
+- **Onde:** `lib/m2/t2/planner/parse-roteiro.ts`
+- **Descrição:** endpoint `fal-ai/any-llm` está marcado como deprecated por fal.ai desde 19/05/2026 (vide landing page). Continua funcional e o smoke Fase 6 passou com `anthropic/claude-haiku-4.5` via esse endpoint, mas o risco de quebrar é real. Migrar antes da quebra definitiva pra:
+  1. **`openrouter/router`** (também via FAL_KEY, não-deprecated) — mais simples, zero setup novo.
+  2. **`@anthropic-ai/sdk` direto** — requer `ANTHROPIC_API_KEY` em `.env.local` + Vercel. Adiciona 1 dep, custo idêntico ou levemente menor (sem markup FAL).
+- **Bloqueia:** nada agora — parser tem fallback regex que garante geração mesmo se LLM cair.
+- **Esforço estimado:** baixo (30 min: trocar endpoint + ajustar input/output shape se mudar).
+- **Identificado em:** 19/05/2026, Fase 6.
 
 ### [REF-M2-005] Cleanup definitivo do T1 após 30 dias de estabilidade T2
 - **Onde:** `lib/m2/templates/atual-maio26/`, `lib/m2/templates/atual-maio26-new/`, `lib/m2/templates/novo-teste-1/`, `lib/m2/render.ts`, `lib/m2/fal-client.ts`, `lib/m2/background-check.ts`, `lib/m2/post-process.ts`, `lib/m2/templates/atual-maio26/prompt.ts`, `app/api/imagens/m2/generate/`, `app/imagens/m2-posts/_components/form-imagem-unica.tsx`, `form-carrossel.tsx`, `modo-geracao-selector.tsx`, `slide-block.tsx`, `logo-selector.tsx`, `png-upload-list.tsx`, `tab-switcher.tsx`.
@@ -285,6 +296,33 @@ Pontos onde uma decisão de produto é necessária antes de avançar.
 ## 🗑️ Resolvidas / Descartadas
 
 Quando uma dívida é resolvida ou descartada, mover para cá com nota curta. Manter os últimos 20 itens, depois limpar.
+
+### [BUG-M2-003] Planner T2 não interpreta roteiro estruturado humano — RESOLVIDA em 19/05/2026
+- **Resolução (Fase 6):** novo parser LLM em `lib/m2/t2/planner/parse-roteiro.ts` usando `anthropic/claude-haiku-4.5` via `fal-ai/any-llm`. Extrai `{title, subtitle, bullets, imagePrompt, cta}` ignorando labels meta ("Texto:", "Apoio:", "Descrição da imagem:", "CTA:"). `imagePrompt` traduzido pra inglês pelo LLM. Fallback regex sempre disponível (timeout 10s, JSON inválido, Zod fail → cai pra heurística determinística).
+- **Smoke real (~$1.25, 83s):** 4 slides com input bruto colado por humano. LLM extraiu 3/3 corretamente, 0 fallbacks. Titles "3 ITENS DA COZINHA POR ATÉ R$10" / "O QUE TROCAR AGORA" / "APROVEITE A PROMOÇÃO" (não mais "TEXTO"). QC consolidado pass=true, avg score 98.75/100, 0 errors.
+- **Custo prod:** ~$0.001/slide LLM (Haiku 4.5). Carrossel 8 slides = ~$0.008 — desprezível vs $2 da geração IA.
+- **Risco:** endpoint deprecated (vide [REF-M2-007]). Fallback regex garante zero downtime.
+
+### [BUG-M2-004] ImageSlots ignorados em 4/5 subtemplates — RESOLVIDA em 19/05/2026
+- **Resolução (Fase 6):** novo helper `buildImageMainSlot` no Planner cria `imageSlot` com `id='image-main'` quando (a) `modoGeracao='upload'` + `imageMainUploadUrl` presente → `source='uploaded'` ou (b) `modoGeracao='ia'` + `parsed.imagePrompt` (do LLM) presente → `source='ai_generated'`. Aplicado em cover, content-3-boxes, content-6-boxes, cta-final.
+- **Layouts condicionais por subtemplate:**
+  - **cover:** sem-img mantém atual (title 280..700, subtitle 740..960). Com-img comprime textos no topo (title 60..260, subtitle 280..420) + hero 600×680 abaixo (240..1140).
+  - **content-3-boxes:** sem-img mantém full-width. Com-img split half-half (boxes esquerda w=440, imagem direita 460×780).
+  - **content-6-boxes:** sem-img mantém full-width. Com-img encolhe boxes esquerda (w=400, arrow w=50) + imagem direita 420×810.
+  - **cta-final:** image-main 360×160 como badge hero topo (y=70..230), `treatment='circle'/'rounded'`. Conservador: Planner SÓ cria slot SE LLM devolver `imagePrompt` explícito (default LLM = null pra cta_final).
+- **API SubtemplateModule estendida:** `resolveTextSlotDefs?(plan): TextSlotDef[]` permite ao subtemplate trocar boxes/fontSizeMax conforme estado do plan. compose.ts respeita o override.
+- **Smoke real:** slide 1 (cover) com imagem 600×680 visível, slide 2 (content_6) com 6 bullets + imagem lateral (sobreposição borderline aceitável — ver [MEL-M2-009]), slide 3 (comparison) com 2 imagens IA, slide 4 (cta_final) sem image (LLM devolveu imagePrompt=null como esperado).
+- **Resolve também [REF-M2-006]** que tinha sido aberta na Fase 5 com escopo idêntico.
+
+### [BUG-M2-005] alignItems flex-end + widthFactor + overflow (latente) — RESOLVIDA em 19/05/2026
+- **Resolução (Fase 6):** 3 mudanças cirúrgicas:
+  - **alignItems:** trocado de `'flex-end'` pra `'center'` em todos os containers de title/subtitle/cta/box dos 4 subtemplates (cover, content-3, content-6, cta-final) + comparison (title + caption). Evita extravasamento pra cima do canvas em texto longo.
+  - **widthFactor:** bumped +0.04 em `text-renderer.ts` (800→0.70, 700→0.66, 600→0.62, default→0.56). Conservador — fontSize fica ~5% menor mas wrap converge antes de gerar overflow.
+  - **overflow: hidden:** adicionado em todos os containers de title/subtitle/cta/box pra impedir vazamento visual final caso o text-renderer ainda assim erre.
+- **Smoke real:** títulos longos centralizados sem corte top/bottom, fontSizes razoáveis em todos os slides.
+
+### [MEL-M2-008] Auto-extração de keyword pra UI sem campo dedicado — RESOLVIDA em 19/05/2026
+- **Resolução (hotfix anterior, commit 798bea9):** campo "Palavra-chave do arquivo (opcional)" removido do UI dos 4 módulos (M1, M2 T2, M3, M4). Novo `autoExtractKeyword(opts)` em `lib/filename.ts` extrai keyword automaticamente do conteúdo do form via discriminated union por módulo. Schema das APIs segue aceitando `keyword?: string` opcional pra retro-compat. Smoke `scripts/smoke-hotfix-keyword/` 14/14 pass.
 
 ### [REF-M2-004] Retrofit padrão de nome `img-{modulo}-{slide}-{keyword}-{mes}{ano}` em M1/M2T1/M3/M4 (Fase 4.5) — RESOLVIDA em 18/05/2026
 - **Escopo:** aplicar `lib/filename.ts` (criada na Fase 4) em todos os módulos pré-existentes. Tarefa mecânica e isolada por módulo — não tocar em pipeline IA, prompts ou render.

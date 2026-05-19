@@ -413,4 +413,10 @@ export interface T2RenderOutput {
   /** Pack final — devolvido pro client guardar e reusar em regerar. */
   pack: CarouselAssetPack | null
   tookMs: number
+  /**
+   * Fase 6: log do parser LLM por slide pra auditoria/debug. Slides que NÃO
+   * passam pelo parser (ex: comparison-before-after) ficam fora desta lista.
+   * Estrutura definida em `lib/m2/t2/planner/parse-roteiro.ts`.
+   */
+  parserResults?: unknown[]
 }

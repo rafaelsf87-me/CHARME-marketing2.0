@@ -15,10 +15,12 @@
  */
 
 import type {
+  ImageSlot,
   RegerarSlideInput,
   SlidePlan,
   SlidePlanFooter,
   T2Input,
+  T2ModoGeracao,
   T2SlideInput,
   T2SlideType,
   T2SubtemplateId,
@@ -26,6 +28,12 @@ import type {
 import { chooseBackgroundForCarousel } from './backgrounds/select'
 import { T2_BACKGROUNDS } from './backgrounds/catalog'
 import { slidePlanSchema } from './schema'
+import {
+  parseRoteiroSlide,
+  type ParsedSlide,
+  type ParseRoteiroResult,
+  type ParsedSlideSlideType,
+} from './planner/parse-roteiro'
 
 // ID do background dedicado pro cta-final (DEC-M2-015).
 // Curado manualmente, footer já embutido no PNG.
@@ -93,6 +101,61 @@ function defaultFooter(): SlidePlanFooter {
   return { enabled: false, logo: 'casinha', position: 'bottom-center' }
 }
 
+/**
+ * Cria imageSlot 'image-main' conforme modo + parsed.imagePrompt. Retorna
+ * null se nenhuma fonte de imagem disponível (slide sem imagem).
+ *
+ * Política BUG-M2-004 Fase 6:
+ *   - modoGeracao='upload' + input.imageMainUploadUrl → source='uploaded'
+ *     (DEC-M2-014 bypassa LLM e GPT Image; LLM ainda processa textos).
+ *   - modoGeracao='ia' + parsed.imagePrompt → source='ai_generated'
+ *   - sem nenhum dos dois → null (subtemplate renderiza sem imagem)
+ */
+function buildImageMainSlot(args: {
+  input: T2SlideInput
+  parsed: ParsedSlide
+  modoGeracao: T2ModoGeracao
+}): ImageSlot | null {
+  if (args.modoGeracao === 'upload' && args.input.imageMainUploadUrl) {
+    return {
+      id: 'image-main',
+      source: 'uploaded',
+      slotRef: { kind: 'subtemplate-slot', id: 'image-main' },
+      uploadedUrl: args.input.imageMainUploadUrl,
+      treatment: 'rounded',
+    }
+  }
+  if (args.modoGeracao === 'ia' && args.parsed.imagePrompt) {
+    return {
+      id: 'image-main',
+      source: 'ai_generated',
+      slotRef: { kind: 'subtemplate-slot', id: 'image-main' },
+      ai: { prompt: args.parsed.imagePrompt, assetType: 'product' },
+      treatment: 'rounded',
+    }
+  }
+  return null
+}
+
+/** Mapeia T2SlideType pra ParsedSlideSlideType (input do LLM parser). */
+function toParserSlideType(slideType: T2SlideType): ParsedSlideSlideType {
+  switch (slideType) {
+    case 'cover':
+      return 'cover'
+    case 'cta_final':
+      return 'cta_final'
+    case 'imagem_unica':
+      return 'imagem_unica'
+    case 'content_3':
+    case 'content_6':
+      return 'content'
+    case 'comparison':
+      // Comparison não passa pelo LLM parser (input já estruturado via slots).
+      // Caso seja chamado, trata como content (parser não vai usar mesmo).
+      return 'content'
+  }
+}
+
 function parseCoverText(copyTexto: string): { title: string; subtitle: string } {
   // Cover espera title + subtitle separados por \n\n ou primeira linha = título.
   const parts = copyTexto.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean)
@@ -121,8 +184,21 @@ function buildCoverPlan(args: {
   index: number
   input: T2SlideInput
   backgroundId: string
+  parsed?: ParsedSlide
+  modoGeracao?: T2ModoGeracao
 }): SlidePlan {
-  const { title, subtitle } = parseCoverText(args.input.copyTexto)
+  // Quando parsed presente (LLM ou fallback), usa-o; senão heurística antiga.
+  const title = args.parsed?.title || parseCoverText(args.input.copyTexto).title
+  const subtitle = args.parsed?.subtitle ?? parseCoverText(args.input.copyTexto).subtitle
+
+  const imageSlot = args.parsed
+    ? buildImageMainSlot({
+        input: args.input,
+        parsed: args.parsed,
+        modoGeracao: args.modoGeracao ?? 'ia',
+      })
+    : null
+
   return {
     slideId: `slide-${args.index + 1}`,
     slideIndex: args.index,
@@ -138,12 +214,12 @@ function buildCoverPlan(args: {
       },
       {
         id: 'subtitle',
-        content: subtitle,
+        content: subtitle ?? '',
         slotRef: { kind: 'subtemplate-slot', id: 'subtitle' },
         overflowStrategy: 'shrink',
       },
     ],
-    imageSlots: [],
+    imageSlots: imageSlot ? [imageSlot] : [],
     footer: defaultFooter(),
   }
 }
@@ -153,26 +229,40 @@ function buildContentPlan(args: {
   input: T2SlideInput
   backgroundId: string
   subtemplateId: 'content-3-boxes' | 'content-6-boxes'
+  parsed?: ParsedSlide
+  modoGeracao?: T2ModoGeracao
 }): SlidePlan {
-  const bullets = parseBullets(args.input)
-  // Primeira linha pode ser título do slide se vier antes dos bullets em
-  // copyTexto. Heurística simples: se bullets[0] não começa com letra
-  // maiúscula curta, tratá-lo como título.
-  let title = args.input.slots?.title ?? ''
-  let boxes = bullets
-  if (!title && bullets.length > 0 && bullets[0].length < 60) {
-    // Se primeiro item parece título (curto), promove pra título.
-    // Mas só se vier explícito via slots OU se identificarmos padrão.
-    if (args.input.slots?.title) {
-      title = args.input.slots.title
-    } else if (bullets.length > (args.subtemplateId === 'content-6-boxes' ? 4 : 2)) {
-      title = bullets[0]
-      boxes = bullets.slice(1)
+  let title: string
+  let boxes: string[]
+
+  if (args.parsed) {
+    title = args.parsed.title
+    boxes = args.parsed.bullets
+  } else {
+    // Fallback heurístico (compat sem parser)
+    const bullets = parseBullets(args.input)
+    title = args.input.slots?.title ?? ''
+    boxes = bullets
+    if (!title && bullets.length > 0 && bullets[0].length < 60) {
+      if (args.input.slots?.title) {
+        title = args.input.slots.title
+      } else if (bullets.length > (args.subtemplateId === 'content-6-boxes' ? 4 : 2)) {
+        title = bullets[0]
+        boxes = bullets.slice(1)
+      }
     }
   }
 
   const maxBoxes = args.subtemplateId === 'content-6-boxes' ? 6 : 3
   const boxesLimited = boxes.slice(0, maxBoxes)
+
+  const imageSlot = args.parsed
+    ? buildImageMainSlot({
+        input: args.input,
+        parsed: args.parsed,
+        modoGeracao: args.modoGeracao ?? 'ia',
+      })
+    : null
 
   return {
     slideId: `slide-${args.index + 1}`,
@@ -198,7 +288,7 @@ function buildContentPlan(args: {
         overflowStrategy: 'shrink' as const,
       })),
     ],
-    imageSlots: [],
+    imageSlots: imageSlot ? [imageSlot] : [],
     footer: defaultFooter(),
   }
 }
@@ -312,15 +402,31 @@ function buildCtaFinalPlan(args: {
   input: T2SlideInput
   backgroundId: string
   isSingle: boolean
+  parsed?: ParsedSlide
+  modoGeracao?: T2ModoGeracao
 }): SlidePlan {
   const slots = args.input.slots ?? {}
   const lines = args.input.copyTexto.split(/\n+/).map((l) => l.trim()).filter(Boolean)
-  const title = slots.title ?? lines[0] ?? ''
-  const subtitle = slots.subtitle ?? lines.slice(1, 2).join(' ')
+
+  const title = args.parsed?.title || (slots.title ?? lines[0] ?? '')
+  const subtitle =
+    args.parsed?.subtitle ??
+    slots.subtitle ??
+    (lines.slice(1, 2).join(' ') || '')
   // DEC-M2-015: footer embutido no background já carrega @handle. CTA agora
   // é call-to-action de ação (ex: "CONHEÇA NA LOJA"), não duplica @handle.
-  // Texto livre, max 30 chars enforced pelo schema (slots: max 500 → ok).
-  const cta = (slots.cta ?? 'CONHEÇA NA LOJA').slice(0, 30)
+  const ctaFromParser = args.parsed?.cta ?? null
+  const cta = (ctaFromParser ?? slots.cta ?? 'CONHEÇA NA LOJA').slice(0, 30)
+
+  // BUG-M2-004 Fase 6 (conservador): cta-final só ganha image-main se o
+  // parser/usuário pediu explicitamente. Sem default decorativo.
+  const imageSlot = args.parsed
+    ? buildImageMainSlot({
+        input: args.input,
+        parsed: args.parsed,
+        modoGeracao: args.modoGeracao ?? 'ia',
+      })
+    : null
 
   return {
     slideId: args.isSingle ? 'imagem-unica' : `slide-${args.index + 1}`,
@@ -348,7 +454,7 @@ function buildCtaFinalPlan(args: {
         overflowStrategy: 'shrink',
       },
     ],
-    imageSlots: [],
+    imageSlots: imageSlot ? [imageSlot] : [],
     // cta-final tem footer embutido no background — não programático.
     footer: defaultFooter(),
   }
@@ -448,6 +554,154 @@ export function buildSlidePlan(input: T2Input): SlidePlan[] {
   }
 
   return plans
+}
+
+// ─── buildSlidePlanWithParser (Fase 6 — LLM-based) ─────────────────────────
+
+export interface BuildSlidePlanResult {
+  plans: SlidePlan[]
+  /** Log do parser por slide pra auditoria/debug. */
+  parserResults: ParseRoteiroResult[]
+}
+
+/**
+ * Versão async de buildSlidePlan que chama o LLM parser (Claude Haiku 4.5
+ * via fal-ai/any-llm) em paralelo pra cada slide. Substitui parseCoverText/
+ * parseBullets do builder sync por extração semântica estruturada.
+ *
+ * Cria imageSlot 'image-main' quando parsed.imagePrompt presente (modo IA)
+ * ou imageMainUploadUrl presente (modo upload — DEC-M2-014 bypassa LLM e
+ * GPT Image, asset pronto via compose Sharp).
+ *
+ * Slides de tipo 'comparison' NÃO passam pelo parser (input já estruturado
+ * via slots.imagePromptBefore/After/labelBefore/labelAfter/caption).
+ *
+ * Em caso de falha do LLM (timeout/JSON inválido/Zod fail), o parser
+ * retorna via='fallback' com extração regex — geração NUNCA bloqueia.
+ */
+export async function buildSlidePlanWithParser(input: T2Input): Promise<BuildSlidePlanResult> {
+  const ctaBgId = resolveCtaBackgroundId()
+  const modoGeracao = input.modoGeracao ?? 'ia'
+
+  // ─── Imagem única ────────────────────────────────────────────────────────
+  if (input.modo === 'imagem-unica') {
+    if (input.slides.length !== 1) {
+      throw new Error(`[T2] imagem-unica exige exatamente 1 slide, recebeu ${input.slides.length}`)
+    }
+    const parserResult = await parseRoteiroSlide({
+      slideCopy: input.slides[0].copyTexto,
+      slideType: 'imagem_unica',
+      slideIndex: 0,
+      totalSlides: 1,
+    })
+    const plan = buildCtaFinalPlan({
+      index: 0,
+      input: input.slides[0],
+      backgroundId: ctaBgId,
+      isSingle: true,
+      parsed: parserResult.parsed,
+      modoGeracao,
+    })
+    return {
+      plans: [slidePlanSchema.parse(plan)],
+      parserResults: [parserResult],
+    }
+  }
+
+  // ─── Carrossel ───────────────────────────────────────────────────────────
+  const n = input.slides.length
+  if (n < 2) throw new Error(`[T2] carrossel exige ≥2 slides, recebeu ${n}`)
+
+  // Decide slideType + subtemplate por slide ANTES de chamar LLM (heurística
+  // determinística — não depende do parser).
+  const slideMetas = input.slides.map((slide, i) => {
+    const isFirst = i === 0
+    const isLast = i === n - 1
+    const slideType = inferSlideType(slide, isFirst, isLast)
+    const subtemplateId = inferSubtemplate(slide, slideType)
+    return { slide, i, slideType, subtemplateId, isLast }
+  })
+
+  // Resolve backgrounds (compartilha family — invariante I7).
+  const previousBgIds: string[] = []
+  const backgroundIds: string[] = []
+  for (const meta of slideMetas) {
+    if (meta.isLast) {
+      backgroundIds.push(ctaBgId)
+    } else {
+      const bg = chooseBackgroundForCarousel(meta.i, previousBgIds)
+      backgroundIds.push(bg.id)
+      previousBgIds.push(bg.id)
+    }
+  }
+
+  // Dispara LLM em paralelo pra slides que precisam (não-comparison).
+  const parserPromises = slideMetas.map(async (meta): Promise<ParseRoteiroResult | null> => {
+    if (meta.subtemplateId === 'comparison-before-after') {
+      return null // input estruturado, não passa pelo parser
+    }
+    return parseRoteiroSlide({
+      slideCopy: meta.slide.copyTexto,
+      slideType: toParserSlideType(meta.slideType),
+      slideIndex: meta.i,
+      totalSlides: n,
+    })
+  })
+  const parserResultsRaw = await Promise.all(parserPromises)
+
+  const plans: SlidePlan[] = []
+  for (let i = 0; i < slideMetas.length; i++) {
+    const meta = slideMetas[i]
+    const parserResult = parserResultsRaw[i]
+    const parsed = parserResult?.parsed
+    const backgroundId = backgroundIds[i]
+
+    let plan: SlidePlan
+    switch (meta.subtemplateId) {
+      case 'cover':
+        plan = buildCoverPlan({ index: meta.i, input: meta.slide, backgroundId, parsed, modoGeracao })
+        break
+      case 'content-3-boxes':
+      case 'content-6-boxes':
+        plan = buildContentPlan({
+          index: meta.i,
+          input: meta.slide,
+          backgroundId,
+          subtemplateId: meta.subtemplateId,
+          parsed,
+          modoGeracao,
+        })
+        break
+      case 'comparison-before-after':
+        plan = buildComparisonPlan({ index: meta.i, input: meta.slide, backgroundId, modoGeracao })
+        break
+      case 'cta-final':
+        plan = buildCtaFinalPlan({
+          index: meta.i,
+          input: meta.slide,
+          backgroundId,
+          isSingle: false,
+          parsed,
+          modoGeracao,
+        })
+        break
+      default:
+        throw new Error(`[T2] subtemplate "${meta.subtemplateId}" não suportado pelo Planner`)
+    }
+    plans.push(slidePlanSchema.parse(plan))
+  }
+
+  const last = plans[plans.length - 1]
+  if (last.subtemplateId !== 'cta-final') {
+    throw new Error(
+      `[T2] DEC-M2-015 violado: último slide do carrossel deve ser cta-final, foi ${last.subtemplateId}`,
+    )
+  }
+
+  return {
+    plans,
+    parserResults: parserResultsRaw.filter((r): r is ParseRoteiroResult => r !== null),
+  }
 }
 
 // ─── Regerar (DEC-M2-013) ───────────────────────────────────────────────────

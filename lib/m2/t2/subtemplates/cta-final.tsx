@@ -1,18 +1,19 @@
 /**
- * Subtemplate: cta-final (Fase 2)
+ * Subtemplate: cta-final (Fase 6 — imageSlot opcional como badge hero topo)
  *
- * Layout: título grande + subtitle + cta. Footer está EMBUTIDO no background
- * (DEC-M2-015) — não renderiza programaticamente. Texto ocupa a faixa
- * superior (60..1100) deixando ~250px inferiores pro footer do PNG.
+ * Layout principal mantém Fase 2/3 (title 240..660, subtitle 700..920,
+ * cta 960..1080, footer embutido no PNG ocupando últimos 250px).
  *
- * Slots:
- *   - title (topo-meio):    ExtraBold 80-140, maxLines 3, center
- *   - subtitle (meio):      SemiBold 40-56, maxLines 3, center
- *   - cta (logo acima do footer): ExtraBold 32-48, cor cyan brand, maxLines 2
+ * COM imagem (BUG-M2-004 Fase 6, conservador):
+ *   - image-main pequeno (360×160) no topo (y=70..230), treatment 'circle'.
+ *   - title/subtitle/cta inalterados (não competem com hero topo).
+ *   - Planner SÓ cria slot SE LLM devolver imagePrompt explícito pra cta_final.
+ *
+ * BUG-M2-005: alignItems trocado de flex-end pra center; overflow hidden.
  */
 
 import * as React from 'react'
-import type { Rect, TextSlotDef } from '../types'
+import type { ImageSlotDef, Rect, TextSlotDef } from '../types'
 import { renderTextLines } from './_shared'
 import type { SubtemplateModule, SubtemplateRenderArgs } from './types'
 
@@ -22,6 +23,9 @@ const SAFE_WIDTH = 920
 const TITLE_BOX: Rect = { x: SAFE_LEFT, y: 240, w: SAFE_WIDTH, h: 420 }
 const SUBTITLE_BOX: Rect = { x: SAFE_LEFT, y: 700, w: SAFE_WIDTH, h: 220 }
 const CTA_BOX: Rect = { x: SAFE_LEFT, y: 960, w: SAFE_WIDTH, h: 120 }
+
+// Image hero topo (decorativo, opcional)
+const IMAGE_MAIN_BOX: Rect = { x: 360, y: 70, w: 360, h: 160 }
 
 const TITLE_SLOT_DEF: TextSlotDef = {
   id: 'title',
@@ -57,6 +61,13 @@ const CTA_SLOT_DEF: TextSlotDef = {
   color: '#4CDDC3',
 }
 
+const IMAGE_MAIN_DEF: ImageSlotDef = {
+  id: 'image-main',
+  box: IMAGE_MAIN_BOX,
+  acceptsUpload: true,
+  defaultTreatment: 'rounded',
+}
+
 function inferTextColor(args: SubtemplateRenderArgs): string {
   return args.background.contrast === 'light-text' ? '#FFFFFF' : args.background.palette.primary
 }
@@ -88,8 +99,9 @@ function renderTree(args: SubtemplateRenderArgs): React.ReactElement {
             top: TITLE_BOX.y,
             width: TITLE_BOX.w,
             height: TITLE_BOX.h,
-            alignItems: 'flex-end',
+            alignItems: 'center',
             justifyContent: 'center',
+            overflow: 'hidden',
           }}
         >
           {renderTextLines({
@@ -114,6 +126,7 @@ function renderTree(args: SubtemplateRenderArgs): React.ReactElement {
             height: SUBTITLE_BOX.h,
             alignItems: 'center',
             justifyContent: 'center',
+            overflow: 'hidden',
           }}
         >
           {renderTextLines({
@@ -138,6 +151,7 @@ function renderTree(args: SubtemplateRenderArgs): React.ReactElement {
             height: CTA_BOX.h,
             alignItems: 'center',
             justifyContent: 'center',
+            overflow: 'hidden',
           }}
         >
           {renderTextLines({
@@ -158,11 +172,13 @@ export const ctaFinalModule: SubtemplateModule = {
   config: {
     id: 'cta-final',
     textSlots: [TITLE_SLOT_DEF, SUBTITLE_SLOT_DEF, CTA_SLOT_DEF],
-    imageSlots: [],
+    imageSlots: [IMAGE_MAIN_DEF],
     density: 'sparse',
     compatibleBackgrounds: ['*'],
   },
   render: renderTree,
+  // cta-final mantém o mesmo layout de texto com ou sem imagem (image-main fica
+  // como badge decorativo no topo, sem competir com title/subtitle/cta).
 }
 
 export default ctaFinalModule

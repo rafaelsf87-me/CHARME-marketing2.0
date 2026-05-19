@@ -182,12 +182,12 @@ interface ResolvedTextLayout {
 
 function resolveTextLayoutForSlots(
   textSlots: TextSlot[],
-  subtemplateConfig: ReturnType<typeof getSubtemplate>['config'],
+  textSlotDefs: ReturnType<typeof getSubtemplate>['config']['textSlots'],
 ): ResolvedTextLayout {
   const fontSizes = new Map<string, number>()
   const lines = new Map<string, string[]>()
   for (const slot of textSlots) {
-    const def = subtemplateConfig.textSlots.find((d) => d.id === slot.id)
+    const def = textSlotDefs.find((d) => d.id === slot.id)
     if (!def) continue
     const fit = fitTextToBox({
       text: slot.content,
@@ -235,7 +235,12 @@ export async function composeSlide(args: ComposeSlideArgs): Promise<Buffer> {
   // 3. Subtemplate Satori (renderiza placeholders de boxes — as imagens vão
   //    por composite Sharp depois pra fidelidade).
   const subtemplate = getSubtemplate(plan.subtemplateId)
-  const layout = resolveTextLayoutForSlots(plan.textSlots, subtemplate.config)
+  // BUG-M2-004 Fase 6: subtemplate pode resolver textSlotDefs dinamicamente
+  // baseado no plan (ex: cover muda layout quando há image-main no plan).
+  const effectiveTextSlotDefs = subtemplate.resolveTextSlotDefs
+    ? subtemplate.resolveTextSlotDefs(plan)
+    : subtemplate.config.textSlots
+  const layout = resolveTextLayoutForSlots(plan.textSlots, effectiveTextSlotDefs)
   const tree = subtemplate.render({
     background: bgConfig,
     textSlots: plan.textSlots,

@@ -41,12 +41,14 @@ export interface FitTextResult {
 
 // Width factor empírico do Montserrat por weight (conservador — superestima
 // pra evitar overflow no Satori real, que tende a quebrar mais cedo que o
-// cálculo otimista). ExtraBold uppercase em pt-BR ~0.66.
+// cálculo otimista). Bumped +0.04 na Fase 6 (BUG-M2-005) — observou-se
+// estouro em títulos longos pt-BR mesmo com fator anterior. Trade-off:
+// fontSize fica ~5% menor que o "exato", em troca de zero overflow.
 function widthFactorFor(weight: 400 | 500 | 600 | 700 | 800): number {
-  if (weight >= 800) return 0.66
-  if (weight >= 700) return 0.62
-  if (weight >= 600) return 0.58
-  return 0.52
+  if (weight >= 800) return 0.70
+  if (weight >= 700) return 0.66
+  if (weight >= 600) return 0.62
+  return 0.56
 }
 
 function wrapText(text: string, maxWidthPx: number, charWidthPx: number): string[] {

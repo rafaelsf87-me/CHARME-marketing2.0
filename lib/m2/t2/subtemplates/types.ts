@@ -11,8 +11,10 @@
 import type {
   BackgroundConfig,
   ImageSlot,
+  SlidePlan,
   SubtemplateConfig,
   TextSlot,
+  TextSlotDef,
 } from '../types'
 
 export interface SubtemplateRenderArgs {
@@ -39,4 +41,11 @@ export type SubtemplateRenderFn = (args: SubtemplateRenderArgs) => React.ReactEl
 export interface SubtemplateModule {
   config: SubtemplateConfig
   render: SubtemplateRenderFn
+  /**
+   * Opcional. Retorna a lista de TextSlotDef efetiva pra este plan (BUG-M2-004
+   * Fase 6). Permite ao subtemplate trocar boxes/fontSizeMax conforme o plan
+   * (ex: cover com vs sem image-main). Quando ausente, compose.ts usa
+   * `config.textSlots` (comportamento Fase 2/3).
+   */
+  resolveTextSlotDefs?: (plan: SlidePlan) => TextSlotDef[]
 }

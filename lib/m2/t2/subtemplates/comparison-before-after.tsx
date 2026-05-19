@@ -137,8 +137,10 @@ function renderTree(args: SubtemplateRenderArgs): React.ReactElement {
             top: TITLE_BOX.y,
             width: TITLE_BOX.w,
             height: TITLE_BOX.h,
-            alignItems: 'flex-end',
+            // BUG-M2-005: center evita estouro pra cima do canvas
+            alignItems: 'center',
             justifyContent: 'center',
+            overflow: 'hidden',
           }}
         >
           {renderTextLines({
@@ -267,6 +269,7 @@ function renderTree(args: SubtemplateRenderArgs): React.ReactElement {
             height: CAPTION_BOX.h,
             alignItems: 'flex-start',
             justifyContent: 'center',
+            overflow: 'hidden',
           }}
         >
           {renderTextLines({

@@ -1,19 +1,18 @@
 /**
- * Subtemplate: content-6-boxes (Fase 2)
+ * Subtemplate: content-6-boxes (Fase 6 — imageSlot opcional, layout split)
  *
- * Layout: até 6 blocos de texto compactos com setinhas decorativas.
+ * Layout:
+ *   SEM imagem (default Fase 2/3):
+ *     title topo + 6 boxes empilhadas com setinhas → (full-width).
  *
- * Slots:
- *   - title (topo): ExtraBold 56-72, maxLines 2
- *   - box-1..box-6: SemiBold 24-32, maxLines 2 cada
+ *   COM imagem (BUG-M2-004 Fase 6):
+ *     title topo + 6 boxes esquerda (compactas) + image-main direita (420×810).
  *
- * Gap entre boxes: 24px. Cor herda de bg.contrast.
- * Cada box leva uma seta "→" Unicode em texto pra preservar legibilidade
- * em qualquer background.
+ * BUG-M2-005: alignItems trocado de flex-end pra center; overflow hidden.
  */
 
 import * as React from 'react'
-import type { Rect, TextSlotDef } from '../types'
+import type { ImageSlotDef, Rect, SlidePlan, TextSlotDef } from '../types'
 import { renderTextLines } from './_shared'
 import type { SubtemplateModule, SubtemplateRenderArgs } from './types'
 
@@ -21,24 +20,42 @@ const SAFE_LEFT = 80
 const SAFE_WIDTH = 920
 
 const TITLE_BOX: Rect = { x: SAFE_LEFT, y: 130, w: SAFE_WIDTH, h: 200 }
-// Densificado pós-Fase 2: gap menor + altura ligeiramente menor + setinhas
-// maiores ocupam melhor a safe area vertical até a footer zone (1190).
-// 6 boxes × 130 alt + 5 gaps × 18 = 870. Inicia em y=370 → termina y=1240.
-// Como cta-final-bg-01 e starfields têm safe area bottom 180-250, vou
-// começar em 360 e terminar 1230 (ainda dentro da safe area).
+
+// ─── Layout SEM imagem (atual) ─────────────────────────────────────────────
+
 const BOX_HEIGHT = 130
 const BOX_GAP = 18
 const BOXES_START_Y = 360
-const ARROW_W = 70
-const BOX_X = SAFE_LEFT + ARROW_W + 20
-const BOX_W = SAFE_WIDTH - ARROW_W - 20
+const ARROW_W_NO_IMG = 70
+const BOX_X_NO_IMG = SAFE_LEFT + ARROW_W_NO_IMG + 20
+const BOX_W_NO_IMG = SAFE_WIDTH - ARROW_W_NO_IMG - 20
 
-function boxRect(i: number): Rect {
-  return { x: BOX_X, y: BOXES_START_Y + i * (BOX_HEIGHT + BOX_GAP), w: BOX_W, h: BOX_HEIGHT }
+// ─── Layout COM imagem (split: arrow + box esquerda + image direita) ──────
+
+const ARROW_W_WITH_IMG = 50
+const BOX_X_WITH_IMG = SAFE_LEFT + ARROW_W_WITH_IMG + 20
+const BOX_W_WITH_IMG = 400
+const IMG_LEFT_WITH_IMG = 580
+const IMG_TOP_WITH_IMG = 360
+const IMG_WIDTH_WITH_IMG = 420
+const IMG_HEIGHT_WITH_IMG = 810
+
+function boxRect(i: number, withImage: boolean): Rect {
+  return {
+    x: withImage ? BOX_X_WITH_IMG : BOX_X_NO_IMG,
+    y: BOXES_START_Y + i * (BOX_HEIGHT + BOX_GAP),
+    w: withImage ? BOX_W_WITH_IMG : BOX_W_NO_IMG,
+    h: BOX_HEIGHT,
+  }
 }
 
-function arrowRect(i: number): Rect {
-  return { x: SAFE_LEFT, y: BOXES_START_Y + i * (BOX_HEIGHT + BOX_GAP), w: ARROW_W, h: BOX_HEIGHT }
+function arrowRect(i: number, withImage: boolean): Rect {
+  return {
+    x: SAFE_LEFT,
+    y: BOXES_START_Y + i * (BOX_HEIGHT + BOX_GAP),
+    w: withImage ? ARROW_W_WITH_IMG : ARROW_W_NO_IMG,
+    h: BOX_HEIGHT,
+  }
 }
 
 const TITLE_SLOT_DEF: TextSlotDef = {
@@ -52,31 +69,52 @@ const TITLE_SLOT_DEF: TextSlotDef = {
   maxLines: 2,
 }
 
-function boxSlotDef(id: string, box: Rect): TextSlotDef {
+function boxSlotDef(id: string, box: Rect, withImage: boolean): TextSlotDef {
   return {
     id,
     box,
     fontStack: 'body',
     fontWeight: 600,
     fontSizeMin: 24,
-    fontSizeMax: 32,
+    // Sem imagem: 32. Com imagem (box menor): 28 (compacta).
+    fontSizeMax: withImage ? 28 : 32,
     lineHeight: 1.25,
     maxLines: 2,
   }
 }
 
-const BOX_DEFS: TextSlotDef[] = Array.from({ length: 6 }, (_, i) => boxSlotDef(`box-${i + 1}`, boxRect(i)))
+function buildBoxDefs(withImage: boolean): TextSlotDef[] {
+  return Array.from({ length: 6 }, (_, i) =>
+    boxSlotDef(`box-${i + 1}`, boxRect(i, withImage), withImage),
+  )
+}
+
+const BOX_DEFS_NO_IMG = buildBoxDefs(false)
+const BOX_DEFS_WITH_IMG = buildBoxDefs(true)
+
+const IMAGE_MAIN_DEF: ImageSlotDef = {
+  id: 'image-main',
+  box: { x: IMG_LEFT_WITH_IMG, y: IMG_TOP_WITH_IMG, w: IMG_WIDTH_WITH_IMG, h: IMG_HEIGHT_WITH_IMG },
+  acceptsUpload: true,
+  defaultTreatment: 'rounded',
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────
 
 function inferTextColor(args: SubtemplateRenderArgs): string {
   return args.background.contrast === 'light-text' ? '#FFFFFF' : args.background.palette.primary
 }
 
 function inferAccentColor(args: SubtemplateRenderArgs): string {
-  // Accent pra setinha: cyan brand quando texto claro, primary palette quando escuro.
   return args.background.contrast === 'light-text' ? '#4CDDC3' : args.background.palette.primary
 }
 
+function hasImageMainSlot(args: SubtemplateRenderArgs): boolean {
+  return args.imageSlots.some((s) => s.id === 'image-main')
+}
+
 function renderTree(args: SubtemplateRenderArgs): React.ReactElement {
+  const withImage = hasImageMainSlot(args)
   const titleSlot = args.textSlots.find((s) => s.id === 'title')
   const titleFontSize = args.resolvedFontSizes.get('title') ?? TITLE_SLOT_DEF.fontSizeMin
   const titleLines = args.resolvedLines.get('title') ?? (titleSlot ? [titleSlot.content] : [])
@@ -87,8 +125,8 @@ function renderTree(args: SubtemplateRenderArgs): React.ReactElement {
     const boxId = `box-${i + 1}`
     const slot = args.textSlots.find((s) => s.id === boxId)
     if (!slot) return null
-    const box = boxRect(i)
-    const arrow = arrowRect(i)
+    const box = boxRect(i, withImage)
+    const arrow = arrowRect(i, withImage)
     const fontSize = args.resolvedFontSizes.get(boxId) ?? 24
     const lines = args.resolvedLines.get(boxId) ?? [slot.content]
     return (
@@ -110,8 +148,7 @@ function renderTree(args: SubtemplateRenderArgs): React.ReactElement {
               display: 'flex',
               fontFamily: 'Montserrat',
               fontWeight: 800,
-              // Densificado pós-Fase 2: setinha mais pesada (36→56 → 64).
-              fontSize: 64,
+              fontSize: withImage ? 48 : 64,
               color: accentColor,
               lineHeight: 1,
             }}
@@ -129,6 +166,7 @@ function renderTree(args: SubtemplateRenderArgs): React.ReactElement {
             height: box.h,
             alignItems: 'center',
             justifyContent: 'flex-start',
+            overflow: 'hidden',
           }}
         >
           {renderTextLines({
@@ -155,8 +193,9 @@ function renderTree(args: SubtemplateRenderArgs): React.ReactElement {
             top: TITLE_BOX.y,
             width: TITLE_BOX.w,
             height: TITLE_BOX.h,
-            alignItems: 'flex-end',
+            alignItems: 'center',
             justifyContent: 'center',
+            overflow: 'hidden',
           }}
         >
           {renderTextLines({
@@ -174,15 +213,23 @@ function renderTree(args: SubtemplateRenderArgs): React.ReactElement {
   )
 }
 
+function planHasImageMain(plan: SlidePlan): boolean {
+  return plan.imageSlots.some((s) => s.id === 'image-main')
+}
+
 export const content6BoxesModule: SubtemplateModule = {
   config: {
     id: 'content-6-boxes',
-    textSlots: [TITLE_SLOT_DEF, ...BOX_DEFS],
-    imageSlots: [],
+    textSlots: [TITLE_SLOT_DEF, ...BOX_DEFS_NO_IMG],
+    imageSlots: [IMAGE_MAIN_DEF],
     density: 'busy',
     compatibleBackgrounds: ['*'],
   },
   render: renderTree,
+  resolveTextSlotDefs: (plan) =>
+    planHasImageMain(plan)
+      ? [TITLE_SLOT_DEF, ...BOX_DEFS_WITH_IMG]
+      : [TITLE_SLOT_DEF, ...BOX_DEFS_NO_IMG],
 }
 
 export default content6BoxesModule
