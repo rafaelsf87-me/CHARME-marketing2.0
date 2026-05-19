@@ -95,6 +95,29 @@ function inferSubtemplate(
   }
 }
 
+/**
+ * Re-rota pra `image-focus` quando o parser (ou input) sinalizou:
+ *  - bullets vazio (slide é "olhe esta imagem", não lista)
+ *  - imagem presente (imagePrompt OU upload)
+ *  - slideType era content_3/content_6 originalmente
+ *
+ * Chamado APÓS parseRoteiroSlide, em buildSlidePlanWithParser.
+ */
+function maybePromoteToImageFocus(args: {
+  subtemplateId: T2SubtemplateId
+  parsed: ParsedSlide | undefined
+  hasUpload: boolean
+}): T2SubtemplateId {
+  if (args.subtemplateId !== 'content-3-boxes' && args.subtemplateId !== 'content-6-boxes') {
+    return args.subtemplateId
+  }
+  if (!args.parsed) return args.subtemplateId
+  const noBullets = args.parsed.bullets.length === 0
+  const hasImage = !!args.parsed.imagePrompt || args.hasUpload
+  if (noBullets && hasImage) return 'image-focus'
+  return args.subtemplateId
+}
+
 function defaultFooter(): SlidePlanFooter {
   // DEC-M2-015: footer programático aposentado em V1. Marker `enabled=false`
   // pra QC saber que não deve checar FOOTER_MISSING.
@@ -312,6 +335,19 @@ function buildComparisonPlan(args: {
   // usa o uploadedUrl como asset pronto (DEC-M2-014).
   const useUpload = args.modoGeracao === 'upload' && !!args.input.imageMainUploadUrl
 
+  // MEL-M2-004 Fase 6 v3: prefixo de consistência pros 2 prompts before/after.
+  // Como cada chamada gpt-image-1 é stateless, reforçamos no prompt que a
+  // forma física/proporções devem ser idênticas — só muda a condição (sujo/limpo,
+  // usado/novo, antes/depois). Sem image-to-image; abordagem text-only.
+  const COMPARISON_SAME_FORM_PREFIX =
+    'EXACTLY the same product, same physical form, same proportions, same dimensions, same brand. Only condition differs (worn/used/dirty vs new/clean). '
+  const prefixedBefore = slots.imagePromptBefore
+    ? `${COMPARISON_SAME_FORM_PREFIX}${slots.imagePromptBefore}`
+    : undefined
+  const prefixedAfter = slots.imagePromptAfter
+    ? `${COMPARISON_SAME_FORM_PREFIX}${slots.imagePromptAfter}`
+    : undefined
+
   return {
     slideId: `slide-${args.index + 1}`,
     slideIndex: args.index,
@@ -362,12 +398,12 @@ function buildComparisonPlan(args: {
             uploadedUrl: args.input.imageMainUploadUrl!,
             treatment: 'rounded' as const,
           }
-        : slots.imagePromptBefore
+        : prefixedBefore
           ? {
               id: 'image-before',
               source: 'ai_generated' as const,
               slotRef: { kind: 'subtemplate-slot' as const, id: 'image-before' },
-              ai: { prompt: slots.imagePromptBefore, assetType: 'product' as const },
+              ai: { prompt: prefixedBefore, assetType: 'product' as const },
               treatment: 'rounded' as const,
             }
           : {
@@ -377,12 +413,12 @@ function buildComparisonPlan(args: {
               staticPath: '/brand/m2/placeholders/neutral-1.png',
               treatment: 'rounded' as const,
             },
-      slots.imagePromptAfter
+      prefixedAfter
         ? {
             id: 'image-after',
             source: 'ai_generated' as const,
             slotRef: { kind: 'subtemplate-slot' as const, id: 'image-after' },
-            ai: { prompt: slots.imagePromptAfter, assetType: 'product' as const },
+            ai: { prompt: prefixedAfter, assetType: 'product' as const },
             treatment: 'rounded' as const,
           }
         : {
@@ -393,6 +429,55 @@ function buildComparisonPlan(args: {
             treatment: 'rounded' as const,
           },
     ],
+    footer: defaultFooter(),
+  }
+}
+
+function buildImageFocusPlan(args: {
+  index: number
+  input: T2SlideInput
+  backgroundId: string
+  parsed?: ParsedSlide
+  modoGeracao?: T2ModoGeracao
+}): SlidePlan {
+  const title = args.parsed?.title || args.input.copyTexto.split(/\n+/)[0] || ''
+  const subtitle = args.parsed?.subtitle ?? null
+
+  const imageSlot = args.parsed
+    ? buildImageMainSlot({
+        input: args.input,
+        parsed: args.parsed,
+        modoGeracao: args.modoGeracao ?? 'ia',
+      })
+    : null
+
+  return {
+    slideId: `slide-${args.index + 1}`,
+    slideIndex: args.index,
+    // image-focus herda do tipo content_3 (mesmo contexto semântico do slide,
+    // só muda o layout). Mantém validação Zod do slideType.
+    slideType: 'content_3',
+    backgroundId: args.backgroundId,
+    subtemplateId: 'image-focus',
+    textSlots: [
+      {
+        id: 'title',
+        content: title,
+        slotRef: { kind: 'subtemplate-slot', id: 'title' },
+        overflowStrategy: 'shrink',
+      },
+      ...(subtitle
+        ? [
+            {
+              id: 'subtitle',
+              content: subtitle,
+              slotRef: { kind: 'subtemplate-slot' as const, id: 'subtitle' },
+              overflowStrategy: 'shrink' as const,
+            },
+          ]
+        : []),
+    ],
+    imageSlots: imageSlot ? [imageSlot] : [],
     footer: defaultFooter(),
   }
 }
@@ -657,8 +742,16 @@ export async function buildSlidePlanWithParser(input: T2Input): Promise<BuildSli
     const parsed = parserResult?.parsed
     const backgroundId = backgroundIds[i]
 
+    // Fase 6 v3 (BUG-M2-006): pós-parser, promover content_3/content_6 pra
+    // image-focus quando bullets vazio + imagem presente.
+    const effectiveSubtemplate = maybePromoteToImageFocus({
+      subtemplateId: meta.subtemplateId,
+      parsed,
+      hasUpload: !!meta.slide.imageMainUploadUrl,
+    })
+
     let plan: SlidePlan
-    switch (meta.subtemplateId) {
+    switch (effectiveSubtemplate) {
       case 'cover':
         plan = buildCoverPlan({ index: meta.i, input: meta.slide, backgroundId, parsed, modoGeracao })
         break
@@ -668,7 +761,7 @@ export async function buildSlidePlanWithParser(input: T2Input): Promise<BuildSli
           index: meta.i,
           input: meta.slide,
           backgroundId,
-          subtemplateId: meta.subtemplateId,
+          subtemplateId: effectiveSubtemplate,
           parsed,
           modoGeracao,
         })
@@ -686,8 +779,17 @@ export async function buildSlidePlanWithParser(input: T2Input): Promise<BuildSli
           modoGeracao,
         })
         break
+      case 'image-focus':
+        plan = buildImageFocusPlan({
+          index: meta.i,
+          input: meta.slide,
+          backgroundId,
+          parsed,
+          modoGeracao,
+        })
+        break
       default:
-        throw new Error(`[T2] subtemplate "${meta.subtemplateId}" não suportado pelo Planner`)
+        throw new Error(`[T2] subtemplate "${effectiveSubtemplate}" não suportado pelo Planner`)
     }
     plans.push(slidePlanSchema.parse(plan))
   }

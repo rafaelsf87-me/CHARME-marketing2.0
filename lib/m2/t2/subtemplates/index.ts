@@ -12,6 +12,7 @@ import { content3BoxesModule } from './content-3-boxes'
 import { content6BoxesModule } from './content-6-boxes'
 import { comparisonBeforeAfterModule } from './comparison-before-after'
 import { ctaFinalModule } from './cta-final'
+import { imageFocusModule } from './image-focus'
 
 export const T2_SUBTEMPLATES: Record<T2SubtemplateId, SubtemplateModule> = {
   cover: coverModule,
@@ -19,6 +20,7 @@ export const T2_SUBTEMPLATES: Record<T2SubtemplateId, SubtemplateModule> = {
   'content-6-boxes': content6BoxesModule,
   'comparison-before-after': comparisonBeforeAfterModule,
   'cta-final': ctaFinalModule,
+  'image-focus': imageFocusModule,
 }
 
 export function getSubtemplate(id: T2SubtemplateId): SubtemplateModule {

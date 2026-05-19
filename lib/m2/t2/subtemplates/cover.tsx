@@ -49,19 +49,23 @@ const SUBTITLE_SLOT_NO_IMG: TextSlotDef = {
 
 // ─── Layouts COM imagem (Fase 6 BUG-M2-004) ────────────────────────────────
 
-const TITLE_BOX_WITH_IMG: Rect = { x: 80, y: 60, w: 920, h: 200 }
-const SUBTITLE_BOX_WITH_IMG: Rect = { x: 80, y: 280, w: 920, h: 140 }
-const IMAGE_BOX_WITH_IMG: Rect = { x: 240, y: 460, w: 600, h: 680 }
+// Fase 6 v3 (MEL-M2-009): coords ajustadas pra suportar titles longos (98+ chars).
+// Antes: title h=200, image 600×680. Title de 98 chars caía pra fontSize ~60
+// e ficava desproporcional. Agora: title h=280 (até 3 linhas em 64-72px),
+// image 500×560 menor mas ainda hero, subtitle h=160 (3 linhas).
+const TITLE_BOX_WITH_IMG: Rect = { x: 80, y: 60, w: 920, h: 280 }
+const SUBTITLE_BOX_WITH_IMG: Rect = { x: 80, y: 360, w: 920, h: 160 }
+const IMAGE_BOX_WITH_IMG: Rect = { x: 290, y: 560, w: 500, h: 560 }
 
 const TITLE_SLOT_WITH_IMG: TextSlotDef = {
   id: 'title',
   box: TITLE_BOX_WITH_IMG,
   fontStack: 'display',
   fontWeight: 800,
-  fontSizeMin: 48,
-  fontSizeMax: 96, // teto menor que sem-img (cabe em h=200)
+  fontSizeMin: 44,
+  fontSizeMax: 88, // teto pra titles longos (3 linhas × 88 × 1.05 = 277 ≤ 280)
   lineHeight: 1.05,
-  maxLines: 2,
+  maxLines: 3,
 }
 
 const SUBTITLE_SLOT_WITH_IMG: TextSlotDef = {
@@ -72,7 +76,7 @@ const SUBTITLE_SLOT_WITH_IMG: TextSlotDef = {
   fontSizeMin: 24,
   fontSizeMax: 40,
   lineHeight: 1.25,
-  maxLines: 2,
+  maxLines: 3,
 }
 
 const IMAGE_MAIN_DEF: ImageSlotDef = {

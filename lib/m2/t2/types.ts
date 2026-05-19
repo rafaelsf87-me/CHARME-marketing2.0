@@ -19,6 +19,10 @@ export const T2_SUBTEMPLATE_IDS = [
   'content-6-boxes',
   'cta-final',
   'comparison-before-after',
+  // Fase 6 v3 (BUG-M2-006): layout image-hero central pra slides tipo
+  // "olhe esta imagem" sem bullets. Roteado pelo Planner quando
+  // parsed.bullets vazio E imagePrompt/upload presente.
+  'image-focus',
 ] as const
 export type T2SubtemplateId = (typeof T2_SUBTEMPLATE_IDS)[number]
 

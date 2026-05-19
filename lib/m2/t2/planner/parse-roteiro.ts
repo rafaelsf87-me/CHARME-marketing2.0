@@ -92,6 +92,19 @@ REGRAS POR TIPO DE SLIDE
 - cta_final: title é a frase de fechamento, subtitle complementa, cta é a ação. imagePrompt NULL por default; só preencha se o roteiro pede imagem decorativa explícita.
 - imagem_unica: similar a cta_final.
 
+REGRA — SEPARAÇÃO TITLE/SUBTITLE EM CONTEÚDO NUMERADO
+- Se o texto começa com padrão "N. Nome do item." (numeração + nome curto + ponto) seguido de descrição:
+  - title = "N. Nome do item" (CURTO — max 40 chars, foco na numeração + nome)
+  - subtitle = descrição completa (todo o texto após o primeiro ponto)
+- Exemplo: input "3. Escorredor de louça. Ele vive molhado e pode acumular limo, resíduos e manchas sem você perceber."
+  → title: "3. Escorredor de louça"
+  → subtitle: "Ele vive molhado e pode acumular limo, resíduos e manchas sem você perceber."
+- Outro exemplo: input "1. Botões do fogão. Eles acumulam gordura, poeira e resíduos das mãos o tempo todo."
+  → title: "1. Botões do fogão"
+  → subtitle: "Eles acumulam gordura, poeira e resíduos das mãos o tempo todo."
+- Se o texto NÃO tem numeração inicial, title é a primeira frase curta natural (até o primeiro ponto ou interrogação) e subtitle é o resto.
+- NUNCA deixe title com mais de 40 chars quando houver opção de quebrar pelo ponto.
+
 EXEMPLO (cover):
 INPUT:
 """
