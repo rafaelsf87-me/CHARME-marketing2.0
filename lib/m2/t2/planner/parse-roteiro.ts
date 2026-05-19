@@ -33,6 +33,12 @@ export const parsedSlideSchema = z.object({
   // desnecessário. Bumped pra 220 (cobre frases naturais); o auto-shrink
   // do text-renderer encaixa visualmente.
   cta: z.string().max(220).nullable().default(null),
+  // V1.1.1 (BUG-M2-010): LLM pode hintar comparison quando detecta
+  // antes/depois no roteiro. Planner usa esse hint pra rotear pro
+  // subtemplate comparison-before-after.
+  subtemplateHint: z.enum(['comparison-before-after']).nullable().default(null),
+  imagePromptBefore: z.string().max(600).nullable().default(null),
+  imagePromptAfter: z.string().max(600).nullable().default(null),
 })
 
 export type ParsedSlide = z.infer<typeof parsedSlideSchema>
@@ -76,6 +82,37 @@ CAMPOS DE SAÍDA
 - bullets: array de strings. Itens objetivos (max 8, max 200 chars cada). [] se não houver lista.
 - imagePrompt: string | null. Descrição EM INGLÊS do PRODUTO/OBJETO isolado, pra IA gerar. Null se o slide é só texto.
 - cta: string | null. Call-to-action, max 60 chars. Só preencha se slideType="cta_final" E o roteiro pede CTA explicitamente; caso contrário null.
+- subtemplateHint: "comparison-before-after" | null. Sinalize SOMENTE se detectar comparison (regra abaixo). Default null.
+- imagePromptBefore: string | null. PRESENTE APENAS se subtemplateHint="comparison-before-after". EM INGLÊS. Descrição do estado "antes/ruim/errado/velho".
+- imagePromptAfter: string | null. PRESENTE APENAS se subtemplateHint="comparison-before-after". EM INGLÊS. Descrição do estado "depois/bom/certo/novo".
+
+REGRA — DETECTAR COMPARISON (BUG-M2-010 V1.1.1)
+Se o roteiro do slide menciona qualquer um destes pares:
+- "antes/depois", "errado/certo", "ruim/bom", "com/sem"
+- OU tem 2 descrições de imagem ("Descrição da imagem antes" + "Descrição da imagem depois", ou "Imagem 1/2", etc)
+- OU descreve duas versões/estados do mesmo objeto
+
+ENTÃO retorne:
+- subtemplateHint = "comparison-before-after"
+- imagePromptBefore = primeira descrição (antes/errado/ruim/velho) traduzida pra inglês
+- imagePromptAfter = segunda descrição (depois/certo/bom/novo) traduzida pra inglês
+- imagePrompt = null (não usar — comparison usa os dois prompts dedicados)
+
+EXEMPLO comparison:
+INPUT:
+"""
+Texto: Cobertor pesado vs leve em camadas
+Apoio: a diferença real
+Descrição da imagem antes: heavy single thick blanket on bed
+Descrição da imagem depois: bed with three light layered blankets stacked
+"""
+OUTPUT:
+{"title":"Cobertor pesado vs leve em camadas","subtitle":"a diferença real","bullets":[],"imagePrompt":null,"cta":null,"subtemplateHint":"comparison-before-after","imagePromptBefore":"heavy single thick blanket spread on bed, dense fabric, dark color","imagePromptAfter":"bed with three light layered blankets stacked, soft fabric, bright tones"}
+
+REGRA — cta_final SEMPRE TEM IMAGEM (BUG-M2-009 V1.1.1)
+- cta_final agora SEMPRE preenche imagePrompt (carrossel viral requer imagem em 100% dos slides).
+- Se o roteiro não descreveu imagem explicitamente pro cta_final, INFIRA a imagem a partir do contexto/tema do carrossel.
+- imagePrompt deve descrever PRODUTO/OBJETO em inglês, conciso (até ~30 palavras), conforme as REGRAS DO imagePrompt abaixo.
 
 REGRAS DO imagePrompt (CRÍTICAS — Pipeline Híbrido invariante DEC-M2-014)
 - Descreva APENAS o produto/objeto/sujeito principal e suas características intrínsecas (tipo, cor, formato, material, condição).
@@ -87,9 +124,9 @@ REGRAS DO imagePrompt (CRÍTICAS — Pipeline Híbrido invariante DEC-M2-014)
 - Exemplo ruim: "three cleaning products arranged on countertop" (menciona surface — proibido)
 
 REGRAS POR TIPO DE SLIDE
-- cover: título forte + subtitle opcional. bullets vazio. imagePrompt ENCORAJADO se houver "Descrição da imagem".
-- content: título curto + bullets (3-6 itens). imagePrompt ENCORAJADO se houver "Descrição da imagem".
-- cta_final: title é a frase de fechamento, subtitle complementa, cta é a ação. imagePrompt NULL por default; só preencha se o roteiro pede imagem decorativa explícita.
+- cover: título forte + subtitle opcional. bullets vazio. imagePrompt OBRIGATÓRIO em V1.1.1 (carrossel viral requer imagem em 100% dos slides — se o roteiro não descreveu, INFIRA do tema).
+- content: título curto + bullets (3-6 itens). imagePrompt OBRIGATÓRIO em V1.1.1 (mesmo motivo).
+- cta_final: title é a frase de fechamento, subtitle complementa, cta é a ação. imagePrompt OBRIGATÓRIO em V1.1.1 (BUG-M2-009 — se o roteiro não descreveu, INFIRA do tema).
 - imagem_unica: similar a cta_final.
 
 REGRA — SEPARAÇÃO TITLE/SUBTITLE EM CONTEÚDO NUMERADO
@@ -273,6 +310,10 @@ export function parseFallback(opts: ParseRoteiroOpts): ParsedSlide {
       // Fallback NÃO traduz pra inglês — preserva PT-BR cru. Melhor que nada.
       imagePrompt: imagePromptFromLabel,
       cta,
+      // V1.1.1: fallback regex não detecta comparison nem before/after.
+      subtemplateHint: null,
+      imagePromptBefore: null,
+      imagePromptAfter: null,
     }
   }
 
@@ -290,6 +331,9 @@ export function parseFallback(opts: ParseRoteiroOpts): ParsedSlide {
     bullets,
     imagePrompt: imagePromptFromLabel,
     cta: null,
+    subtemplateHint: null,
+    imagePromptBefore: null,
+    imagePromptAfter: null,
   }
 }
 

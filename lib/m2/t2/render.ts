@@ -29,7 +29,7 @@ import { put } from '@vercel/blob'
 import { composeSlide } from './compose'
 import { validateSlide } from './qc'
 import { buildSlidePlanWithParser, applyAjusteToPlan as _applyAjuste } from './planner'
-import { generateProductAsset } from './assets/product'
+import { generateProductAsset, generateProductPair } from './assets/product'
 import { generateSceneAsset } from './assets/scene'
 import {
   addAsset,
@@ -86,9 +86,62 @@ async function resolveAssetsForPlan(
 ): Promise<ResolvedImageBuffers> {
   const byId = new Map<string, Buffer>()
 
+  // FIX 6 V1.1.1 (MEL-M2-004): comparison-before-after gera par via img2img
+  // pra preservar forma física idêntica. Detecta se o plan tem AMBOS slots
+  // image-before + image-after marcados como ai_generated — se sim, usa
+  // generateProductPair (sequencial: after via text → before via edit-image
+  // com after como reference). Caso contrário, geração independente.
+  const beforeSlot = plan.imageSlots.find((s) => s.id === 'image-before' && s.source === 'ai_generated')
+  const afterSlot = plan.imageSlots.find((s) => s.id === 'image-after' && s.source === 'ai_generated')
+  if (beforeSlot && afterSlot && beforeSlot.ai && afterSlot.ai) {
+    const beforeHash = crypto.createHash('sha256').update(beforeSlot.ai.prompt).digest('hex').slice(0, 8)
+    const afterHash = crypto.createHash('sha256').update(afterSlot.ai.prompt).digest('hex').slice(0, 8)
+    const beforeKey = beforeSlot.packKey ?? `slot-image-before-${beforeHash}`
+    const afterKey = afterSlot.packKey ?? `slot-image-after-${afterHash}`
+
+    const beforeCached = findAsset(pack, beforeKey)
+    const afterCached = findAsset(pack, afterKey)
+    if (beforeCached && afterCached) {
+      byId.set('image-before', beforeCached.buffer)
+      byId.set('image-after', afterCached.buffer)
+      console.log(`[T2/render] cache HIT comparison pair (before+after)`)
+    } else {
+      const pair = await generateProductPair({
+        promptAfter: afterSlot.ai.prompt,
+        promptBefore: beforeSlot.ai.prompt,
+      })
+      // Upload assets (URLs persistidas pra /regerar) e registra no pack.
+      const afterUrl = await uploadFn(
+        pair.after.buffer,
+        `m2-t2/assets/${pack.packHash}-${afterKey}-${Date.now()}.png`,
+      ).catch(() => '')
+      const beforeUrl = await uploadFn(
+        pair.before.buffer,
+        `m2-t2/assets/${pack.packHash}-${beforeKey}-${Date.now()}.png`,
+      ).catch(() => '')
+      addAsset(pack, {
+        packKey: afterKey,
+        entry: { url: afterUrl, promptHash: pair.after.promptHash, assetType: 'product', transparent: true },
+        buffer: pair.after.buffer,
+        costUsd: pair.after.costUsd,
+      })
+      addAsset(pack, {
+        packKey: beforeKey,
+        entry: { url: beforeUrl, promptHash: pair.before.promptHash, assetType: 'product', transparent: true },
+        buffer: pair.before.buffer,
+        costUsd: pair.before.costUsd,
+      })
+      byId.set('image-after', pair.after.buffer)
+      byId.set('image-before', pair.before.buffer)
+    }
+    // Demais slots (uploaded/static) seguem fluxo normal abaixo.
+  }
+
   // Paraleliza geração dentro do mesmo plan (slot a slot quando independentes).
   await Promise.all(
     plan.imageSlots.map(async (slot) => {
+      // Pula slots já resolvidos pelo par comparison.
+      if (byId.has(slot.id)) return
       switch (slot.source) {
         case 'reused-from-pack': {
           if (!slot.packKey) throw new Error(`[T2/render] slot ${slot.id} reused-from-pack sem packKey`)
@@ -194,14 +247,15 @@ async function renderOneSlideWithRetry(args: {
   pack: CarouselAssetPackRuntime
   uploadFn: NonNullable<RenderM2T2Opts['uploadFn']>
   attempt?: number
+  overlaySeedKey?: string
 }): Promise<SlideRenderResult> {
-  const { plan, pack, uploadFn, attempt = 1 } = args
+  const { plan, pack, uploadFn, attempt = 1, overlaySeedKey } = args
 
   // Resolve assets do plan
   const resolved = await resolveAssetsForPlan(plan, pack, uploadFn)
 
   // Compose
-  const buffer = await composeSlide({ plan, imageBuffers: resolved.byId })
+  const buffer = await composeSlide({ plan, imageBuffers: resolved.byId, overlaySeedKey })
 
   // QC
   const qc = await validateSlide({ buffer, plan })
@@ -221,7 +275,7 @@ async function renderOneSlideWithRetry(args: {
           pack.buffers.delete(packKey)
         }
       }
-      return renderOneSlideWithRetry({ plan, pack, uploadFn, attempt: 2 })
+      return renderOneSlideWithRetry({ plan, pack, uploadFn, attempt: 2, overlaySeedKey })
     }
   }
 
@@ -248,12 +302,15 @@ export async function renderM2T2(input: T2Input, opts?: RenderM2T2Opts): Promise
 
   const pack = newPack(parsed.contextoGeral ?? `t2-${Date.now()}`)
   const uploadFn = opts?.uploadFn ?? defaultUpload
+  // V1.1.1 (MEL-M2-017): overlaySeedKey compartilhado entre slides do mesmo
+  // carrossel pra continuidade visual (mesmo set de overlays distribuído).
+  const overlaySeedKey = parsed.contextoGeral ?? `t2-${Date.now()}`
 
   // Sequencial pra preservar ordem de log + permitir cache pack entre slides.
   // (Slides do mesmo carrossel que reusam 'product-main' ganham do cache.)
   const results: SlideRenderResult[] = []
   for (const plan of plans) {
-    const r = await renderOneSlideWithRetry({ plan, pack, uploadFn })
+    const r = await renderOneSlideWithRetry({ plan, pack, uploadFn, overlaySeedKey })
     results.push(r)
   }
 

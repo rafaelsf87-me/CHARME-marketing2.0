@@ -118,9 +118,35 @@ function maybePromoteToImageFocus(args: {
   return args.subtemplateId
 }
 
+/**
+ * V1.1.1 (BUG-M2-010): Promove content_3/content_6 pra comparison-before-after
+ * quando o LLM detecta antes/depois no roteiro.
+ *
+ * Tem PRIORIDADE sobre maybePromoteToImageFocus — chamado antes na pipeline.
+ */
+function maybePromoteToComparison(args: {
+  subtemplateId: T2SubtemplateId
+  parsed: ParsedSlide | undefined
+}): T2SubtemplateId {
+  if (args.subtemplateId !== 'content-3-boxes' && args.subtemplateId !== 'content-6-boxes') {
+    return args.subtemplateId
+  }
+  if (!args.parsed?.subtemplateHint) return args.subtemplateId
+  if (args.parsed.subtemplateHint === 'comparison-before-after') {
+    return 'comparison-before-after'
+  }
+  return args.subtemplateId
+}
+
 function defaultFooter(): SlidePlanFooter {
-  // DEC-M2-015: footer programático aposentado em V1. Marker `enabled=false`
-  // pra QC saber que não deve checar FOOTER_MISSING.
+  // V1.1.1 (MEL-M2-015): footer programático em TODOS os subtemplates EXCETO
+  // cta-final (que tem footer embutido no background PNG, ver ctaFinalFooter()).
+  return { enabled: true, logo: 'casinha', position: 'bottom-center' }
+}
+
+function ctaFinalFooter(): SlidePlanFooter {
+  // cta-final: footer embutido no PNG do background (DEC-M2-015 invariante).
+  // enabled=false evita renderização duplicada do footer programático.
   return { enabled: false, logo: 'casinha', position: 'bottom-center' }
 }
 
@@ -321,32 +347,35 @@ function buildComparisonPlan(args: {
   input: T2SlideInput
   backgroundId: string
   modoGeracao: 'ia' | 'upload'
+  parsed?: ParsedSlide
 }): SlidePlan {
   const slots = args.input.slots ?? {}
   const labelBefore = slots.labelBefore ?? 'ANTES'
   const labelAfter = slots.labelAfter ?? 'DEPOIS'
   const caption = slots.caption ?? ''
 
-  // Title: primeira linha do copyTexto OU slots.title
+  // V1.1.1 (BUG-M2-010): title vem de parsed.title se o LLM detectou comparison,
+  // caso contrário do slots.title ou primeira linha (caminho legado).
   const lines = args.input.copyTexto.split(/\n+/).map((l) => l.trim()).filter(Boolean)
-  const title = slots.title ?? lines[0] ?? ''
+  const title = args.parsed?.title || slots.title || lines[0] || ''
 
   // Em modo IA, ignora upload (volta pra prompt/static-asset). Em modo upload,
   // usa o uploadedUrl como asset pronto (DEC-M2-014).
   const useUpload = args.modoGeracao === 'upload' && !!args.input.imageMainUploadUrl
 
-  // MEL-M2-004 Fase 6 v3: prefixo de consistência pros 2 prompts before/after.
-  // Como cada chamada gpt-image-1 é stateless, reforçamos no prompt que a
-  // forma física/proporções devem ser idênticas — só muda a condição (sujo/limpo,
-  // usado/novo, antes/depois). Sem image-to-image; abordagem text-only.
+  // V1.1.1 (BUG-M2-010): imagePrompts before/after vêm de slots OU de parsed
+  // (quando LLM hintou comparison). Slots têm prioridade (input estruturado
+  // explícito do user).
+  const rawBefore = slots.imagePromptBefore ?? args.parsed?.imagePromptBefore ?? undefined
+  const rawAfter = slots.imagePromptAfter ?? args.parsed?.imagePromptAfter ?? undefined
+
+  // FIX 6 (MEL-M2-004 V1.1.1): prefix mantido pra fallback text-only quando
+  // img2img não rola (ex: provider error). Pipeline real usa edit-image
+  // sequencial em assets/product.ts (img2img c/ reference forma idêntica).
   const COMPARISON_SAME_FORM_PREFIX =
     'EXACTLY the same product, same physical form, same proportions, same dimensions, same brand. Only condition differs (worn/used/dirty vs new/clean). '
-  const prefixedBefore = slots.imagePromptBefore
-    ? `${COMPARISON_SAME_FORM_PREFIX}${slots.imagePromptBefore}`
-    : undefined
-  const prefixedAfter = slots.imagePromptAfter
-    ? `${COMPARISON_SAME_FORM_PREFIX}${slots.imagePromptAfter}`
-    : undefined
+  const prefixedBefore = rawBefore ? `${COMPARISON_SAME_FORM_PREFIX}${rawBefore}` : undefined
+  const prefixedAfter = rawAfter ? `${COMPARISON_SAME_FORM_PREFIX}${rawAfter}` : undefined
 
   return {
     slideId: `slide-${args.index + 1}`,
@@ -541,8 +570,9 @@ function buildCtaFinalPlan(args: {
       },
     ],
     imageSlots: imageSlot ? [imageSlot] : [],
-    // cta-final tem footer embutido no background — não programático.
-    footer: defaultFooter(),
+    // cta-final tem footer embutido no background PNG — usa ctaFinalFooter
+    // que marca enabled=false pra evitar renderização duplicada.
+    footer: ctaFinalFooter(),
   }
 }
 
@@ -721,10 +751,13 @@ export async function buildSlidePlanWithParser(input: T2Input): Promise<BuildSli
     }
   }
 
-  // Dispara LLM em paralelo pra slides que precisam (não-comparison).
+  // Dispara LLM em paralelo pra TODOS os slides (V1.1.1: comparison-hint pode
+  // emergir do LLM, então até slides classificados como content precisam passar).
   const parserPromises = slideMetas.map(async (meta): Promise<ParseRoteiroResult | null> => {
+    // Slides já marcados como comparison pelo input estruturado (slots.labelBefore
+    // etc) ainda pulam o parser — input do user já tem os campos.
     if (meta.subtemplateId === 'comparison-before-after') {
-      return null // input estruturado, não passa pelo parser
+      return null
     }
     return parseRoteiroSlide({
       slideCopy: meta.slide.copyTexto,
@@ -742,10 +775,15 @@ export async function buildSlidePlanWithParser(input: T2Input): Promise<BuildSli
     const parsed = parserResult?.parsed
     const backgroundId = backgroundIds[i]
 
-    // Fase 6 v3 (BUG-M2-006): pós-parser, promover content_3/content_6 pra
-    // image-focus quando bullets vazio + imagem presente.
-    const effectiveSubtemplate = maybePromoteToImageFocus({
+    // V1.1.1 (BUG-M2-010): comparison-hint do LLM tem prioridade sobre image-focus.
+    // Promove primeiro pra comparison se hint presente, depois pra image-focus
+    // se bullets vazio + imagem.
+    const promotedToComparison = maybePromoteToComparison({
       subtemplateId: meta.subtemplateId,
+      parsed,
+    })
+    const effectiveSubtemplate = maybePromoteToImageFocus({
+      subtemplateId: promotedToComparison,
       parsed,
       hasUpload: !!meta.slide.imageMainUploadUrl,
     })
@@ -767,7 +805,7 @@ export async function buildSlidePlanWithParser(input: T2Input): Promise<BuildSli
         })
         break
       case 'comparison-before-after':
-        plan = buildComparisonPlan({ index: meta.i, input: meta.slide, backgroundId, modoGeracao })
+        plan = buildComparisonPlan({ index: meta.i, input: meta.slide, backgroundId, modoGeracao, parsed })
         break
       case 'cta-final':
         plan = buildCtaFinalPlan({

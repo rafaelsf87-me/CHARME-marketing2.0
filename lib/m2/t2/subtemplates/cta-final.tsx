@@ -1,15 +1,19 @@
 /**
- * Subtemplate: cta-final (Fase 6 — imageSlot opcional como badge hero topo)
+ * Subtemplate: cta-final (V1.1.1 — image hero ao centro, BUG-M2-009)
  *
- * Layout principal mantém Fase 2/3 (title 240..660, subtitle 700..920,
- * cta 960..1080, footer embutido no PNG ocupando últimos 250px).
+ * MUDANÇA DE INVARIANTE V1.1.1 (DEC-M2-015 atualizada):
+ *   ANTES: "cta_final default sem imagem (foco no CTA)"
+ *   DEPOIS: "cta_final SEMPRE tem imagem (carrossel viral requer imagem
+ *           em 100% dos slides)"
  *
- * COM imagem (BUG-M2-004 Fase 6, conservador):
- *   - image-main pequeno (360×160) no topo (y=70..230), treatment 'circle'.
- *   - title/subtitle/cta inalterados (não competem com hero topo).
- *   - Planner SÓ cria slot SE LLM devolver imagePrompt explícito pra cta_final.
+ * Layout V1.1.1:
+ *   y=80,   h=200          → TITLE     (compacto, max 2 linhas, 80-110px)
+ *   y=320,  h=400, x=240   → IMAGE     (hero centro, 600×400, treatment 'rounded')
+ *   y=760,  h=140          → SUBTITLE  (1-2 linhas, 38-50px)
+ *   y=920,  h=120          → CTA       (1 linha, 36-48px, cyan)
+ *   y=1100..1350           → FOOTER    (embutido no PNG atual)
  *
- * BUG-M2-005: alignItems trocado de flex-end pra center; overflow hidden.
+ * BUG-M2-005: alignItems center; overflow hidden.
  */
 
 import * as React from 'react'
@@ -20,22 +24,20 @@ import type { SubtemplateModule, SubtemplateRenderArgs } from './types'
 const SAFE_LEFT = 80
 const SAFE_WIDTH = 920
 
-const TITLE_BOX: Rect = { x: SAFE_LEFT, y: 240, w: SAFE_WIDTH, h: 420 }
-const SUBTITLE_BOX: Rect = { x: SAFE_LEFT, y: 700, w: SAFE_WIDTH, h: 220 }
-const CTA_BOX: Rect = { x: SAFE_LEFT, y: 960, w: SAFE_WIDTH, h: 120 }
-
-// Image hero topo (decorativo, opcional)
-const IMAGE_MAIN_BOX: Rect = { x: 360, y: 70, w: 360, h: 160 }
+const TITLE_BOX: Rect = { x: SAFE_LEFT, y: 80, w: SAFE_WIDTH, h: 200 }
+const IMAGE_MAIN_BOX: Rect = { x: 240, y: 320, w: 600, h: 400 }
+const SUBTITLE_BOX: Rect = { x: SAFE_LEFT, y: 760, w: SAFE_WIDTH, h: 140 }
+const CTA_BOX: Rect = { x: SAFE_LEFT, y: 920, w: SAFE_WIDTH, h: 120 }
 
 const TITLE_SLOT_DEF: TextSlotDef = {
   id: 'title',
   box: TITLE_BOX,
   fontStack: 'display',
   fontWeight: 800,
-  fontSizeMin: 80,
-  fontSizeMax: 140,
+  fontSizeMin: 60,
+  fontSizeMax: 110,
   lineHeight: 1.05,
-  maxLines: 3,
+  maxLines: 2,
 }
 
 const SUBTITLE_SLOT_DEF: TextSlotDef = {
@@ -43,10 +45,10 @@ const SUBTITLE_SLOT_DEF: TextSlotDef = {
   box: SUBTITLE_BOX,
   fontStack: 'body',
   fontWeight: 600,
-  fontSizeMin: 40,
-  fontSizeMax: 56,
+  fontSizeMin: 38,
+  fontSizeMax: 50,
   lineHeight: 1.2,
-  maxLines: 3,
+  maxLines: 2,
 }
 
 const CTA_SLOT_DEF: TextSlotDef = {

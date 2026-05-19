@@ -14,7 +14,13 @@
  */
 
 import crypto from 'node:crypto'
-import { callGptImage1Product, callRembg, detectsAlphaPresent } from '../fal-client'
+import {
+  callGptImage1Product,
+  callGptImage1Edit,
+  callRembg,
+  detectsAlphaPresent,
+  uploadToFalStorage,
+} from '../fal-client'
 
 // Sufixo obrigatório (Fase 6 v2, fix CRÍTICO 19/05/2026): força produto
 // isolado em fundo transparente. Background é responsabilidade do compose
@@ -61,4 +67,71 @@ export async function generateProductAsset(args: GenerateProductArgs): Promise<G
   }
 
   return { buffer, promptHash, costUsd }
+}
+
+// ─── FIX 6 V1.1.1 (MEL-M2-004): par before/after com forma idêntica ──────────
+
+export interface GenerateProductPairArgs {
+  /** Prompt do estado "depois/bom/novo" — gerado primeiro via text-to-image. */
+  promptAfter: string
+  /** Prompt do estado "antes/ruim/velho" — gerado via edit-image com after como ref. */
+  promptBefore: string
+}
+
+export interface GenerateProductPairResult {
+  after: GenerateProductResult
+  before: GenerateProductResult
+  /** Custo total do par (em USD). */
+  totalCostUsd: number
+}
+
+/**
+ * Gera par before/after com forma física IDÊNTICA via img2img.
+ *
+ * Workflow (MEL-M2-004 V1.1.1):
+ *   1. Gera AFTER (estado limpo/novo) via gpt-image-1/text-to-image
+ *   2. Upload do buffer pro fal.storage → URL pública
+ *   3. Gera BEFORE via gpt-image-1/edit-image com:
+ *      - image_urls = [URL do after]
+ *      - input_fidelity = 'high' (forte preservação de forma)
+ *      - prompt focado em "same product, only condition differs"
+ *
+ * Custo: ~$0.50/par (2× gpt-image-1 high). Tempo: ~60s sequencial.
+ */
+export async function generateProductPair(args: GenerateProductPairArgs): Promise<GenerateProductPairResult> {
+  // 1) AFTER via text-to-image (mesma pipeline do generateProductAsset).
+  console.log(`[T2/product/pair] gerando AFTER via text-to-image`)
+  const afterResult = await generateProductAsset({ prompt: args.promptAfter })
+
+  // 2) Upload do AFTER pro fal.storage pra obter URL pública.
+  console.log(`[T2/product/pair] uploading AFTER pro fal.storage`)
+  const afterUrl = await uploadToFalStorage(afterResult.buffer)
+
+  // 3) BEFORE via edit-image com after como reference.
+  const beforePromptCore = args.promptBefore.trim()
+  const beforeFullPrompt = `EXACTLY the same product as the reference image: identical dimensions, identical shape, identical proportions, identical material, identical brand. Same physical form. Only the surface condition differs. Show this product in the following state: ${beforePromptCore}. isolated subject on transparent background, no scene, no environment, no surface, no text, no logo, no watermark, studio-quality lighting, realistic Brazilian commercial product photography.`
+  const beforePromptHash = hashPrompt(beforeFullPrompt)
+  console.log(`[T2/product/pair] gerando BEFORE via edit-image (fidelity=high) · hash=${beforePromptHash}`)
+
+  let beforeBuffer = await callGptImage1Edit({
+    prompt: beforeFullPrompt,
+    referenceUrl: afterUrl,
+    inputFidelity: 'high',
+    background: 'transparent',
+    imageSize: '1024x1024',
+  })
+  let beforeCost = 0.25
+
+  const hasAlpha = await detectsAlphaPresent(beforeBuffer)
+  if (!hasAlpha) {
+    console.log(`[T2/product/pair] BEFORE alpha ausente — aplicando rembg (+$0.005)`)
+    beforeBuffer = await callRembg(beforeBuffer)
+    beforeCost += 0.005
+  }
+
+  return {
+    after: afterResult,
+    before: { buffer: beforeBuffer, promptHash: beforePromptHash, costUsd: beforeCost },
+    totalCostUsd: afterResult.costUsd + beforeCost,
+  }
 }

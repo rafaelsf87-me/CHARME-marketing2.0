@@ -22,6 +22,7 @@ type FalImageRef = { url?: string }
 type FalOutput = { images?: FalImageRef[] }
 
 const GPT_IMAGE_1_TEXT_ENDPOINT = 'fal-ai/gpt-image-1/text-to-image'
+const GPT_IMAGE_1_EDIT_ENDPOINT = 'fal-ai/gpt-image-1/edit-image'
 const REMBG_ENDPOINT = 'fal-ai/imageutils/rembg'
 
 export interface CallGptImage1ProductArgs {
@@ -60,6 +61,69 @@ export async function callGptImage1Product(args: CallGptImage1ProductArgs): Prom
   const resp = await fetch(url)
   if (!resp.ok) throw new Error(`[T2] Falha ao baixar asset do FAL (${resp.status})`)
   return Buffer.from(await resp.arrayBuffer())
+}
+
+export interface CallGptImage1EditArgs {
+  prompt: string
+  /** URL pública (Vercel Blob ou fal.storage) da imagem de referência. */
+  referenceUrl: string
+  /** Fidelidade à referência. 'high' = preserva forma fortemente; 'low' =
+   *  apenas inspira. Default 'high' pra forma idêntica em comparison
+   *  before/after (MEL-M2-004 V1.1.1). */
+  inputFidelity?: 'low' | 'high'
+  /** Default '1024x1024'. */
+  imageSize?: '1024x1024' | '1536x1024' | '1024x1536'
+  /** Default 'transparent'. */
+  background?: 'transparent' | 'auto' | 'opaque'
+}
+
+/**
+ * Edita imagem via gpt-image-1 edit-image. Aceita reference URL +
+ * input_fidelity (0-100). Usado em comparison before/after (FIX 6 V1.1.1)
+ * pra preservar forma física idêntica entre os 2 estados.
+ */
+export async function callGptImage1Edit(args: CallGptImage1EditArgs): Promise<Buffer> {
+  const {
+    prompt,
+    referenceUrl,
+    inputFidelity = 'high',
+    imageSize = '1024x1024',
+    background = 'transparent',
+  } = args
+
+  const { data } = await fal.subscribe(GPT_IMAGE_1_EDIT_ENDPOINT, {
+    input: {
+      prompt,
+      image_urls: [referenceUrl],
+      input_fidelity: inputFidelity,
+      image_size: imageSize,
+      quality: 'high',
+      output_format: 'png',
+      background,
+      num_images: 1,
+    },
+    logs: false,
+  })
+
+  const output = data as FalOutput
+  const url = output.images?.[0]?.url
+  if (!url) throw new Error(`[T2] FAL ${GPT_IMAGE_1_EDIT_ENDPOINT} não retornou URL de imagem`)
+
+  console.log(`[T2] ${GPT_IMAGE_1_EDIT_ENDPOINT} OK (fidelity=${inputFidelity}) → ${url}`)
+
+  const resp = await fetch(url)
+  if (!resp.ok) throw new Error(`[T2] Falha ao baixar asset do FAL edit (${resp.status})`)
+  return Buffer.from(await resp.arrayBuffer())
+}
+
+/** Upload buffer pro fal.storage e retorna URL pública (uso interno do edit-image). */
+export async function uploadToFalStorage(buffer: Buffer, contentType = 'image/png'): Promise<string> {
+  const arrayBuffer = buffer.buffer.slice(
+    buffer.byteOffset,
+    buffer.byteOffset + buffer.byteLength,
+  ) as ArrayBuffer
+  const blob = new Blob([arrayBuffer], { type: contentType })
+  return fal.storage.upload(blob)
 }
 
 /**

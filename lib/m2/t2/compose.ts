@@ -30,6 +30,7 @@ import { getBackground } from './backgrounds/catalog'
 import { getSubtemplate } from './subtemplates'
 import { renderFooter } from './footer'
 import { fitTextToBox } from './text-renderer'
+import { pickOverlaysForSlide, loadOverlayBuffer } from './overlays'
 import { T2_CANVAS_HEIGHT, T2_CANVAS_WIDTH } from './types'
 import type { ImageSlot, SlidePlan, TextSlot } from './types'
 
@@ -219,6 +220,10 @@ export interface ComposeSlideArgs {
    *  buffers (ex: IA Fase 3) que têm precedência. Se vazio, compose
    *  resolve via uploadedUrl / staticPath / pack key. */
   imageBuffers?: Map<string, Buffer>
+  /** V1.1.1 (MEL-M2-017): chave de seed pros overlays determinísticos.
+   *  Default = plan.slideId. Render M2 T2 injeta contextoGeral pra que
+   *  carrosséis inteiros compartilhem o mesmo set de overlays. */
+  overlaySeedKey?: string
 }
 
 export async function composeSlide(args: ComposeSlideArgs): Promise<Buffer> {
@@ -228,6 +233,21 @@ export async function composeSlide(args: ComposeSlideArgs): Promise<Buffer> {
   // 1. Background
   const bgConfig = getBackground(plan.backgroundId)
   const bgBuffer = await loadBackgroundBuffer(bgConfig.file)
+
+  // 1b. Overlays decorativos brand (V1.1.1 MEL-M2-017) — sobre BG, sob satori.
+  // cta-final tem footer + design embutido no PNG, pulamos overlays pra não
+  // poluir o layout final.
+  const overlayComposites: sharp.OverlayOptions[] = []
+  if (plan.subtemplateId !== 'cta-final') {
+    const placements = pickOverlaysForSlide({
+      seedKey: args.overlaySeedKey ?? plan.slideId,
+      slideIndex: plan.slideIndex,
+    })
+    for (const p of placements) {
+      const buf = await loadOverlayBuffer(p)
+      overlayComposites.push({ input: buf, top: p.top, left: p.left })
+    }
+  }
 
   // 2. ImageSlots resolvidos (uploads, static, pack — DEC-M2-014)
   const imageBuffers = await resolveImageBuffers(plan, override)
@@ -251,8 +271,9 @@ export async function composeSlide(args: ComposeSlideArgs): Promise<Buffer> {
   })
   const subtemplateBuffer = await renderSatoriOverlay(tree)
 
-  // 4. Composites
+  // 4. Composites — ordem: overlays brand → satori (texto/boxes) → imageSlots → footer
   const composites: sharp.OverlayOptions[] = []
+  composites.push(...overlayComposites)
   composites.push({ input: subtemplateBuffer, top: 0, left: 0 })
 
   // 4a. Image slots (Sharp composite por cima do Satori overlay)
