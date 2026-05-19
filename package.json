@@ -13,8 +13,6 @@
     "db:migrate": "drizzle-kit migrate",
     "seed:admin": "tsx --env-file=.env.local scripts/seed-admin.ts",
     "m1:generate-masks": "tsx --env-file=.env.local scripts/generate-m1-masks.ts",
-    "m2:smoke-imagem-unica": "tsx --env-file=.env.local scripts/smoke-m2-imagem-unica.ts",
-    "m2:smoke-carrossel": "tsx --env-file=.env.local scripts/smoke-m2-carrossel.ts",
     "m2:gen-gradient": "tsx scripts/generate-gradient-base.ts"
   },
   "dependencies": {
