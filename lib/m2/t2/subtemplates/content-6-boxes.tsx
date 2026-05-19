@@ -22,9 +22,13 @@ const SAFE_WIDTH = 920
 const TITLE_BOX: Rect = { x: SAFE_LEFT, y: 130, w: SAFE_WIDTH, h: 200 }
 
 // ─── Layout SEM imagem (atual) ─────────────────────────────────────────────
+//
+// Fase 6 v2 (19/05/2026): step vertical comprimido (148→112) pra eliminar
+// "vazio entre bullets" reportado no smoke Fase 6. Continua dentro da safe
+// area (y final 1032 < bottom 1170).
 
-const BOX_HEIGHT = 130
-const BOX_GAP = 18
+const BOX_HEIGHT = 100
+const BOX_GAP = 12
 const BOXES_START_Y = 360
 const ARROW_W_NO_IMG = 70
 const BOX_X_NO_IMG = SAFE_LEFT + ARROW_W_NO_IMG + 20

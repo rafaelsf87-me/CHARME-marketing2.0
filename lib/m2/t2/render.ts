@@ -24,6 +24,7 @@
  *   - Warnings: entregam com badge no payload
  */
 
+import crypto from 'node:crypto'
 import { put } from '@vercel/blob'
 import { composeSlide } from './compose'
 import { validateSlide } from './qc'
@@ -102,8 +103,17 @@ async function resolveAssetsForPlan(
         }
         case 'ai_generated': {
           if (!slot.ai) throw new Error(`[T2/render] slot ${slot.id} ai_generated sem ai.prompt`)
-          // Se já temos um asset com o mesmo prompt no pack, reusa direto.
-          const packKey = slot.packKey ?? `slot-${slot.id}`
+          // Fase 6 v2 fix: packKey precisa incluir hash do prompt — slot.id
+          // sozinho colide entre slides do mesmo carrossel quando todos usam
+          // o mesmo id 'image-main' (BUG-M2-004 introduziu). Hash do prompt
+          // permite reuso real quando 2 slides pedem EXATAMENTE o mesmo
+          // produto e re-geração quando os prompts diferem.
+          const promptKey = crypto
+            .createHash('sha256')
+            .update(slot.ai.prompt)
+            .digest('hex')
+            .slice(0, 8)
+          const packKey = slot.packKey ?? `slot-${slot.id}-${promptKey}`
           const existing = findAsset(pack, packKey)
           if (existing) {
             byId.set(slot.id, existing.buffer)

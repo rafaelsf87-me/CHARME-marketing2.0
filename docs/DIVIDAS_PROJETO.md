@@ -57,6 +57,42 @@
 
 ## 🔧 Melhorias Pendentes
 
+### [MEL-M2-011] Cover com cena (vs produto isolado) sai com fundo residual visível
+- **Onde:** `lib/m2/t2/assets/product.ts` + `lib/m2/t2/planner/parse-roteiro.ts`
+- **Sintoma:** smoke Fase 6 v2 (19/05/2026) slide 1 — user pediu "Cozinha bonita com 3 áreas destacadas" como descrição da imagem. gpt-image-1 entregou cena de cozinha em fundo branco claro. rembg cortou mas deixou halos cinzas em volta dos elementos (bancada, escorredor). O sufixo `"no scene, no marble, no counter"` funcionou bem pra produto isolado (slides 2-3 saíram perfeitos) mas é violado quando o input pede cena composta.
+- **Conflito de invariantes:** DEC-M2-014 + Pipeline Híbrido dizem "background é responsabilidade do compose Sharp" → IA gera só produto isolado. MAS users pedem cenas (cover tipo "olhe esses 3 problemas na cozinha"). Tensão direta.
+- **Possíveis fix V2:**
+  - (a) Detectar no parser quando `imagePrompt` descreve cena (múltiplos objetos + ambiente) e marcar `assetType: 'scene'` (usar `generateSceneAsset` que tem prompt diferente).
+  - (b) Pipeline de 2 passos pra cover-cena: 1ª call gera cena com fundo, 2ª call usa fal-ai/evf-sam pra segmentar só os elementos destacados, descarta fundo.
+  - (c) Aceitar cena com halo residual em cover (compromisso documentado) e proibir explicitamente cena em content-* (que viraram excelentes em smoke v2).
+- **Bloqueia:** nada agora (cover com halo continua funcional, só esteticamente abaixo do ideal).
+- **Esforço estimado:** médio-alto.
+- **Identificado em:** smoke Fase 6 v2, 19/05/2026.
+
+### [MEL-M2-010] Title overflow truncando início em cta_final com texto longo
+- **Onde:** `lib/m2/t2/subtemplates/cta-final.tsx` + `lib/m2/t2/text-renderer.ts` (caso `strategy='shrink'` com `overflow=true`).
+- **Sintoma:** smoke Fase 6 v2 slide 4 — title input `"3. Escorredor de louça. Ele vive molhado e pode acumular limo, resíduos e manchas sem você perceber."` (108 chars). text-renderer entregou 5-6 linhas no fontSizeMin (80px), `overflow=true`. Container Satori com `alignItems: 'center'` + `overflow: 'hidden'` cortou as linhas de cima visualmente → render começa em "LOUÇA. ELE VIVE MOLHADO..." (perdeu "3. ESCORREDOR DE").
+- **Causa raiz:** `fitTextToBox` em modo 'shrink' retorna TODAS as lines quando não cabem (não trunca), confiando no overflow:hidden do container. Container centraliza verticalmente → topo cortado.
+- **Fix V2 proposto:**
+  - (a) text-renderer: em strategy='shrink' com overflow=true, aplicar `lines.slice(0, maxLines)` (alinhado com 'truncate-ellipsis' mas sem '…').
+  - (b) cta-final.tsx: trocar `alignItems: 'center'` por `'flex-start'` no title quando overflow detectado (preserva início).
+  - (c) Planner: cap explícito de 80 chars no title de cta_final (quebra o resto pro subtitle).
+- **Bloqueia:** nada (slide ainda transmite mensagem via subtitle + CTA visíveis).
+- **Esforço estimado:** baixo (1h).
+- **Identificado em:** smoke Fase 6 v2, 19/05/2026.
+
+### [MEL-M2-004] Consistência de FORMA/PROPORÇÃO em comparison-before-after
+- **Onde:** `lib/m2/t2/assets/product.ts` + `lib/m2/t2/subtemplates/comparison-before-after.tsx`
+- **Sintoma:** smoke Fase 6 (19/05/2026) mostrou que before/after da mesma "transformação" saem com FORMA FÍSICA e PROPORÇÃO diferentes — uma bucha cúbica alta vs uma achatada retangular, parecendo produtos distintos em vez do mesmo objeto em condições diferentes. Quebra a tese visual de "transformação do mesmo objeto".
+- **Causa raiz:** 2 chamadas independentes ao gpt-image-1 text-to-image (uma por imagePrompt). Modelo não tem memória do primeiro output ao gerar o segundo.
+- **Fix futuro proposto (V2):**
+  - (a) Prompt mais agressivo: `"same product, same physical form, same proportions, same dimensions, only condition differs (used+dirty vs new+clean)"`.
+  - (b) Image-to-image: gerar 1 imagem do produto novo, usar como reference pra gerar versão "envelhecida" (image edit). Fluxo: 1ª call text-to-image do "novo" → 2ª call image-edit com `image_url=novo` + prompt "make this used and dirty, keep exact shape/proportions".
+  - (c) Trocar pra Flux Kontext (image edit) ou Imagen4 com reference image.
+- **Bloqueia:** nada agora (slide comparison funciona, só não tem consistência visual perfeita).
+- **Esforço estimado:** médio (1 dia: testar 2-3 abordagens + smoke comparativo).
+- **Identificado em:** smoke Fase 3, atualizado smoke Fase 6, 19/05/2026.
+
 ### [MEL-M2-009] Validar legibilidade do cover.tsx title com imageSlot
 - **Onde:** `lib/m2/t2/subtemplates/cover.tsx`
 - **Descrição:** layout cover com imageSlot na Fase 6 comprime altura do title de ~420px (sem-img) → 200px (com-img). Smoke Fase 6 (19/05/2026) produziu title legível mas em fontSize médio (~96 max). Em textos mais longos pode ficar desproporcionalmente pequeno. Considerar se aparecer:

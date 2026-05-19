@@ -16,8 +16,13 @@
 import crypto from 'node:crypto'
 import { callGptImage1Product, callRembg, detectsAlphaPresent } from '../fal-client'
 
+// Sufixo obrigatório (Fase 6 v2, fix CRÍTICO 19/05/2026): força produto
+// isolado em fundo transparente. Background é responsabilidade do compose
+// Sharp (DEC-M2-014 + Pipeline Híbrido invariante). gpt-image-1 às vezes
+// ignora `background='transparent'` no param e desenha cenário a partir
+// do prompt; bloqueamos explicitamente menções a scene/surface/marble/etc.
 const PRODUCT_PROMPT_TEMPLATE = (userPrompt: string): string =>
-  `isolated product photograph, ${userPrompt}, plain neutral light gray background, no text, no logo, no watermark, no UI elements, no scene, no shadow on background, studio-quality lighting, realistic Brazilian commercial product photography, common product proportions as sold in Brazil.`
+  `${userPrompt}, isolated subject on transparent background, no scene, no environment, no shadow on background, no surface, no counter, no marble, no table, no kitchen, no room, no wall, no floor, no text, no logo, no watermark, no UI elements, studio-quality lighting, product photography style, plain transparent background, realistic Brazilian commercial product photography, common product proportions as sold in Brazil.`
 
 export interface GenerateProductArgs {
   /** Descrição do produto fornecida pelo user/Planner. */

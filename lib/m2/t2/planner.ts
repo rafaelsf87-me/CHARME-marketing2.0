@@ -414,9 +414,10 @@ function buildCtaFinalPlan(args: {
     slots.subtitle ??
     (lines.slice(1, 2).join(' ') || '')
   // DEC-M2-015: footer embutido no background já carrega @handle. CTA agora
-  // é call-to-action de ação (ex: "CONHEÇA NA LOJA"), não duplica @handle.
+  // é call-to-action de ação (ex: "CONHEÇA NA LOJA" ou frase longa).
+  // Fase 6 v2: slice 30→220 chars (auto-shrink do text-renderer encaixa).
   const ctaFromParser = args.parsed?.cta ?? null
-  const cta = (ctaFromParser ?? slots.cta ?? 'CONHEÇA NA LOJA').slice(0, 30)
+  const cta = (ctaFromParser ?? slots.cta ?? 'CONHEÇA NA LOJA').slice(0, 220)
 
   // BUG-M2-004 Fase 6 (conservador): cta-final só ganha image-main se o
   // parser/usuário pediu explicitamente. Sem default decorativo.

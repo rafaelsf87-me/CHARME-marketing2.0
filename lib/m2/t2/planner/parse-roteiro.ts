@@ -28,7 +28,11 @@ export const parsedSlideSchema = z.object({
   subtitle: z.string().max(280).nullable().default(null),
   bullets: z.array(z.string().max(200)).max(8).default([]),
   imagePrompt: z.string().max(600).nullable().default(null),
-  cta: z.string().max(60).nullable().default(null),
+  // CTA frequentemente vem long-form em PT-BR ("Curtiu? Compartilhe com
+  // uma amiga que ama X"). 60 chars era estreito demais e causava fallback
+  // desnecessário. Bumped pra 220 (cobre frases naturais); o auto-shrink
+  // do text-renderer encaixa visualmente.
+  cta: z.string().max(220).nullable().default(null),
 })
 
 export type ParsedSlide = z.infer<typeof parsedSlideSchema>
@@ -54,6 +58,12 @@ export interface ParseRoteiroResult {
 
 const SYSTEM_PROMPT = `Você é um assistente que extrai estrutura semântica de roteiros de slide de Instagram em PT-BR para um sistema de geração automática de imagens.
 
+REGRA ABSOLUTA — INVENÇÃO PROIBIDA
+- Preserve LITERALMENTE valores, preços, números, nomes, marcas e produtos mencionados no roteiro do usuário.
+- NUNCA invente: preços ("R$10", "promoção", "frete grátis"), quantidades, datas, nomes de produtos, marcas, ofertas, ou qualquer informação que não esteja explícita no input bruto.
+- Se o usuário não mencionou, NÃO existe na sua resposta.
+- Validação interna: antes de retornar, confira que qualquer valor numérico ou preço presente no JSON também aparece no input bruto. Se aparecer algo novo, REMOVA.
+
 REGRAS DE EXTRAÇÃO
 1. IGNORE labels meta no input do usuário: "Texto", "Apoio", "Descrição da imagem", "CTA", "Imagem", "Título", "Subtítulo", "Bullet", "•", "-" (no início de linha).
 2. FOQUE no conteúdo real do roteiro — extraia o que o usuário QUER comunicar, não as etiquetas estruturais.
@@ -64,13 +74,22 @@ CAMPOS DE SAÍDA
 - title: string. Frase principal do slide. Max 200 chars. SEMPRE preenchido.
 - subtitle: string | null. Apoio do título, 1 frase curta, max 280 chars. Null se o slide só tem título.
 - bullets: array de strings. Itens objetivos (max 8, max 200 chars cada). [] se não houver lista.
-- imagePrompt: string | null. Descrição EM INGLÊS do produto/cena pra IA gerar. Null se o slide é só texto.
+- imagePrompt: string | null. Descrição EM INGLÊS do PRODUTO/OBJETO isolado, pra IA gerar. Null se o slide é só texto.
 - cta: string | null. Call-to-action, max 60 chars. Só preencha se slideType="cta_final" E o roteiro pede CTA explicitamente; caso contrário null.
+
+REGRAS DO imagePrompt (CRÍTICAS — Pipeline Híbrido invariante DEC-M2-014)
+- Descreva APENAS o produto/objeto/sujeito principal e suas características intrínsecas (tipo, cor, formato, material, condição).
+- NUNCA mencione cenário ou background. PROIBIDO: "background", "scene", "environment", "marble", "counter", "table", "surface", "kitchen counter", "kitchen", "room", "wall", "floor", "natural lighting", "ambient", "interior".
+- O fundo é responsabilidade do compose Sharp (não do gpt-image-1). Se o input do user mencionar cenário ("sobre bancada de mármore", "na cozinha"), IGNORE o cenário e descreva só o produto.
+- Sempre EM INGLÊS, conciso (até ~30 palavras).
+- Exemplo bom: "yellow rectangular kitchen sponge with green scrubber on top, common Brazilian dish sponge, flat proportions, used and dirty condition"
+- Exemplo ruim: "yellow sponge on white marble counter with natural light" (menciona cenário — proibido)
+- Exemplo ruim: "three cleaning products arranged on countertop" (menciona surface — proibido)
 
 REGRAS POR TIPO DE SLIDE
 - cover: título forte + subtitle opcional. bullets vazio. imagePrompt ENCORAJADO se houver "Descrição da imagem".
 - content: título curto + bullets (3-6 itens). imagePrompt ENCORAJADO se houver "Descrição da imagem".
-- cta_final: title é a frase de fechamento, subtitle complementa, cta é a ação. imagePrompt NULL por default; só preencha se o roteiro pede imagem decorativa.
+- cta_final: title é a frase de fechamento, subtitle complementa, cta é a ação. imagePrompt NULL por default; só preencha se o roteiro pede imagem decorativa explícita.
 - imagem_unica: similar a cta_final.
 
 EXEMPLO (cover):
@@ -81,7 +100,7 @@ Apoio: Sim, qualquer um — testamos com 200 modelos diferentes.
 Descrição da imagem: sofá branco com capa elástica esticada por cima, sala clara
 """
 OUTPUT:
-{"title":"Você sabia que a capa elástica veste qualquer sofá?","subtitle":"Sim, qualquer um — testamos com 200 modelos diferentes.","bullets":[],"imagePrompt":"a white sofa with a fitted stretch cover applied, bright living room interior, soft natural light","cta":null}
+{"title":"Você sabia que a capa elástica veste qualquer sofá?","subtitle":"Sim, qualquer um — testamos com 200 modelos diferentes.","bullets":[],"imagePrompt":"a white modern sofa with a fitted stretch cover applied, clean studio-style product shot of the sofa only","cta":null}
 
 EXEMPLO (content):
 INPUT:
@@ -93,7 +112,7 @@ Bullet: Pano de microfibra
 Descrição da imagem: três itens de limpeza dispostos sobre bancada de mármore branco
 """
 OUTPUT:
-{"title":"3 itens da cozinha que você troca por R$10","subtitle":null,"bullets":["Bucha amarela com esfregão verde","Esponja de aço fina","Pano de microfibra"],"imagePrompt":"three kitchen cleaning items arranged on a white marble countertop, top-down product shot, bright lighting","cta":null}
+{"title":"3 itens da cozinha que você troca por R$10","subtitle":null,"bullets":["Bucha amarela com esfregão verde","Esponja de aço fina","Pano de microfibra"],"imagePrompt":"three Brazilian kitchen cleaning items grouped together: a yellow rectangular sponge with a green scrubber on top, a thin steel wool pad, and a folded microfiber cloth","cta":null}
 
 EXEMPLO (cta_final):
 INPUT:
