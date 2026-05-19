@@ -17,12 +17,14 @@ export function PreviewBanners({ output, onReset }: PreviewBannersProps) {
   const desktopFilename = buildDownloadFilename({
     slide: { kind: 'm3', formato: 'desktop' },
     keyword: output.normalizedKeyword,
+    keywordPreNormalized: true,
     extension: 'webp',
     date: generatedDate,
   })
   const mobileFilename = buildDownloadFilename({
     slide: { kind: 'm3', formato: 'mobile' },
     keyword: output.normalizedKeyword,
+    keywordPreNormalized: true,
     extension: 'webp',
     date: generatedDate,
   })

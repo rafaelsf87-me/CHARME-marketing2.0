@@ -31,6 +31,7 @@ export function PreviewCarrossel({ slots, normalizedKeyword, generatedAt }: Prev
     return buildDownloadFilename({
       slide: { kind: 'm2', variant: `slide${slideIndex + 1}` as `slide${number}` },
       keyword: normalizedKeyword,
+      keywordPreNormalized: true,
       extension: 'png',
       date: generatedDate,
     })

@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { M4RenderSchema } from '@/lib/m4/schema'
 import { renderM4Thumbnail } from '@/lib/m4/render'
-import { slugifyKeyword } from '@/lib/filename'
+import { slugifyKeyword, autoExtractKeyword } from '@/lib/filename'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -23,8 +23,9 @@ export async function POST(req: NextRequest) {
 
   try {
     const result = await renderM4Thumbnail(parsed.data)
-    const fallbackKeyword = parsed.data.keyword ?? parsed.data.line1
-    const normalizedKeyword = slugifyKeyword(fallbackKeyword)
+    const normalizedKeyword = parsed.data.keyword
+      ? slugifyKeyword(parsed.data.keyword)
+      : autoExtractKeyword({ kind: 'm4', line1: parsed.data.line1 })
     const generatedAt = new Date().toISOString()
     return NextResponse.json({
       url: result.url,

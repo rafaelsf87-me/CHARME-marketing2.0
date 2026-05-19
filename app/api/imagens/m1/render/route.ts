@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
-import { M1RenderSchema, m1KeywordFallbackSource } from '@/lib/m1/schema'
+import { M1RenderSchema } from '@/lib/m1/schema'
 import { renderM1 } from '@/lib/m1/render'
-import { slugifyKeyword } from '@/lib/filename'
+import { slugifyKeyword, autoExtractKeyword } from '@/lib/filename'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -31,14 +31,14 @@ export async function POST(req: NextRequest) {
     console.log(
       `[M1] render OK em ${tookMs}ms · ${parsed.data.movel}/${parsed.data.tipoFoto}/${parsed.data.tipoCapa}/set${parsed.data.set}`
     )
-    const fallbackSource =
-      parsed.data.keyword ??
-      m1KeywordFallbackSource({
-        tipoCapa: parsed.data.tipoCapa,
-        corHex: parsed.data.corHex,
-        fotoSofa: parsed.data.fotoSofa,
-      })
-    const normalizedKeyword = slugifyKeyword(fallbackSource)
+    const normalizedKeyword = parsed.data.keyword
+      ? slugifyKeyword(parsed.data.keyword)
+      : autoExtractKeyword({
+          kind: 'm1',
+          tipoCapa: parsed.data.tipoCapa,
+          corHex: parsed.data.corHex,
+          fotoEstampaUrl: parsed.data.fotoSofa,
+        })
     const generatedAt = new Date().toISOString()
     return NextResponse.json({ url, tookMs, normalizedKeyword, generatedAt })
   } catch (err) {

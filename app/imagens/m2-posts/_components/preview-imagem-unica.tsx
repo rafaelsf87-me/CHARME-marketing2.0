@@ -22,6 +22,7 @@ export function PreviewImagemUnica({
   const filename = buildDownloadFilename({
     slide: { kind: 'm2', variant: 'imagem-unica' },
     keyword: normalizedKeyword,
+    keywordPreNormalized: true,
     extension: 'png',
     date: generatedAt ? new Date(generatedAt) : new Date(),
   })

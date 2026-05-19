@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { regerarSlideInputSchema } from '@/lib/m2/t2/schema'
 import { renderSlideRegerar } from '@/lib/m2/t2/render'
-import { slugifyKeyword } from '@/lib/filename'
+import { autoExtractKeyword } from '@/lib/filename'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -45,9 +45,18 @@ export async function POST(req: NextRequest) {
     const { result, pack } = await renderSlideRegerar(parsed.data)
     const tookMs = Date.now() - startedAt
 
-    const normalizedKeyword = slugifyKeyword(
-      body.normalizedKeyword ?? parsed.data.contextoOriginal.contextoGeral ?? '',
-    )
+    // Se o client envia normalizedKeyword (caso comum: persistido da response
+    // anterior do /render), reusa direto sem re-normalizar. Senão, autoExtract
+    // baseado no contextoOriginal pra garantir consistência com /render.
+    const normalizedKeyword =
+      body.normalizedKeyword && body.normalizedKeyword.length > 0
+        ? body.normalizedKeyword
+        : autoExtractKeyword({
+            kind: 'm2',
+            modo: parsed.data.contextoOriginal.modo,
+            contextoGeral: parsed.data.contextoOriginal.contextoGeral,
+            firstSlideCopyTexto: parsed.data.contextoOriginal.slides[0]?.copyTexto,
+          })
 
     console.log(
       `[M2-T2] regerar OK em ${tookMs}ms · slide ${result.slideId} · ajuste="${parsed.data.ajustePrompt.slice(0, 60)}"`,

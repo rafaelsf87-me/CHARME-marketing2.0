@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { M3InputSchema } from '@/lib/m3/schema'
 import { renderM3 } from '@/lib/m3/render'
-import { slugifyKeyword } from '@/lib/filename'
+import { slugifyKeyword, autoExtractKeyword } from '@/lib/filename'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -33,8 +33,12 @@ export async function POST(req: NextRequest) {
       `[M3] render OK em ${tookMs}ms · template=${parsed.data.template} · ` +
         `custo=$${result.custoEstimado}`,
     )
-    const fallbackKeywordSource = parsed.data.keyword ?? parsed.data.textos.nomePromocao
-    const normalizedKeyword = slugifyKeyword(fallbackKeywordSource)
+    const normalizedKeyword = parsed.data.keyword
+      ? slugifyKeyword(parsed.data.keyword)
+      : autoExtractKeyword({
+          kind: 'm3',
+          nomePromocao: parsed.data.textos.nomePromocao,
+        })
     return NextResponse.json({ ...result, normalizedKeyword })
   } catch (err) {
     console.error('[M3] render error:', err)

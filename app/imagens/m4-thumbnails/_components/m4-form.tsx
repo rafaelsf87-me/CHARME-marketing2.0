@@ -7,7 +7,6 @@ import { PreviewArea } from './preview-area'
 import { UploadField } from '@/components/upload-field'
 import { TextFieldWithCounter } from '@/components/text-field-with-counter'
 import { TooltipInfo } from '@/components/tooltip-info'
-import { KeywordField } from '@/components/shared/keyword-field'
 import { brandM4 } from '@/lib/brand/m4.brand'
 import {
   M4RenderSchema,
@@ -28,7 +27,6 @@ export function M4Form() {
   const [line3, setLine3] = React.useState('')
   const [iconUrl, setIconUrl] = React.useState<string | null>(null)
   const [customization, setCustomization] = React.useState('')
-  const [keyword, setKeyword] = React.useState('')
 
   const [previewState, setPreviewState] = React.useState<PreviewState>('empty')
   const [resultUrl, setResultUrl] = React.useState<string | null>(null)
@@ -67,7 +65,6 @@ export function M4Form() {
       line3: has3 ? line3.trim() : undefined,
       iconUrl: iconUrl ?? undefined,
       customization: customization.trim() || undefined,
-      keyword: keyword.trim() || undefined,
     }
 
     const localCheck = M4RenderSchema.safeParse(payload)
@@ -167,13 +164,6 @@ export function M4Form() {
             className="w-full resize-y rounded-md border border-[color:var(--border-strong)] bg-white px-3 py-2 text-sm outline-none focus:border-[#553679] focus:ring-2 focus:ring-[#553679]/15"
           />
         </div>
-
-      <KeywordField
-        value={keyword}
-        onChange={setKeyword}
-        fallbackHint={line1.trim().split(/\s+/)[0] || 'ex.: novidade, descontao'}
-        disabled={previewState === 'loading'}
-      />
 
       <div className="flex items-center justify-end gap-3">
         {!isValid && (

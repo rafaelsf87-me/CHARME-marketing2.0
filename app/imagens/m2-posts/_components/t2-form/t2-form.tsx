@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button'
 import { TabSwitcher, type M2Tab } from '../tab-switcher'
 import { TooltipInfo } from '@/components/tooltip-info'
 import { Textarea } from '@/components/ui/textarea'
-import { KeywordField } from '@/components/shared/keyword-field'
 import { T2SlideBlock, type T2SlideState } from './t2-slide-block'
 import { T2PreviewCard } from './t2-preview-card'
 import { T2RegerarDialog } from './t2-regerar-dialog'
@@ -56,7 +55,6 @@ function buildT2InputPayload(args: {
   tab: M2Tab
   contextoGeral: string
   slides: T2SlideState[]
-  keyword: string
   modoGeracao: T2ModoGeracao
 }): T2Input {
   const baseSlides: T2SlideInput[] = args.slides.map((s) => ({
@@ -66,13 +64,14 @@ function buildT2InputPayload(args: {
     imageMainPrompt:
       args.modoGeracao === 'ia' && s.imageMainPrompt ? s.imageMainPrompt : undefined,
   }))
+  // Hotfix 19/05/2026: `keyword` removida do UI. API auto-extrai via
+  // `autoExtractKeyword` quando body.keyword é undefined (mantém retro-compat).
   return {
     modo: args.tab === 'imagem-unica' ? 'imagem-unica' : 'carrossel',
     templateId: 'pipeline-hibrido-v2',
     logo: 'casinha',
     contextoGeral: args.contextoGeral || undefined,
     slides: baseSlides,
-    keyword: args.keyword || undefined,
     modoGeracao: args.modoGeracao,
   }
 }
@@ -81,7 +80,6 @@ export function T2Form() {
   const [tab, setTab] = React.useState<M2Tab>('carrossel')
   const [numSlides, setNumSlides] = React.useState(DEFAULT_SLIDES)
   const [contextoGeral, setContextoGeral] = React.useState('')
-  const [keyword, setKeyword] = React.useState('')
   const [modoGeracao, setModoGeracao] = React.useState<T2ModoGeracao>('ia')
   const [slides, setSlides] = React.useState<T2SlideState[]>(() =>
     Array.from({ length: DEFAULT_SLIDES }, newSlideState),
@@ -117,15 +115,9 @@ export function T2Form() {
 
   const totalSlides = slides.length
 
-  function fallbackKeywordHint(): string {
-    if (contextoGeral.trim()) return contextoGeral.split(/\s+/)[0]
-    if (slides[0]?.copyTexto.trim()) return slides[0].copyTexto.split(/\s+/)[0]
-    return 'ex.: bucha, floral'
-  }
-
   function downloadFilenameFor(slideIndex: number): string {
     const generatedAt = response?.generatedAt ? new Date(response.generatedAt) : new Date()
-    const kw = response?.normalizedKeyword ?? keyword
+    const kw = response?.normalizedKeyword ?? null
     const isImagemUnica = tab === 'imagem-unica' && totalSlides === 1
     const variant: `slide${number}` | 'imagem-unica' = isImagemUnica
       ? 'imagem-unica'
@@ -133,6 +125,7 @@ export function T2Form() {
     return buildDownloadFilename({
       slide: { kind: 'm2', variant },
       keyword: kw,
+      keywordPreNormalized: true,
       extension: 'png',
       date: generatedAt,
     })
@@ -144,7 +137,7 @@ export function T2Form() {
     setResponse(null)
     setSlideStates(slides.map(() => ({ state: 'idle' as const })))
     try {
-      const payload = buildT2InputPayload({ tab, contextoGeral, slides, keyword, modoGeracao })
+      const payload = buildT2InputPayload({ tab, contextoGeral, slides, modoGeracao })
       const res = await fetch('/api/imagens/m2/t2/render', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -189,7 +182,7 @@ export function T2Form() {
         ajustePrompt,
         slidePlanOriginal: targetPlan,
         packAssets: response.packAssets,
-        contextoOriginal: buildT2InputPayload({ tab, contextoGeral, slides, keyword, modoGeracao }),
+        contextoOriginal: buildT2InputPayload({ tab, contextoGeral, slides, modoGeracao }),
         normalizedKeyword: response.normalizedKeyword,
       }
       const res = await fetch('/api/imagens/m2/t2/regerar', {
@@ -305,13 +298,6 @@ export function T2Form() {
             )
           })}
         </div>
-
-        <KeywordField
-          value={keyword}
-          onChange={setKeyword}
-          fallbackHint={fallbackKeywordHint()}
-          disabled={generating}
-        />
 
         <div className="flex items-center justify-end gap-3">
           {!isValid && (

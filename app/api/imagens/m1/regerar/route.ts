@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
-import { M1RenderSchema, m1KeywordFallbackSource } from '@/lib/m1/schema'
+import { M1RenderSchema } from '@/lib/m1/schema'
 import { renderM1 } from '@/lib/m1/render'
-import { slugifyKeyword } from '@/lib/filename'
+import { slugifyKeyword, autoExtractKeyword } from '@/lib/filename'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -48,14 +48,14 @@ export async function POST(req: NextRequest) {
     console.log(
       `[M1] regerar OK em ${tookMs}ms · ${inputFinal.movel}/${inputFinal.tipoFoto}/${inputFinal.tipoCapa}/set${inputFinal.set} · ajuste="${ajusteLimpo.slice(0, 60)}"`
     )
-    const fallbackSource =
-      inputFinal.keyword ??
-      m1KeywordFallbackSource({
-        tipoCapa: inputFinal.tipoCapa,
-        corHex: inputFinal.corHex,
-        fotoSofa: inputFinal.fotoSofa,
-      })
-    const normalizedKeyword = slugifyKeyword(fallbackSource)
+    const normalizedKeyword = inputFinal.keyword
+      ? slugifyKeyword(inputFinal.keyword)
+      : autoExtractKeyword({
+          kind: 'm1',
+          tipoCapa: inputFinal.tipoCapa,
+          corHex: inputFinal.corHex,
+          fotoEstampaUrl: inputFinal.fotoSofa,
+        })
     const generatedAt = new Date().toISOString()
     return NextResponse.json({ url, tookMs, normalizedKeyword, generatedAt })
   } catch (err) {

@@ -14,9 +14,7 @@ import { CostConfirmDialog } from './cost-confirm-dialog'
 import { NoRoloWarningDialog } from './no-rolo-warning-dialog'
 import { RegerarDialog } from './regerar-dialog'
 import { ResultsGrid, type ResultSlot } from './results-grid'
-import { KeywordField } from '@/components/shared/keyword-field'
 import type { M1Movel, M1TipoCapa, M1TipoFoto, M1RenderInput } from '@/lib/m1/schema'
-import { m1KeywordFallbackSource } from '@/lib/m1/schema'
 import type { M1Set } from '@/lib/m1/templates'
 
 // Custo por render do Pipeline A (nano-banana-2 @ 2K, single-step).
@@ -35,7 +33,6 @@ export function M1Form() {
   const [fotoRolo, setFotoRolo] = React.useState<string | null>(null)
   const [corHex, setCorHex] = React.useState<string | null>(null)
   const [customization, setCustomization] = React.useState('')
-  const [keyword, setKeyword] = React.useState('')
 
   const [slots, setSlots] = React.useState<ResultSlot[]>([])
   const [generating, setGenerating] = React.useState(false)
@@ -76,7 +73,6 @@ export function M1Form() {
       fotoRolo: isCapaLisa ? undefined : fotoRolo ?? undefined,
       corHex: isCapaLisa ? corHex ?? undefined : undefined,
       customization: customization.trim() || undefined,
-      keyword: keyword.trim() || undefined,
     }
   }
 
@@ -265,13 +261,6 @@ export function M1Form() {
         )}
 
         <StepCustomizacao value={customization} onChange={setCustomization} />
-
-        <KeywordField
-          value={keyword}
-          onChange={setKeyword}
-          fallbackHint={m1KeywordFallbackSource({ tipoCapa, corHex, fotoSofa })}
-          disabled={generating}
-        />
 
         <GenerateButton
           isValid={isValid}

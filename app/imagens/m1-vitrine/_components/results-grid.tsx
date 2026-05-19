@@ -131,6 +131,7 @@ function ResultCard({
             filename={buildDownloadFilename({
               slide: { kind: 'm1', tipoFoto: slot.tipoFoto },
               keyword: slot.status.normalizedKeyword,
+              keywordPreNormalized: true,
               extension: 'webp',
               date: slot.status.generatedAt ? new Date(slot.status.generatedAt) : new Date(),
             })}

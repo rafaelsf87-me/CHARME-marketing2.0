@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth/config'
 import { t2InputSchema } from '@/lib/m2/t2/schema'
 import { buildSlidePlan } from '@/lib/m2/t2/planner'
 import { renderM2T2 } from '@/lib/m2/t2/render'
-import { slugifyKeyword } from '@/lib/filename'
+import { slugifyKeyword, autoExtractKeyword } from '@/lib/filename'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -52,9 +52,14 @@ export async function POST(req: NextRequest) {
       ),
     )
 
-    const fallbackKeywordSource =
-      parsed.data.keyword ?? parsed.data.contextoGeral ?? parsed.data.slides[0]?.copyTexto ?? ''
-    const normalizedKeyword = slugifyKeyword(fallbackKeywordSource)
+    const normalizedKeyword = parsed.data.keyword
+      ? slugifyKeyword(parsed.data.keyword)
+      : autoExtractKeyword({
+          kind: 'm2',
+          modo: parsed.data.modo,
+          contextoGeral: parsed.data.contextoGeral,
+          firstSlideCopyTexto: parsed.data.slides[0]?.copyTexto,
+        })
 
     const payload = {
       urls,

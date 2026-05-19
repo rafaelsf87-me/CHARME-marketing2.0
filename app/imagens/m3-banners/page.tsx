@@ -18,7 +18,6 @@ import { FormAtriz } from './_components/form-atriz'
 import { FormDecoracoes } from './_components/form-decoracoes'
 import { LoadingProgress } from './_components/loading-progress'
 import { PreviewBanners } from './_components/preview-banners'
-import { KeywordField } from '@/components/shared/keyword-field'
 
 type RenderState =
   | { kind: 'idle' }
@@ -46,7 +45,6 @@ const DEFAULT_VALUES: M3Input = {
     modo: 'banco',
     ids: ['coracao-rosa', 'coracao-batendo', 'coracao-decoracao', 'coracao-vermelho'],
   },
-  keyword: undefined,
 }
 
 export default function M3Page() {
@@ -109,15 +107,6 @@ export default function M3Page() {
           <FormCondicoes form={form} disabled={isGenerating} />
           <FormAtriz form={form} disabled={isGenerating} />
           <FormDecoracoes form={form} disabled={isGenerating} />
-
-          <KeywordField
-            value={form.watch('keyword') ?? ''}
-            onChange={(v) => form.setValue('keyword', v || undefined)}
-            fallbackHint={
-              form.watch('textos.nomePromocao')?.trim().split(/\s+/)[0] || 'ex.: descontao'
-            }
-            disabled={isGenerating}
-          />
 
           <div className="flex items-center gap-3">
             <Button

@@ -26,6 +26,7 @@ export function PreviewArea({
   const filename = buildDownloadFilename({
     slide: { kind: 'm4' },
     keyword: normalizedKeyword,
+    keywordPreNormalized: true,
     extension: 'png',
     date: generatedAt ? new Date(generatedAt) : new Date(),
   })
