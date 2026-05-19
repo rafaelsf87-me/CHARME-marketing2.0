@@ -101,11 +101,14 @@ CTA: Compartilhe com uma amiga.`,
     outputFilename: 'smoke-cenario-2-numerado-cta.png',
   },
 
-  // ─── Cenário 3: MEL-M2-009 — cover com title longo + image ────────────────
+  // ─── Cenário 3: MEL-M2-009 + MEL-M2-012 — cover longo + preservação literal ─
+  // Input matches Rafael's original briefing v2 (87-char Apoio).
+  // Valida (a) cover title de 98 chars + image cabe sem cortar (MEL-M2-009),
+  // e (b) preservação LITERAL do Apoio completo no subtitle (MEL-M2-012).
   {
     name: 'cenario-3-cover-longo',
-    fix: 'MEL-M2-009',
-    description: 'cover com title de 98 chars + image — deve caber sem cortar',
+    fix: 'MEL-M2-009 + MEL-M2-012',
+    description: 'cover título 98 chars + Apoio 80 chars — ambos preservados literais',
     input: {
       modo: 'carrossel',
       templateId: 'pipeline-hibrido-v2',
@@ -115,7 +118,7 @@ CTA: Compartilhe com uma amiga.`,
       slides: [
         {
           copyTexto: `Texto: 3 itens da cozinha que você esquece de limpar e que podem te dar problemas
-Apoio: Gordura, mau cheiro, bactérias e sujeira acumulada.
+Apoio: Gordura, mau cheiro, bactérias e sujeira acumulada onde muita gente nem percebe.
 Descrição da imagem: ralo da pia da cozinha com restos de comida visíveis`,
         },
         {
@@ -125,7 +128,7 @@ CTA: COMEÇAR`,
       ],
     },
     targetSlideIndex: 0,
-    outputFilename: 'smoke-cenario-3-cover-longo.png',
+    outputFilename: 'smoke-cenario-3-fix-truncamento.png',
   },
 
   // ─── Cenário 4: MEL-M2-004 — comparison "same form" ───────────────────────
@@ -170,7 +173,15 @@ CTA: COMEÇAR`,
 async function main() {
   const startedAt = Date.now()
   await fs.mkdir(OUT_DIR, { recursive: true })
-  console.log('[smoke-t2-fase6-v3] iniciando 4 cenários…\n')
+
+  // SCENARIO_FILTER=cenario-3 roda só o cenário cujo `name` bate. Default = todos.
+  const filter = process.env.SCENARIO_FILTER?.trim() || null
+  const activeScenarios = filter ? SCENARIOS.filter((s) => s.name === filter) : SCENARIOS
+  if (filter && activeScenarios.length === 0) {
+    console.error(`[smoke-t2-fase6-v3] SCENARIO_FILTER="${filter}" não bateu nenhum cenário`)
+    process.exit(1)
+  }
+  console.log(`[smoke-t2-fase6-v3] iniciando ${activeScenarios.length} cenário(s)${filter ? ` (filter=${filter})` : ''}…\n`)
 
   const reports: Array<{
     scenario: string
@@ -184,7 +195,7 @@ async function main() {
     cost: number
   }> = []
 
-  for (const sc of SCENARIOS) {
+  for (const sc of activeScenarios) {
     console.log(`━ ${sc.name} (${sc.fix})`)
     console.log(`  ${sc.description}`)
     const scStart = Date.now()
@@ -236,7 +247,7 @@ async function main() {
   )
 
   console.log('━ Resultado consolidado:')
-  console.log(`  ${reports.length}/${SCENARIOS.length} cenários processados`)
+  console.log(`  ${reports.length}/${activeScenarios.length} cenários processados`)
   console.log(`  tempo total: ${((Date.now() - startedAt) / 1000).toFixed(1)}s`)
   console.log(`  custo estimado: ~$${totalCost.toFixed(2)}`)
   console.log(`  outputs: ${OUT_DIR}/`)

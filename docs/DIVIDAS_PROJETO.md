@@ -9,6 +9,23 @@
 
 ---
 
+## ✅ Resolvidos / Não-bugs
+
+### [MEL-M2-012] Preservação literal de subtitle — INVESTIGADO, não é bug em prod (19/05/2026)
+- **Hipótese inicial:** smoke Fase 6 v3 cenário 3 mostrou subtitle "Gordura, mau cheiro, bactérias e sujeira acumulada." quando o briefing Rafael falava em "…onde muita gente nem percebe." (sufixo de 29 chars ausente). Suspeita: LLM auto-truncando ou schema cortando.
+- **Diagnóstico (caso c — input discrepancy):**
+  - v2 smoke (input 80-char Apoio) → output subtitle 80 chars preservado literal. PNG renderiza em 3 linhas, completo.
+  - v3 smoke cenário 3 (input 51-char Apoio) → output subtitle 51 chars preservado literal.
+  - O cenário 3 do v3 foi reautorado com input ENCURTADO (perda do sufixo "onde muita gente nem percebe") ao adaptar para stress do MEL-M2-009 (cover longo). Erro de autoria do smoke, não bug de sistema.
+- **Validação após fix:**
+  - Smoke cenário 3 re-rodado com input correto (80-char Apoio): subtitle preservado 100% literal (parser log + PNG `smoke-cenario-3-fix-truncamento.png` confirmam).
+  - Schema atual `subtitle: z.string().max(280)` cobre confortavelmente inputs realistas (3x folga).
+  - Prompt LLM já tem REGRA ABSOLUTA — INVENÇÃO PROIBIDA. Funcionou em ambos os smokes.
+- **Ação tomada:** corrigido input do v3 cenário 3 para usar Apoio completo (matches briefing v2). Sem mudança de código de produção.
+- **Aprendizado:** smokes que mudam input para stress de OUTRO fix devem documentar a mudança no comentário. Ideal: matrix de cenários onde inputs longos/curtos viram dimensões separadas.
+
+---
+
 ## 🐛 Bugs Conhecidos
 
 ### [BUG-M2-001] background-check.ts não detecta fundo sólido preto/branco
