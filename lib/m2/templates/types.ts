@@ -1,4 +1,4 @@
-export type TemplateStatus = 'ativo' | 'em-construcao' | 'a-definir'
+export type TemplateStatus = 'ativo' | 'em-construcao' | 'a-definir' | 'em-breve'
 
 export type TemplatePipeline = 'fal-prompt-puro' | 'hibrido-compositing' | 'a-definir'
 

@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { TooltipInfo } from '@/components/tooltip-info'
 import { UploadField } from '@/components/upload-field'
 import { cn } from '@/lib/utils'
+import type { T2ModoGeracao } from '@/lib/m2/t2/types'
 
 const COPY_MIN = 10
 const COPY_MAX = 2000
@@ -26,6 +27,8 @@ interface T2SlideBlockProps {
   isCover: boolean
   /** Carrossel: último slide é cta-final (cta-final não tem imageSlot). */
   isCtaFinal: boolean
+  /** Modo de geração: 'ia' mostra prompt, 'upload' mostra upload. */
+  modoGeracao: T2ModoGeracao
   disabled?: boolean
 }
 
@@ -36,6 +39,7 @@ export function T2SlideBlock({
   onChange,
   isCover,
   isCtaFinal,
+  modoGeracao,
   disabled,
 }: T2SlideBlockProps) {
   const [expanded, setExpanded] = React.useState(index === 0)
@@ -102,41 +106,41 @@ export function T2SlideBlock({
           />
         </div>
 
-        {showImageSlot && (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-[220px_minmax(0,1fr)]">
-            <div className="flex flex-col gap-1.5">
-              <label className="flex items-center gap-2 text-xs font-medium">
-                Imagem (opcional)
-                <TooltipInfo text="Upload de imagem do produto/cena. Política T2: upload é asset pronto — usado direto, sem IA. Se vazio, IA gera com base no prompt abaixo." />
-              </label>
-              <UploadField
-                label=""
-                hint="PNG/JPG · até 10MB"
-                value={value.imageMainUploadUrl}
-                onChange={(next) => onChange({ ...value, imageMainUploadUrl: next })}
-                disabled={disabled}
-              />
-            </div>
+        {showImageSlot && modoGeracao === 'upload' && (
+          <div className="flex flex-col gap-1.5">
+            <label className="flex items-center gap-2 text-xs font-medium">
+              Upload de imagem (opcional)
+              <TooltipInfo text="Modo Upload: 1 imagem por slide. A imagem é asset pronto — usada direto, sem IA (DEC-M2-014). Visível só em slides intermediários do carrossel." />
+            </label>
+            <UploadField
+              label=""
+              hint="PNG/JPG · até 10MB"
+              value={value.imageMainUploadUrl}
+              onChange={(next) => onChange({ ...value, imageMainUploadUrl: next })}
+              disabled={disabled}
+            />
+          </div>
+        )}
 
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 text-xs font-medium">
-                  Prompt da imagem (opcional, se IA)
-                  <TooltipInfo text="Descrição do produto/cena pra IA gerar (gpt-image-1 high). Se 'Imagem' acima estiver preenchida, este campo é ignorado." />
-                </label>
-                <span className="tabular-nums text-[11px] text-[color:var(--text-tertiary)]">
-                  {value.imageMainPrompt.length}/{PROMPT_MAX}
-                </span>
-              </div>
-              <Textarea
-                value={value.imageMainPrompt}
-                onChange={(e) => onChange({ ...value, imageMainPrompt: e.target.value })}
-                maxLength={PROMPT_MAX}
-                placeholder="Ex.: nova bucha amarela com esfregão verde, fundo neutro"
-                disabled={disabled || !!value.imageMainUploadUrl}
-                className="h-40 resize-none"
-              />
+        {showImageSlot && modoGeracao === 'ia' && (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-xs font-medium">
+                Prompt da imagem (opcional)
+                <TooltipInfo text="Modo IA: descrição do produto/cena pra IA gerar (gpt-image-1 high). Visível só em slides intermediários do carrossel." />
+              </label>
+              <span className="tabular-nums text-[11px] text-[color:var(--text-tertiary)]">
+                {value.imageMainPrompt.length}/{PROMPT_MAX}
+              </span>
             </div>
+            <Textarea
+              value={value.imageMainPrompt}
+              onChange={(e) => onChange({ ...value, imageMainPrompt: e.target.value })}
+              maxLength={PROMPT_MAX}
+              placeholder="Ex.: nova bucha amarela com esfregão verde, fundo neutro"
+              disabled={disabled}
+              className="h-32 resize-none"
+            />
           </div>
         )}
       </div>

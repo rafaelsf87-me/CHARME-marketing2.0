@@ -13,7 +13,9 @@ import type { Template } from '../types'
  */
 export const pipelineHibridoV2: Template = {
   id: 'pipeline-hibrido-v2',
-  nome: 'Pipeline Híbrido v2',
+  // Label visível desde 19/05/2026 (decisão executiva — T2 vira único ativo
+  // e ganha o naming "Template 1"). templateId interno preservado pra rollback.
+  nome: 'Template 1',
   descricao: 'Layout 100% controlado, IA isolada apenas em produtos/cenas.',
   status: 'ativo',
   pipeline: 'hibrido-compositing',

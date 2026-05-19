@@ -11,8 +11,16 @@ import { KeywordField } from '@/components/shared/keyword-field'
 import { T2SlideBlock, type T2SlideState } from './t2-slide-block'
 import { T2PreviewCard } from './t2-preview-card'
 import { T2RegerarDialog } from './t2-regerar-dialog'
+import { T2ModoGeracaoSelector } from './t2-modo-geracao-selector'
 import { buildDownloadFilename } from '@/lib/filename'
-import type { CarouselAssetPack, QCReport, SlidePlan, T2Input, T2SlideInput } from '@/lib/m2/t2/types'
+import type {
+  CarouselAssetPack,
+  QCReport,
+  SlidePlan,
+  T2Input,
+  T2ModoGeracao,
+  T2SlideInput,
+} from '@/lib/m2/t2/types'
 
 interface RenderResponse {
   urls: string[]
@@ -49,11 +57,14 @@ function buildT2InputPayload(args: {
   contextoGeral: string
   slides: T2SlideState[]
   keyword: string
+  modoGeracao: T2ModoGeracao
 }): T2Input {
   const baseSlides: T2SlideInput[] = args.slides.map((s) => ({
     copyTexto: s.copyTexto,
     imageMainUploadUrl: s.imageMainUploadUrl ?? undefined,
-    imageMainPrompt: s.imageMainPrompt || undefined,
+    // Em modo upload o prompt é ignorado pelo Planner; em modo IA segue.
+    imageMainPrompt:
+      args.modoGeracao === 'ia' && s.imageMainPrompt ? s.imageMainPrompt : undefined,
   }))
   return {
     modo: args.tab === 'imagem-unica' ? 'imagem-unica' : 'carrossel',
@@ -62,6 +73,7 @@ function buildT2InputPayload(args: {
     contextoGeral: args.contextoGeral || undefined,
     slides: baseSlides,
     keyword: args.keyword || undefined,
+    modoGeracao: args.modoGeracao,
   }
 }
 
@@ -70,6 +82,7 @@ export function T2Form() {
   const [numSlides, setNumSlides] = React.useState(DEFAULT_SLIDES)
   const [contextoGeral, setContextoGeral] = React.useState('')
   const [keyword, setKeyword] = React.useState('')
+  const [modoGeracao, setModoGeracao] = React.useState<T2ModoGeracao>('ia')
   const [slides, setSlides] = React.useState<T2SlideState[]>(() =>
     Array.from({ length: DEFAULT_SLIDES }, newSlideState),
   )
@@ -131,7 +144,7 @@ export function T2Form() {
     setResponse(null)
     setSlideStates(slides.map(() => ({ state: 'idle' as const })))
     try {
-      const payload = buildT2InputPayload({ tab, contextoGeral, slides, keyword })
+      const payload = buildT2InputPayload({ tab, contextoGeral, slides, keyword, modoGeracao })
       const res = await fetch('/api/imagens/m2/t2/render', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -176,7 +189,7 @@ export function T2Form() {
         ajustePrompt,
         slidePlanOriginal: targetPlan,
         packAssets: response.packAssets,
-        contextoOriginal: buildT2InputPayload({ tab, contextoGeral, slides, keyword }),
+        contextoOriginal: buildT2InputPayload({ tab, contextoGeral, slides, keyword, modoGeracao }),
         normalizedKeyword: response.normalizedKeyword,
       }
       const res = await fetch('/api/imagens/m2/t2/regerar', {
@@ -262,6 +275,12 @@ export function T2Form() {
           />
         </div>
 
+        <T2ModoGeracaoSelector
+          value={modoGeracao}
+          onChange={setModoGeracao}
+          disabled={generating}
+        />
+
         <div className="flex flex-col gap-3">
           {slides.map((s, i) => {
             const isCover = tab === 'carrossel' && i === 0
@@ -280,6 +299,7 @@ export function T2Form() {
                 }}
                 isCover={isCover}
                 isCtaFinal={isCtaFinal}
+                modoGeracao={modoGeracao}
                 disabled={generating}
               />
             )

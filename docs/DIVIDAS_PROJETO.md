@@ -111,6 +111,25 @@ Ideias que surgiram mas estão **fora do escopo atual**. Não implementar agora.
 
 Código que funciona mas precisa ser melhorado antes da próxima feature relacionada.
 
+### [REF-M2-006] Subtemplates content-*/cover/cta-final precisam de slot `image-main`
+- **Onde:** `lib/m2/t2/subtemplates/cover.tsx`, `content-3-boxes.tsx`, `content-6-boxes.tsx`, `cta-final.tsx`, `lib/m2/t2/planner.ts` (`buildCoverPlan`, `buildContentPlan`, `buildCtaFinalPlan`).
+- **Descrição:** o toggle "Modo Upload" foi restaurado no T2 (19/05/2026), mas apenas o subtemplate `comparison-before-after` tem slots image-before/image-after definidos. Em cover, content-3-boxes, content-6-boxes e cta-final o campo `imageMainUploadUrl` (e o `imageMainPrompt` em modo IA) é **silenciosamente ignorado** pelo Planner — nenhum slot é criado e o asset não aparece no slide. UI mostra o campo, schema aceita o input, mas visualmente nada acontece.
+- **Trabalho:** (a) decidir layout do slot image-main em cada subtemplate (provavelmente reservar área inferior 600×480 pra produto isolado). (b) adicionar `ImageSlotDef` com `acceptsUpload: true` no config de cada subtemplate. (c) Planner cria `imageSlots: [{ id: 'image-main', ... }]` quando `imageMainUploadUrl` (modo upload) OU `imageMainPrompt` (modo IA) presentes. (d) compose.ts já lida com source='uploaded' (DEC-M2-014 bypass GPT Image) — não muda nada lá.
+- **Bloqueia:** entrega visual completa do toggle Upload. Hoje funciona só em slides com `slideType='comparison'`.
+- **Esforço estimado:** médio (1 dia: design + 4 subtemplates + Planner + smoke visual).
+- **Identificado em:** Sessão consolidação T2, 19/05/2026.
+
+### [REF-M2-005] Cleanup definitivo do T1 após 30 dias de estabilidade T2
+- **Onde:** `lib/m2/templates/atual-maio26/`, `lib/m2/templates/atual-maio26-new/`, `lib/m2/templates/novo-teste-1/`, `lib/m2/render.ts`, `lib/m2/fal-client.ts`, `lib/m2/background-check.ts`, `lib/m2/post-process.ts`, `lib/m2/templates/atual-maio26/prompt.ts`, `app/api/imagens/m2/generate/`, `app/imagens/m2-posts/_components/form-imagem-unica.tsx`, `form-carrossel.tsx`, `modo-geracao-selector.tsx`, `slide-block.tsx`, `logo-selector.tsx`, `png-upload-list.tsx`, `tab-switcher.tsx`.
+- **Descrição:** T1 (`atual-maio26`) removido do registry em 19/05/2026 (decisão executiva — T2 vira único template ativo). Código preservado **30 dias** como segurança de rollback. Após `2026-06-18` sem necessidade de voltar pro T1, remover definitivamente:
+  - Pastas `lib/m2/templates/atual-maio26/`, `atual-maio26-new/`, `novo-teste-1/`
+  - Pipeline puro IA do T1: `lib/m2/render.ts`, `lib/m2/fal-client.ts`, `lib/m2/background-check.ts`, `lib/m2/post-process.ts`
+  - Route handler `app/api/imagens/m2/generate/route.ts` (manter a pasta `_components/` cujos arquivos não são mais alcançáveis pelo UI, ou apagar tudo junto).
+  - Remover entries `'atual-maio26' | 'atual-maio26-new' | 'novo-teste-1'` de `M2_TEMPLATE_IDS` em `lib/m2/schema.ts`.
+- **Bloqueia:** nada agora — código está fora do path de uso (registry só expõe T2 + placeholder "Em breve").
+- **Esforço estimado:** médio (1 dia: deletar arquivos + ajustar enum + rodar typecheck/build/smoke pra garantir que nada quebrou).
+- **Identificado em:** 19/05/2026, decisão executiva apagar T1.
+
 ### [REF-M2-003] Aposentar footer programático após DEC-M2-015
 - **Onde:** `lib/m2/footer-gen.ts` e `lib/m2/t2/footer.ts`.
 - **Descrição:** [DEC-M2-015] estabelece que footer no T2 é **embutido no background do cta-final**. O footer programático fica como fallback técnico mas não é mais o caminho de produção. Remover (ou marcar como `@deprecated`) após T2 estabilizar em prod.

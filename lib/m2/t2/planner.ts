@@ -207,6 +207,7 @@ function buildComparisonPlan(args: {
   index: number
   input: T2SlideInput
   backgroundId: string
+  modoGeracao: 'ia' | 'upload'
 }): SlidePlan {
   const slots = args.input.slots ?? {}
   const labelBefore = slots.labelBefore ?? 'ANTES'
@@ -216,6 +217,10 @@ function buildComparisonPlan(args: {
   // Title: primeira linha do copyTexto OU slots.title
   const lines = args.input.copyTexto.split(/\n+/).map((l) => l.trim()).filter(Boolean)
   const title = slots.title ?? lines[0] ?? ''
+
+  // Em modo IA, ignora upload (volta pra prompt/static-asset). Em modo upload,
+  // usa o uploadedUrl como asset pronto (DEC-M2-014).
+  const useUpload = args.modoGeracao === 'upload' && !!args.input.imageMainUploadUrl
 
   return {
     slideId: `slide-${args.index + 1}`,
@@ -253,17 +258,18 @@ function buildComparisonPlan(args: {
           ]
         : []),
     ],
-    // imageSlots resolvidos por prioridade:
-    //   1. imageMainUploadUrl (DEC-M2-014: upload é asset pronto) → image-before
-    //   2. slots.imagePromptBefore / slots.imagePromptAfter → ai_generated
-    //   3. fallback: placeholders neutros
+    // imageSlots resolvidos por prioridade (depende de modoGeracao):
+    //   modoGeracao='upload' + imageMainUploadUrl → uploaded (image-before)
+    //   modoGeracao='ia' OU sem upload:
+    //     1. slots.imagePromptBefore/After → ai_generated
+    //     2. fallback: placeholders neutros
     imageSlots: [
-      args.input.imageMainUploadUrl
+      useUpload
         ? {
             id: 'image-before',
             source: 'uploaded' as const,
             slotRef: { kind: 'subtemplate-slot' as const, id: 'image-before' },
-            uploadedUrl: args.input.imageMainUploadUrl,
+            uploadedUrl: args.input.imageMainUploadUrl!,
             treatment: 'rounded' as const,
           }
         : slots.imagePromptBefore
@@ -357,8 +363,21 @@ function resolveCtaBackgroundId(): string {
   return exists ? T2_CTA_FINAL_BG_ID : T2_CTA_FINAL_BG_FALLBACK_ID
 }
 
+/**
+ * Constrói SlidePlan[] a partir do input do form.
+ *
+ * modoGeracao (default 'ia'):
+ *   - 'ia'      → planner cria imageSlots ai_generated nos subtemplates que
+ *                 suportam imagens (atualmente só comparison-before-after).
+ *   - 'upload'  → planner usa `imageMainUploadUrl` como `source='uploaded'`
+ *                 em comparison. Em cover, content-3-boxes, content-6-boxes
+ *                 e cta-final o campo é silenciosamente ignorado porque esses
+ *                 subtemplates NÃO têm slot image-main definido (ver
+ *                 [REF-M2-006] em DIVIDAS).
+ */
 export function buildSlidePlan(input: T2Input): SlidePlan[] {
   const ctaBgId = resolveCtaBackgroundId()
+  const modoGeracao = input.modoGeracao ?? 'ia'
 
   if (input.modo === 'imagem-unica') {
     if (input.slides.length !== 1) {
@@ -408,7 +427,7 @@ export function buildSlidePlan(input: T2Input): SlidePlan[] {
         plan = buildContentPlan({ index: i, input: slide, backgroundId, subtemplateId })
         break
       case 'comparison-before-after':
-        plan = buildComparisonPlan({ index: i, input: slide, backgroundId })
+        plan = buildComparisonPlan({ index: i, input: slide, backgroundId, modoGeracao })
         break
       case 'cta-final':
         plan = buildCtaFinalPlan({ index: i, input: slide, backgroundId, isSingle: false })

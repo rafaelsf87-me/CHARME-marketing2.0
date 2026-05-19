@@ -14,6 +14,17 @@ interface ResolvedTemplate extends Template {
 function resolveTemplate(templateId: M2GenerateInput['templateId']): ResolvedTemplate {
   const template = getTemplate(templateId)
 
+  // 19/05/2026: registry expõe apenas T2 ativo no UI; T1/placeholders foram
+  // removidos do REGISTRY mas a rota /api/imagens/m2/generate segue intacta
+  // por 30 dias ([REF-M2-005]). Requests pra ids fora do registry retornam
+  // erro explícito em vez de crash.
+  if (!template) {
+    throw new Error(
+      `[M2] Template "${templateId}" não está mais disponível no registry. ` +
+        `Templates ativos: ver lib/m2/templates/index.ts. Ver [REF-M2-005].`,
+    )
+  }
+
   if (template.status !== 'ativo') {
     throw new Error(
       `[M2] Template "${templateId}" não está ativo (status: ${template.status}). ` +

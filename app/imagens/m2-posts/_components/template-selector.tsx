@@ -14,6 +14,7 @@ const STATUS_BADGE: Record<TemplateStatus, { label: string; className: string }>
   ativo: { label: 'Ativo', className: 'bg-[#E6F9F4] text-[#1F8A6F]' },
   'em-construcao': { label: 'Em construção', className: 'bg-[#FDF0D5] text-[#8A5B1F]' },
   'a-definir': { label: 'A definir', className: 'bg-[#EEEEEC] text-[color:var(--text-tertiary)]' },
+  'em-breve': { label: 'Em breve', className: 'bg-[#F0F0EE] text-[#6B6B66]' },
 }
 
 export function TemplateSelector({ value, onChange }: TemplateSelectorProps) {

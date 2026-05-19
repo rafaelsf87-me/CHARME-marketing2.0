@@ -197,6 +197,7 @@ export const t2InputSchema = z
       .min(1)
       .max(brandM2.pipeline.carouselSlidesRange.max),
     keyword: z.string().max(20).optional(),
+    modoGeracao: z.enum(['ia', 'upload']).default('ia'),
   })
   .superRefine((data, ctx) => {
     if (data.modo === 'imagem-unica' && data.slides.length !== 1) {

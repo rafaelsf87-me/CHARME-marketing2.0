@@ -9,7 +9,7 @@ import { T2Form } from './t2-form/t2-form'
 import type { M2TemplateId } from '@/lib/m2/schema'
 
 export function M2Form() {
-  const [templateId, setTemplateId] = React.useState<M2TemplateId>('atual-maio26')
+  const [templateId, setTemplateId] = React.useState<M2TemplateId>('pipeline-hibrido-v2')
   const [tab, setTab] = React.useState<M2Tab>('imagem-unica')
 
   const isT2 = templateId === 'pipeline-hibrido-v2'

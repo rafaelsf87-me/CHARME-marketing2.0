@@ -339,6 +339,15 @@ export interface QCReport {
 
 export type T2Modo = 'imagem-unica' | 'carrossel'
 
+/**
+ * Modo de geração do asset principal (toggle global do form, herdado do T1).
+ *  - `ia`: planner pode criar imageSlots ai_generated (gpt-image-1 high).
+ *  - `upload`: planner usa `imageMainUploadUrl` como asset pronto (DEC-M2-014
+ *    bypass GPT Image). Quando upload presente mas subtemplate não tem
+ *    slot image-main definido, é ignorado silenciosamente — ver [REF-M2-006].
+ */
+export type T2ModoGeracao = 'ia' | 'upload'
+
 export interface T2SlideInput {
   /** Texto base do slide (10..2000 chars). Planner deriva textSlots. */
   copyTexto: string
@@ -370,6 +379,8 @@ export interface T2Input {
   slides: T2SlideInput[]
   /** Keyword opcional pra nome do arquivo (compartilhado com lib/filename.ts). */
   keyword?: string
+  /** Modo de geração do asset principal. Default 'ia'. */
+  modoGeracao?: T2ModoGeracao
 }
 
 // ============================================================================
