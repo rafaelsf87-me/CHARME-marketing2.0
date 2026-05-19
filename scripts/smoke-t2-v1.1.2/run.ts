@@ -21,6 +21,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { renderM2T2 } from '../../lib/m2/t2/render'
 import type { T2Input } from '../../lib/m2/t2/types'
+import type { ParseRoteiroResult } from '../../lib/m2/t2/planner/parse-roteiro'
 
 const OUT_DIR = path.join(process.cwd(), 'scripts', 'smoke-t2-v1.1.2', 'output')
 
@@ -94,7 +95,7 @@ Descrição da imagem: Cama bem montada em camadas vista lateral mostrando o res
   }
 
   // ─── Validações automáticas pós-smoke (10 critérios do briefing) ─────────
-  const parserResults = output.parserResults ?? []
+  const parserResults = (output.parserResults ?? []) as ParseRoteiroResult[]
   const checks: Array<{ id: string; pass: boolean; detail: string }> = []
 
   // 1. 4 slides gerados (não 5)

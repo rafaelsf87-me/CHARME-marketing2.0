@@ -139,9 +139,14 @@ function maybePromoteToComparison(args: {
 }
 
 function defaultFooter(): SlidePlanFooter {
-  // V1.1.1 (MEL-M2-015): footer programático em TODOS os subtemplates EXCETO
-  // cta-final (que tem footer embutido no background PNG, ver ctaFinalFooter()).
-  return { enabled: true, logo: 'casinha', position: 'bottom-center' }
+  // V1.1.2 final (Rafael 19/05/2026 pós-validação visual): footer programático
+  // REMOVIDO de TODOS os subtemplates intermediários (cover, content-3/6,
+  // comparison, image-focus). Footer aparece APENAS no cta-final via PNG
+  // embutido (cta-final-bg-01.png).
+  // Razão: footer em todos slides poluía visualmente; referências virais
+  // usam footer só no slide final.
+  // [MEL-M2-015] revertido parcialmente em V1.1.2.
+  return { enabled: false, logo: 'casinha', position: 'bottom-center' }
 }
 
 function ctaFinalFooter(): SlidePlanFooter {

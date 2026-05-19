@@ -11,6 +11,14 @@
 
 ## ✅ Resolvidos / Não-bugs
 
+### [MEL-M2-015] Footer em todos os subtemplates — REVERTIDO PARCIALMENTE em 19/05/2026
+- **Histórico:**
+  - V1.1.1 (commit `a21b414`): footer programático "@charmedodetalhe" adicionado em TODOS os subtemplates intermediários (cover, content-3, content-6, comparison, image-focus). cta-final mantido com footer embutido no PNG.
+  - V1.1.2 final (este commit): footer programático REMOVIDO de todos os intermediários. Footer aparece APENAS no cta-final via PNG embutido.
+- **Decisão:** Rafael 19/05/2026 pós-validação visual. Footer em todos slides poluía visualmente; referências virais usam footer só no slide final.
+- **Configuração atual:** `defaultFooter()` retorna `enabled=false` pra todos. `ctaFinalFooter()` também `enabled=false` (footer já está embutido no PNG do background, sem duplicação).
+- **Onde:** `lib/m2/t2/planner.ts:121-138`.
+
 ### [MEL-M2-012] Preservação literal de subtitle — INVESTIGADO, não é bug em prod (19/05/2026)
 - **Hipótese inicial:** smoke Fase 6 v3 cenário 3 mostrou subtitle "Gordura, mau cheiro, bactérias e sujeira acumulada." quando o briefing Rafael falava em "…onde muita gente nem percebe." (sufixo de 29 chars ausente). Suspeita: LLM auto-truncando ou schema cortando.
 - **Diagnóstico (caso c — input discrepancy):**
