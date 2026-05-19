@@ -64,11 +64,52 @@ export interface ParseRoteiroResult {
 
 const SYSTEM_PROMPT = `Você é um assistente que extrai estrutura semântica de roteiros de slide de Instagram em PT-BR para um sistema de geração automática de imagens.
 
-REGRA ABSOLUTA — INVENÇÃO PROIBIDA
-- Preserve LITERALMENTE valores, preços, números, nomes, marcas e produtos mencionados no roteiro do usuário.
-- NUNCA invente: preços ("R$10", "promoção", "frete grátis"), quantidades, datas, nomes de produtos, marcas, ofertas, ou qualquer informação que não esteja explícita no input bruto.
-- Se o usuário não mencionou, NÃO existe na sua resposta.
-- Validação interna: antes de retornar, confira que qualquer valor numérico ou preço presente no JSON também aparece no input bruto. Se aparecer algo novo, REMOVA.
+═══════════════════════════════════════════════════════════
+REGRA #0 — PRESERVAÇÃO LITERAL ABSOLUTA (PRIMÁRIA, IRRENUNCIÁVEL)
+═══════════════════════════════════════════════════════════
+Esta regra tem PRIORIDADE sobre TODAS as outras. Se outra regra deste prompt sugerir algo que contradiga preservação literal, IGNORE a outra regra e siga esta.
+
+- title, subtitle, bullets, cta = TEXTO LITERAL do input do usuário, palavra por palavra.
+- NUNCA reescreva. NUNCA reformule. NUNCA resuma. NUNCA expanda.
+- NUNCA traduza (exceto imagePrompt/imagePromptBefore/imagePromptAfter, que SÃO em inglês).
+- NUNCA invente: preços ("R$10", "promoção", "frete grátis"), quantidades, datas, nomes de produtos, marcas, ofertas, CTAs promocionais, ou qualquer texto que não esteja no input.
+- NUNCA mude caixa-alta/baixa de forma agressiva (preserve a capitalização natural; o sistema decide upper/lower depois).
+- Se o input diz "Os erros que sabotam o calor da sua cama", o output title É "Os erros que sabotam o calor da sua cama" — não "ERROS 1 E 2 QUE ESFRIAM A NOITE".
+- Validação interna: antes de retornar, releia o input bruto e compare palavra por palavra com o JSON. Cada palavra-chave do input deve aparecer no output correspondente. Se algo novo apareceu, REMOVA.
+
+EXEMPLO CONCRETO (estude antes de responder):
+INPUT (bruto):
+"""
+Texto: Os erros que sabotam o calor da sua cama
+Apoio: Tudo que você arruma errado sem perceber
+"""
+✅ OUTPUT CORRETO:
+{"title":"Os erros que sabotam o calor da sua cama","subtitle":"Tudo que você arruma errado sem perceber",...}
+❌ OUTPUT PROIBIDO (você inventou):
+{"title":"ERROS 1 E 2 QUE ESFRIAM A NOITE","subtitle":"Descobrimos o que muita gente erra",...}
+❌ OUTPUT PROIBIDO (você reescreveu):
+{"title":"5 erros que esfriam sua cama","subtitle":"O que você faz de errado",...}
+
+═══════════════════════════════════════════════════════════
+REGRA #0.1 — CTA LITERAL (sub-cláusula da #0)
+═══════════════════════════════════════════════════════════
+- Se o input tem "CTA: <texto>", então output.cta = "<texto>" EXATAMENTE, sem alteração.
+- NÃO traduza, NÃO encurte, NÃO expanda, NÃO modifique pontuação, NÃO transforme caso.
+- NUNCA invente CTA promocional (ex: "CONHEÇA NA LOJA", "COMPRE AGORA") se o user não escreveu.
+- Se input não tem linha "CTA:", output.cta = null.
+EXEMPLO:
+INPUT: "CTA: Compartilhe com uma amiga friorenta"
+✅ output.cta = "Compartilhe com uma amiga friorenta"
+❌ output.cta = "COMPARTILHE COM UMA AMIGA"  (você modificou caixa)
+❌ output.cta = "CONHEÇA NA LOJA"  (você inventou)
+
+═══════════════════════════════════════════════════════════
+REGRA #0.2 — NÚMERO DE SLIDES É IMUTÁVEL (sub-cláusula da #0)
+═══════════════════════════════════════════════════════════
+- O sistema processa 1 slide por vez. Você recebe 1 roteiro → você devolve 1 JSON para ESSE slide.
+- NUNCA divida o roteiro em vários slides. NUNCA junte conteúdo de outros slides.
+- Se um slide tem pouco conteúdo, retorne bullets=[] ou subtitle=null. Mas é UM slide, sempre.
+- slideIndex e totalSlides no userPrompt são metadados — não tente "ajudar" alterando estrutura.
 
 REGRAS DE EXTRAÇÃO
 1. IGNORE labels meta no input do usuário: "Texto", "Apoio", "Descrição da imagem", "CTA", "Imagem", "Título", "Subtítulo", "Bullet", "•", "-" (no início de linha).
@@ -197,11 +238,11 @@ function extractJson(text: string): string {
   return stripped
 }
 
-async function callLLM(userPrompt: string): Promise<string> {
+async function callLLM(userPrompt: string, systemOverride?: string): Promise<string> {
   const llmCall = fal.subscribe('fal-ai/any-llm', {
     input: {
       prompt: userPrompt,
-      system_prompt: SYSTEM_PROMPT,
+      system_prompt: systemOverride ?? SYSTEM_PROMPT,
       model: MODEL,
       temperature: 0.2,
       max_tokens: 1024,
@@ -219,6 +260,99 @@ async function callLLM(userPrompt: string): Promise<string> {
   return data.output
 }
 
+// ─── V1.1.2 — Validação anti-invenção pós-LLM ───────────────────────────────
+
+const META_LABELS_REGEX_GLOBAL = /^(?:texto|apoio|descri[cç][aã]o da imagem(?:\s*(?:antes|depois|before|after|1|2))?|cta|imagem|t[ií]tulo|subt[ií]tulo|bullet)\s*[:\-]\s*/gim
+
+/** Normaliza pra comparação: lowercase + sem acentos + sem pontuação. */
+function normalizeForCompare(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/** Tokenização de palavras significativas (>2 chars, sem stopwords PT-BR comuns). */
+const STOPWORDS_PT = new Set([
+  'que','de','do','da','dos','das','para','por','com','sem','em','no','na','nos','nas',
+  'um','uma','uns','umas','o','a','os','as','e','ou','se','sua','seu','suas','seus',
+  'voce','voces','é','sao','foi','vai','ja','tem','ser','estar','muito','mais','mesmo',
+  'pra','pro','isso','esse','essa','este','esta','tudo','todo','toda','todos','todas',
+])
+function significantTokens(s: string): string[] {
+  return normalizeForCompare(s)
+    .split(/\s+/)
+    .filter((t) => t.length > 2 && !STOPWORDS_PT.has(t))
+}
+
+export interface AntiInventionViolation {
+  field: 'title' | 'subtitle' | 'cta' | 'bullets'
+  reason: string
+}
+
+/**
+ * Compara output do LLM contra input bruto. Detecta inventos (palavras novas
+ * em title/subtitle/cta que não aparecem no input) e truncamento severo.
+ *
+ * Política V1.1.2:
+ * - title: ≥70% das palavras significativas do output devem aparecer no input.
+ * - subtitle: ≥70% das palavras significativas devem aparecer no input.
+ * - cta: deve ser substring case-insensitive do input (literal).
+ */
+export function validateAntiInvention(
+  inputCopyTexto: string,
+  output: ParsedSlide,
+): AntiInventionViolation[] {
+  const inputClean = inputCopyTexto.replace(META_LABELS_REGEX_GLOBAL, ' ')
+  const inputTokens = new Set(significantTokens(inputClean))
+  const violations: AntiInventionViolation[] = []
+
+  function checkField(field: 'title' | 'subtitle', value: string | null) {
+    if (!value) return
+    const outTokens = significantTokens(value)
+    if (outTokens.length === 0) return
+    const overlap = outTokens.filter((t) => inputTokens.has(t)).length
+    const ratio = overlap / outTokens.length
+    if (ratio < 0.7) {
+      violations.push({
+        field,
+        reason: `${field}: ${Math.round(ratio * 100)}% das palavras vieram do input (esperado ≥70%). Output: "${value.slice(0, 80)}"`,
+      })
+    }
+  }
+
+  checkField('title', output.title)
+  checkField('subtitle', output.subtitle)
+
+  // CTA: validação mais estrita — deve ser substring literal do input bruto.
+  if (output.cta) {
+    const ctaNormOut = normalizeForCompare(output.cta)
+    const ctaNormIn = normalizeForCompare(inputCopyTexto)
+    if (!ctaNormIn.includes(ctaNormOut)) {
+      violations.push({
+        field: 'cta',
+        reason: `cta inventado: "${output.cta}" não aparece literal no input`,
+      })
+    }
+  }
+
+  return violations
+}
+
+const ENFORCE_PROMPT_SUFFIX = `
+
+═══════════════════════════════════════════════════════════
+ATENÇÃO — VOCÊ JÁ ERROU UMA VEZ NESTE ROTEIRO.
+═══════════════════════════════════════════════════════════
+Sua tentativa anterior INVENTOU texto que não estava no input. Esta é a 2ª e ÚLTIMA tentativa.
+
+Releia o input PALAVRA POR PALAVRA. Cada palavra de title, subtitle, bullets, cta DEVE existir no roteiro do usuário. NÃO REESCREVA. NÃO REFORMULE. NÃO INVENTE.
+
+Se o usuário escreveu "Os erros que sabotam o calor", você devolve EXATAMENTE "Os erros que sabotam o calor" — não "5 erros que esfriam a noite" nem "Erros 1 e 2".`
+
 // ─── parseRoteiroSlide (entry point) ──────────────────────────────────────
 
 export async function parseRoteiroSlide(opts: ParseRoteiroOpts): Promise<ParseRoteiroResult> {
@@ -234,10 +368,31 @@ ${opts.slideCopy}
 Retorne o JSON estrito conforme o schema definido no system prompt.`
 
   try {
-    const rawOutput = await callLLM(userPrompt)
-    const jsonStr = extractJson(rawOutput)
-    const parsedJson = JSON.parse(jsonStr) as unknown
-    const validated = parsedSlideSchema.parse(parsedJson)
+    // 1ª tentativa: prompt normal.
+    let rawOutput = await callLLM(userPrompt)
+    let jsonStr = extractJson(rawOutput)
+    let validated = parsedSlideSchema.parse(JSON.parse(jsonStr) as unknown)
+    // V1.1.2 (FIX A1): validação anti-invenção. Se falhar, retry 1× com
+    // prompt enforçado. Se 2ª também falhar, FAIL pra fallback regex.
+    let violations = validateAntiInvention(opts.slideCopy, validated)
+    if (violations.length > 0) {
+      console.warn(
+        `[T2/parser] anti-invention violations slide ${opts.slideIndex + 1}/${opts.totalSlides} (tentativa 1): ${violations.map((v) => v.reason).join(' | ')}`,
+      )
+      rawOutput = await callLLM(userPrompt, SYSTEM_PROMPT + ENFORCE_PROMPT_SUFFIX)
+      jsonStr = extractJson(rawOutput)
+      validated = parsedSlideSchema.parse(JSON.parse(jsonStr) as unknown)
+      violations = validateAntiInvention(opts.slideCopy, validated)
+      if (violations.length > 0) {
+        const reason = `LLM inventou texto em ambas as tentativas: ${violations.map((v) => v.reason).join(' | ')}`
+        console.error(`[T2/parser] FAIL anti-invention slide ${opts.slideIndex + 1}/${opts.totalSlides}: ${reason}`)
+        throw new Error(reason)
+      }
+      console.log(
+        `[T2/parser] retry-2 OK slide ${opts.slideIndex + 1}/${opts.totalSlides} (anti-invention)`,
+      )
+    }
+
     return {
       parsed: validated,
       via: 'llm',

@@ -839,6 +839,15 @@ export async function buildSlidePlanWithParser(input: T2Input): Promise<BuildSli
     )
   }
 
+  // V1.1.2 (FIX A2): assert número de slides imutável. Input N → Output N.
+  // LLM/Planner NUNCA pode adicionar/remover slides — invariante crítica
+  // pra preservação da intenção do user.
+  if (plans.length !== n) {
+    throw new Error(
+      `[T2] FIX A2 violado: input.slides.length=${n} → plans.length=${plans.length}. Slide count é imutável.`,
+    )
+  }
+
   return {
     plans,
     parserResults: parserResultsRaw.filter((r): r is ParseRoteiroResult => r !== null),
