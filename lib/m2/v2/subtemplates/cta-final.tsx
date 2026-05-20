@@ -1,41 +1,59 @@
 /**
- * V2 Subtemplate — CTA-FINAL
+ * V2 Subtemplate — CTA-FINAL (V2.0.1)
  *
- * Base = CAPA-CURTA visual + botão CTA central + footer.
- * Footer renderizado inline (logo via data URL pré-resolvido).
+ * Base = CAPA-CURTA. Modificações:
+ *  - Bullets só TL/TR (máx 2 — sem BL/BR)
+ *  - Sem card inferior numerado
+ *  - Botão CTA central rodapé: pílula AZUL ESCURO (#1E1B4B) + texto BRANCO (BUG-V2-005)
+ *  - Footer @charmedodetalhe + logo (única slide com footer — invariante)
+ *
+ * Layout:
+ *  - Y 80-380:   título
+ *  - Y 440-540:  bullets TL/TR
+ *  - Y 480-860:  hero (Sharp layer 2)
+ *  - Y 920-1020: botão CTA
+ *  - Y 1230-1300: footer logo + handle
  */
 
 import * as React from 'react'
 import {
   BRAND_CYAN,
   BRAND_WHITE,
+  BRAND_DEEP_PURPLE,
   IconCircle,
   ConnectorImg,
   TextBlock,
+  TEXT_SHADOW_HEAVY,
 } from './_shared'
 import { bucketForTitulo, bucketForBullet } from '../text-buckets'
 import { wrapText } from '../text-renderer'
 import type { V2AssetUrls } from '../icons'
 import type { V2Plan } from '../types'
+import type { ZoneSpec } from '../zones'
 
 export interface RenderCtaFinalArgs {
   plan: V2Plan
   assets: V2AssetUrls
+  zone: ZoneSpec
   footerLogoUrl: string
   footerHandle: string
 }
 
 const ICON_SIZE = 96
 const TITLE_MAX_W = 960
-const TITLE_MAX_H = 240
-const CTA_BG = BRAND_CYAN
-const CTA_TEXT_COLOR = '#1A1A1A'
+const TITLE_MAX_H = 280
+
+// BUG-V2-005: fundo #1E1B4B (azul escuro) + texto branco. NÃO ciano.
+const CTA_BG = BRAND_DEEP_PURPLE
+const CTA_TEXT_COLOR = '#FFFFFF'
 
 const TOP_CORNERS = [
-  { iconLeft: 60, iconTop: 440, textLeft: 170, textTop: 440, textWidth: 320,
-    textAlign: 'left' as const, connector: 'curve-tl' as const, connectorTop: 540, connectorLeft: 130 },
-  { iconLeft: 924, iconTop: 440, textLeft: 590, textTop: 440, textWidth: 320,
-    textAlign: 'right' as const, connector: 'curve-tr' as const, connectorTop: 540, connectorLeft: 570 },
+  { iconLeft: 40, iconTop: 440, textLeft: 150, textTop: 440, textWidth: 320,
+    textAlign: 'left' as const, connector: 'curve-tl' as const,
+    connectorTop: 480, connectorLeft: 130, connectorWidth: 260, connectorHeight: 140 },
+  { iconLeft: 944, iconTop: 440, textLeft: 610, textTop: 440, textWidth: 320,
+    textAlign: 'right' as const, connector: 'curve-tr' as const,
+    connectorTop: 480, connectorLeft: 690, connectorWidth: 260, connectorHeight: 140 },
 ]
 
 export function renderCtaFinal(args: RenderCtaFinalArgs): React.ReactElement {
@@ -69,7 +87,7 @@ export function renderCtaFinal(args: RenderCtaFinalArgs): React.ReactElement {
         />
       </div>
 
-      {/* Bullets topo (máx 2) */}
+      {/* Bullets TL/TR */}
       {bullets.map((b, idx) => {
         const corner = TOP_CORNERS[idx]
         if (!corner) return null
@@ -79,15 +97,15 @@ export function renderCtaFinal(args: RenderCtaFinalArgs): React.ReactElement {
           maxWidthPx: corner.textWidth,
           fontSize: bulletBucket.fontSize,
           fontWeight: 700,
-          maxHeightPx: 160,
+          maxHeightPx: 140,
           lineHeight: 1.15,
         })
         return (
           <React.Fragment key={idx}>
             <ConnectorImg
               url={assets.connectors[corner.connector]}
-              width={380}
-              height={200}
+              width={corner.connectorWidth}
+              height={corner.connectorHeight}
               top={corner.connectorTop}
               left={corner.connectorLeft}
             />
@@ -100,7 +118,7 @@ export function renderCtaFinal(args: RenderCtaFinalArgs): React.ReactElement {
             <div
               style={{
                 position: 'absolute',
-                top: corner.textTop,
+                top: corner.textTop + 12,
                 left: corner.textLeft,
                 width: corner.textWidth,
                 display: 'flex',
@@ -113,17 +131,18 @@ export function renderCtaFinal(args: RenderCtaFinalArgs): React.ReactElement {
                 color={BRAND_WHITE}
                 align={corner.textAlign}
                 lineHeight={1.15}
+                textShadow={TEXT_SHADOW_HEAVY}
               />
             </div>
           </React.Fragment>
         )
       })}
 
-      {/* Botão CTA central */}
+      {/* Botão CTA central — BUG-V2-005: bg #1E1B4B + texto branco */}
       <div
         style={{
           position: 'absolute',
-          top: 1000,
+          top: 940,
           left: 60,
           width: 960,
           display: 'flex',
@@ -136,14 +155,14 @@ export function renderCtaFinal(args: RenderCtaFinalArgs): React.ReactElement {
             padding: '20px 36px',
             background: CTA_BG,
             borderRadius: 999,
-            maxWidth: 880,
+            maxWidth: 920,
           }}
         >
           <span
             style={{
               fontFamily: 'Montserrat',
               fontWeight: 800,
-              fontSize: 32,
+              fontSize: 30,
               color: CTA_TEXT_COLOR,
               textAlign: 'center',
               lineHeight: 1.1,

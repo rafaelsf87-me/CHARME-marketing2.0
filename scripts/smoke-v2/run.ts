@@ -61,21 +61,22 @@ Fechamento: Cuidar da casa é um trabalho que muitas vezes não se vê, mas faz 
     expectedVariant: 'capa-longa',
   },
 
-  // ─── C) Override forçando o oposto ──────────────────────────────────────
+  // ─── C) CTA-FINAL modo upload (BUG-V2-005 — valida cor botão sem custo FAL) ──
   {
-    nome: 'C-cta-final-override',
+    nome: 'C-cta-final-upload',
     input: {
       templateType: 'cta-final',
       brief: `Você merece uma casa que te abraça
 • Capas que renovam o ambiente
 • Toques que fazem a diferença
 Compartilhe com quem ama cuidar do lar`,
-      variantOverride: 'auto', // CTA-FINAL sempre força curta — variantOverride é ignorado
-      modoGeracao: 'ia',
+      variantOverride: 'auto',
+      modoGeracao: 'upload',
+      imageUploadUrl: `file://${path.join(process.cwd(), 'public', 'brand', 'm2', 'placeholders', 'neutral-2.png')}`,
       logo: 'casinha',
       keyword: 'cta-share',
     },
-    expectedVariant: 'capa-curta', // CTA-FINAL sempre roda como CURTA
+    expectedVariant: 'capa-curta',
   },
 
   // ─── D) Bônus: modo UPLOAD ──────────────────────────────────────────────

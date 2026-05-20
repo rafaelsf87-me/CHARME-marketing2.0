@@ -99,7 +99,35 @@ CAMPOS DE SAÍDA (JSON estrito, sem markdown)
   Se o brief não tem bullets explícitos (texto corrido), retorne []. NÃO invente bullets.
   texto: max 200 chars, literal. icone: id do ícone da lista acima.
 
-- badgeSubtema: { texto, icone } OU null. Use APENAS quando o título tem 2 partes claras (ex: "COMO RENOVAR A SALA / GASTANDO POUCO"). texto = subparte do título destacada (max 60 chars). icone = pílula contextual (ex: "cifrao" pra "GASTANDO POUCO").
+- badgeSubtema: { texto, icone } OU null.
+
+═══════════════════════════════════════════════════════════
+REGRA CRÍTICA — SEPARAÇÃO TÍTULO vs BADGE (BUG-V2-007)
+═══════════════════════════════════════════════════════════
+SEMPRE separar título em 2 partes quando o briefing contém um SUB-TEMA / CONDIÇÃO / QUALIFICADOR:
+- titulo = ação ou afirmação principal (1ª parte, max 30 chars)
+- badgeSubtema.texto = condição/sub-tema/qualificador (2ª parte, max 60 chars)
+- badgeSubtema.icone = ícone contextual da semântica
+
+Padrões que SEMPRE viram badge:
+- "gastando pouco" / "gastando muito" → badge + icone="cifrao"
+- "sem esforço" / "sem gastar" / "sem complicação" → badge + icone="raio"
+- "em 1 semana" / "em 30 dias" / "rápido" → badge + icone="relogio"
+- "garantido" / "com segurança" → badge + icone="escudo"
+- "premium" / "top" / "5 estrelas" → badge + icone="estrela"
+- "promoção" / "oferta" / "desconto" → badge + icone="etiqueta"
+- "dica" / "ideia" → badge + icone="lampada"
+
+EXEMPLOS OBRIGATÓRIOS:
+INPUT: "Como renovar a sala gastando pouco" → titulo="COMO RENOVAR A SALA", badgeSubtema={texto:"GASTANDO POUCO", icone:"cifrao"}
+INPUT: "Limpe a casa em 1 hora" → titulo="LIMPE A CASA", badgeSubtema={texto:"EM 1 HORA", icone:"relogio"}
+INPUT: "Renove o sofá sem reforma" → titulo="RENOVE O SOFÁ", badgeSubtema={texto:"SEM REFORMA", icone:"raio"}
+INPUT: "5 dicas para casa sempre limpa" → titulo="5 DICAS", badgeSubtema={texto:"CASA SEMPRE LIMPA", icone:"lampada"}
+
+Quando NÃO usar badge (deixar null):
+- Briefings narrativos sem qualificador ("O cansaço invisível de quem cuida da casa") → titulo único, sem badge
+- Quando título já é curto e direto sem 2ª parte ("Frequência de rega")
+- Briefings emocionais/reflexivos → usa iconeTopo em vez de badge
 
 - iconeTopo: id do ícone OU null. Use APENAS para briefings emocionais/reflexivos (não-transacionais, ex: "cansaço invisível", "cuidado com a casa"). Sugestão: "casa-coracao" pra temas brand-emocional, "coracao" pra afeto.
 
@@ -108,7 +136,9 @@ CAMPOS DE SAÍDA (JSON estrito, sem markdown)
 - cardInferiorLonga: { textoLongo, destaque, icone } OU null. Use APENAS quando o brief tem fechamento emocional em 2 partes: texto reflexivo + chamada curta destaque (ex: "Cuidar da casa é trabalho que não se vê / VOCÊ TAMBÉM MERECE SER CUIDADO!").
 
 - heroPrompt: string em INGLÊS OU null. Descrição visual do hero (produto/cena) pra gpt-image-1.
-  Estilo padrão V2: realistic photograph, soft lighting, isolated subject, purple gradient background blue to violet, Instagram aesthetic, high quality.
+  IMPORTANTE V2.0.1: o gradient brand vem da BASE do template (não da IA). O hero é o produto/cena ISOLADO em fundo transparente.
+  Estilo padrão V2: realistic photograph, soft natural lighting, isolated subject on transparent background, no background, no scenery, no surroundings, product photography style, high quality.
+  Sempre termine com: ", isolated on transparent background, no background scene, no text, no logo".
   NULL se o brief não menciona elemento visual ou se modo upload (sistema avisa).
 
 REGRA DE EXCLUSIVIDADE
@@ -146,7 +176,7 @@ OUTPUT:
     "bullets": ["Esconde manchas... renova na hora", "e parece sofá novo", "Sem reforma... sem dor de cabeça"]
   },
   "cardInferiorLonga": null,
-  "heroPrompt": "modern gray sofa with stretchable patterned cover, realistic photograph, soft natural lighting, isolated on purple gradient background blue to violet, Instagram aesthetic, side view, high quality"
+  "heroPrompt": "modern gray sofa with stretchable patterned cover, realistic photograph, soft natural lighting, side view, product photography style, isolated on transparent background, no background scene, no text, no logo"
 }
 
 EXEMPLO 2 (emocional, longo):
@@ -171,7 +201,7 @@ OUTPUT:
     "destaque": "VOCÊ TAMBÉM MERECE SER CUIDADO!",
     "icone": "coracao"
   },
-  "heroPrompt": "tired woman in apron leaning on laundry basket, kitchen background, realistic photograph, soft natural lighting, purple gradient background blue to violet, Instagram aesthetic, high quality"
+  "heroPrompt": "tired woman in beige apron leaning on laundry basket, realistic photograph, soft natural lighting, three quarter view, isolated on transparent background, no background scene, no text, no logo"
 }
 
 Retorne APENAS o JSON. Sem markdown. Sem fences. Sem explicação.`

@@ -60,11 +60,12 @@ async function fetchUploadedAsset(url: string): Promise<Buffer> {
 }
 
 function augmentHeroPromptForVariant(prompt: string, variant: V2CapaVariant): string {
-  // Hint posicional pra gpt-image-1 deixar espaço pro overlay Satori.
+  // V2.0.1: hero é isolado em fundo transparente (gradient brand vem do compose).
+  // Aspect hint ajuda gpt-image-1 a compor o sujeito na orientação certa.
   if (variant === 'capa-longa') {
-    return `${prompt}. Composition: subject positioned right side of frame, ample purple gradient background on left half for text overlay space.`
+    return `${prompt}. Subject framed for vertical portrait composition (4:5 aspect), centered.`
   }
-  return `${prompt}. Composition: subject centered in middle band, purple gradient background dominates top and bottom for text and card overlay space.`
+  return `${prompt}. Subject framed for horizontal banner composition, centered, with empty transparent margins on top and bottom.`
 }
 
 function defaultUploadFn(buffer: Buffer, key: string): Promise<string> {

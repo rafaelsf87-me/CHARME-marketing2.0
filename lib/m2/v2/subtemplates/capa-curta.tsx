@@ -1,8 +1,15 @@
 /**
- * V2 Subtemplate — CAPA-CURTA
+ * V2 Subtemplate — CAPA-CURTA (V2.0.1)
  *
- * Layout (1080×1350): título topo-esquerda + badge + 4 ícones+conectores
- * em volta + hero centro (Sharp) + card inferior numerado opcional.
+ * Layout (zone hero = X 110-970, Y 480-860):
+ *  - Y 80-400:   título alinhado esquerda
+ *  - Y 380-450:  badge sub-tema (abaixo título, NUNCA sobre hero)
+ *  - Y 440-540:  bullets TL/TR (acima do hero, fora da zona)
+ *  - Y 480-860:  hero (Sharp layer 2)
+ *  - Y 880-980:  bullets BL/BR (abaixo do hero, fora da zona)
+ *  - Y 1010-1290: card inferior numerado opcional
+ *
+ * Conectores apontam pros pontos âncora do hero (BUG-V2-003).
  */
 
 import * as React from 'react'
@@ -13,21 +20,25 @@ import {
   ConnectorImg,
   TextBlock,
   BadgePill,
+  TEXT_SHADOW_HEAVY,
 } from './_shared'
 import { bucketForTitulo, bucketForBullet } from '../text-buckets'
 import { wrapText } from '../text-renderer'
 import type { V2AssetUrls } from '../icons'
 import type { V2Plan } from '../types'
+import type { ZoneSpec } from '../zones'
 
 export interface RenderCapaCurtaArgs {
   plan: V2Plan
   assets: V2AssetUrls
+  zone: ZoneSpec
 }
 
 const ICON_SIZE = 96
 const TITLE_MAX_W = 960
-const TITLE_MAX_H = 380
+const TITLE_MAX_H = 320
 
+// Coordenadas FIXAS dos 4 cantos (acima/abaixo do hero, fora da zona Y 480-860).
 const CORNERS: Array<{
   iconLeft: number
   iconTop: number
@@ -41,28 +52,33 @@ const CORNERS: Array<{
   connectorWidth: number
   connectorHeight: number
 }> = [
-  // TL
-  { iconLeft: 60, iconTop: 460, textLeft: 170, textTop: 460, textWidth: 320, textAlign: 'left',
-    connector: 'curve-tl', connectorTop: 560, connectorLeft: 130, connectorWidth: 380, connectorHeight: 200 },
+  // TL — ícone topo-esq, conector vai pra anchor TL do hero
+  { iconLeft: 40, iconTop: 440, textLeft: 150, textTop: 440, textWidth: 320, textAlign: 'left',
+    connector: 'curve-tl', connectorTop: 480, connectorLeft: 130, connectorWidth: 260, connectorHeight: 140 },
   // TR
-  { iconLeft: 924, iconTop: 460, textLeft: 590, textTop: 460, textWidth: 320, textAlign: 'right',
-    connector: 'curve-tr', connectorTop: 560, connectorLeft: 570, connectorWidth: 380, connectorHeight: 200 },
+  { iconLeft: 944, iconTop: 440, textLeft: 610, textTop: 440, textWidth: 320, textAlign: 'right',
+    connector: 'curve-tr', connectorTop: 480, connectorLeft: 690, connectorWidth: 260, connectorHeight: 140 },
   // BL
-  { iconLeft: 60, iconTop: 950, textLeft: 170, textTop: 950, textWidth: 320, textAlign: 'left',
-    connector: 'curve-bl', connectorTop: 800, connectorLeft: 130, connectorWidth: 380, connectorHeight: 180 },
+  { iconLeft: 40, iconTop: 880, textLeft: 150, textTop: 880, textWidth: 320, textAlign: 'left',
+    connector: 'curve-bl', connectorTop: 720, connectorLeft: 130, connectorWidth: 260, connectorHeight: 140 },
   // BR
-  { iconLeft: 924, iconTop: 950, textLeft: 590, textTop: 950, textWidth: 320, textAlign: 'right',
-    connector: 'curve-br', connectorTop: 800, connectorLeft: 570, connectorWidth: 380, connectorHeight: 180 },
+  { iconLeft: 944, iconTop: 880, textLeft: 610, textTop: 880, textWidth: 320, textAlign: 'right',
+    connector: 'curve-br', connectorTop: 720, connectorLeft: 690, connectorWidth: 260, connectorHeight: 140 },
 ]
 
 export function renderCapaCurta(args: RenderCapaCurtaArgs): React.ReactElement {
   const { plan, assets } = args
 
+  // BUG (V2.0.2 fix): quando há badge, cap fontSize em 110 pra título caber em 2 linhas
+  // e deixar espaço pro badge embaixo sem sobrepor literal (viola REGRA #0 se cortar).
   const tituloBucket = bucketForTitulo(plan.titulo.length)
+  const tituloFontSize = plan.badgeSubtema
+    ? Math.min(tituloBucket.fontSize, 110)
+    : tituloBucket.fontSize
   const tituloWrap = wrapText({
     text: plan.titulo.toUpperCase(),
     maxWidthPx: TITLE_MAX_W,
-    fontSize: tituloBucket.fontSize,
+    fontSize: tituloFontSize,
     fontWeight: 800,
     maxHeightPx: TITLE_MAX_H,
     lineHeight: 1.0,
@@ -72,7 +88,7 @@ export function renderCapaCurta(args: RenderCapaCurtaArgs): React.ReactElement {
 
   return (
     <div style={{ position: 'relative', width: 1080, height: 1350, display: 'flex' }}>
-      {/* Título topo-esquerda */}
+      {/* Título */}
       <div style={{ position: 'absolute', top: 80, left: 60, width: TITLE_MAX_W, display: 'flex' }}>
         <TextBlock
           lines={tituloWrap.lines}
@@ -85,14 +101,14 @@ export function renderCapaCurta(args: RenderCapaCurtaArgs): React.ReactElement {
         />
       </div>
 
-      {/* Badge sub-tema (opcional) */}
+      {/* Badge sub-tema — Y dinâmico baseado em altura REAL do título (sem cap arbitrário) */}
       {plan.badgeSubtema && (
         <BadgePill
           texto={plan.badgeSubtema.texto}
           iconUrl={assets.icons[plan.badgeSubtema.icone]}
-          top={80 + tituloWrap.lines.length * tituloWrap.fontSize * 1.0 + 20}
+          top={80 + tituloWrap.lines.length * tituloWrap.fontSize * 1.0 + 16}
           left={60}
-          fontSize={42}
+          fontSize={32}
         />
       )}
 
@@ -106,7 +122,7 @@ export function renderCapaCurta(args: RenderCapaCurtaArgs): React.ReactElement {
           maxWidthPx: corner.textWidth,
           fontSize: bulletBucket.fontSize,
           fontWeight: 700,
-          maxHeightPx: 200,
+          maxHeightPx: 140,
           lineHeight: 1.15,
         })
         return (
@@ -127,7 +143,7 @@ export function renderCapaCurta(args: RenderCapaCurtaArgs): React.ReactElement {
             <div
               style={{
                 position: 'absolute',
-                top: corner.textTop,
+                top: corner.textTop + 12,
                 left: corner.textLeft,
                 width: corner.textWidth,
                 display: 'flex',
@@ -140,6 +156,7 @@ export function renderCapaCurta(args: RenderCapaCurtaArgs): React.ReactElement {
                 color={BRAND_WHITE}
                 align={corner.textAlign}
                 lineHeight={1.15}
+                textShadow={TEXT_SHADOW_HEAVY}
               />
             </div>
           </React.Fragment>
@@ -151,14 +168,14 @@ export function renderCapaCurta(args: RenderCapaCurtaArgs): React.ReactElement {
         <div
           style={{
             position: 'absolute',
-            top: 1060,
+            top: 1010,
             left: 60,
             width: 960,
-            minHeight: 220,
-            padding: 32,
+            minHeight: 230,
+            padding: 28,
             borderRadius: 24,
             border: `2px solid ${BRAND_CYAN}`,
-            background: 'rgba(20, 16, 60, 0.55)',
+            background: 'rgba(20, 16, 60, 0.7)',
             display: 'flex',
             flexDirection: 'column',
             gap: 12,
@@ -188,7 +205,7 @@ export function renderCapaCurta(args: RenderCapaCurtaArgs): React.ReactElement {
               style={{
                 fontFamily: 'Montserrat',
                 fontWeight: 800,
-                fontSize: 40,
+                fontSize: 38,
                 color: BRAND_WHITE,
               }}
             >
@@ -210,7 +227,7 @@ export function renderCapaCurta(args: RenderCapaCurtaArgs): React.ReactElement {
                 style={{
                   fontFamily: 'Montserrat',
                   fontWeight: 600,
-                  fontSize: 28,
+                  fontSize: 26,
                   color: BRAND_WHITE,
                   opacity: 0.95,
                 }}

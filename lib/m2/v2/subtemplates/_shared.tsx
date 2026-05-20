@@ -1,8 +1,7 @@
 /**
  * V2 Subtemplates — shared helpers (Satori React elements)
  *
- * Os ícones/conectores são passados como `url` (data URL ou HTTP URL).
- * Pre-resolution em compose.ts → loadAllAssetUrls() → data URLs base64.
+ * Os ícones/conectores são passados como data URL pré-resolvidos (compose.ts).
  */
 
 import * as React from 'react'
@@ -10,6 +9,11 @@ import * as React from 'react'
 export const BRAND_CYAN = '#4CDDC3'
 export const BRAND_WHITE = '#FEFEFC'
 export const BRAND_DARK = '#1A1A1A'
+export const BRAND_DEEP_PURPLE = '#1E1B4B'
+
+/** Shadow forte pra texto sobre hero — garante legibilidade independente do conteúdo do hero. */
+export const TEXT_SHADOW_HEAVY = '0 2px 12px rgba(0, 0, 0, 0.85), 0 0 4px rgba(0, 0, 0, 0.6)'
+export const TEXT_SHADOW_SOFT = '0 1px 4px rgba(0, 0, 0, 0.4)'
 
 interface IconCircleProps {
   url: string
@@ -57,6 +61,7 @@ interface TextBlockProps {
   align?: 'left' | 'center' | 'right'
   letterSpacing?: string
   opacity?: number
+  textShadow?: string
 }
 
 export function TextBlock({
@@ -68,6 +73,7 @@ export function TextBlock({
   align = 'left',
   letterSpacing = '0',
   opacity = 1,
+  textShadow,
 }: TextBlockProps): React.ReactElement {
   const justify = align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center'
   return (
@@ -94,6 +100,7 @@ export function TextBlock({
             justifyContent: justify,
             letterSpacing,
             whiteSpace: 'nowrap',
+            ...(textShadow ? { textShadow } : {}),
           }}
         >
           {ln}
@@ -124,7 +131,8 @@ export function BadgePill({ texto, iconUrl, top, left, fontSize = 36 }: BadgePil
         padding: '14px 24px',
         border: `2px solid ${BRAND_CYAN}`,
         borderRadius: 999,
-        background: 'transparent',
+        // Bg semi-transparente roxo escuro pra contraste com gradient claro/hero.
+        background: 'rgba(20, 16, 60, 0.55)',
       }}
     >
       <span
