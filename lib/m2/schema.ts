@@ -6,6 +6,11 @@ export const M2_TEMPLATE_IDS = [
   'atual-maio26-new',
   'novo-teste-1',
   'pipeline-hibrido-v2',
+  // V2.0 (feat/v2-templates) — Templates fixos (CAPA-CURTA/CAPA-LONGA/CTA-FINAL).
+  // IMPORTANTE: este id NÃO casa com imagemUnicaSchema/carrosselSchema (T2).
+  // É apenas marcador de UI — o roteamento real vai pra POST /api/imagens/m2/v2/generate
+  // que tem schema próprio (lib/m2/v2/schema.ts).
+  'v2-fixos',
 ] as const
 export type M2TemplateId = (typeof M2_TEMPLATE_IDS)[number]
 
