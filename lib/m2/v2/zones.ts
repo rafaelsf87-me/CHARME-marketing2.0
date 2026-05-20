@@ -30,16 +30,17 @@ export interface ZoneSpec {
   anchors: AnchorPoint[]
 }
 
-// ─── CAPA-CURTA / CTA-FINAL ─────────────────────────────────────────────────
-// Hero zone: banner horizontal centro. Bullets TL/TR acima, BL/BR abaixo do hero.
+// ─── CAPA-CURTA ─────────────────────────────────────────────────────────────
+// BUG-V2-008: hero ampliado pra ~40% (540px). Bullets TL/TR ficam acima (Y 380),
+// BL/BR ficam DENTRO da zona expandida (Y 900) com text-shadow forte. Card Y 1040.
 
 export const ZONE_CAPA_CURTA: ZoneSpec = {
-  heroZone: { x: 110, y: 480, w: 860, h: 380 },
+  heroZone: { x: 90, y: 430, w: 900, h: 540 },
   anchors: [
-    { x: 110 + 60, y: 480 + 40 }, // TL: 10% interno
-    { x: 110 + 860 - 60, y: 480 + 40 }, // TR
-    { x: 110 + 60, y: 480 + 380 - 40 }, // BL
-    { x: 110 + 860 - 60, y: 480 + 380 - 40 }, // BR
+    { x: 90 + 60, y: 430 + 40 }, // TL
+    { x: 90 + 900 - 60, y: 430 + 40 }, // TR
+    { x: 90 + 60, y: 430 + 540 - 40 }, // BL
+    { x: 90 + 900 - 60, y: 430 + 540 - 40 }, // BR
   ],
 }
 
@@ -55,9 +56,18 @@ export const ZONE_CAPA_LONGA: ZoneSpec = {
 }
 
 // ─── CTA-FINAL ──────────────────────────────────────────────────────────────
-// Hero zone igual capa-curta. Card inferior substituído por botão CTA + footer.
+// Hero menor que CAPA-CURTA porque botão CTA + footer ocupam ~330px do inferior.
+// Hero zone: Y 380-840 (460px). Botão Y 880, Footer Y 1230.
 
-export const ZONE_CTA_FINAL: ZoneSpec = ZONE_CAPA_CURTA
+export const ZONE_CTA_FINAL: ZoneSpec = {
+  heroZone: { x: 110, y: 380, w: 860, h: 460 },
+  anchors: [
+    { x: 110 + 60, y: 380 + 40 },
+    { x: 110 + 860 - 60, y: 380 + 40 },
+    { x: 110 + 60, y: 380 + 460 - 40 },
+    { x: 110 + 860 - 60, y: 380 + 460 - 40 },
+  ],
+}
 
 // ─── Dispatcher ─────────────────────────────────────────────────────────────
 

@@ -29,6 +29,7 @@ import { planV2 } from './planner'
 import { generateHeroV2 } from './fal-client'
 import { composeV2 } from './compose'
 import { runQc, type V2QCReport } from './qc'
+import type { PlanVia } from './planner'
 import type { V2Input, V2Plan, V2RenderOutput, V2CapaVariant } from './types'
 
 export interface RenderV2Opts {
@@ -40,7 +41,7 @@ export interface RenderV2Opts {
 
 export interface RenderV2Result extends V2RenderOutput {
   qc: V2QCReport
-  via: 'llm' | 'fallback'
+  via: PlanVia
 }
 
 const COST_PER_LLM_CALL_USD = 0.005 // Claude Haiku 4.5 ballpark
@@ -126,7 +127,7 @@ export interface RenderV2BufferResult {
   buffer: Buffer
   plan: V2Plan
   qc: V2QCReport
-  via: 'llm' | 'fallback'
+  via: PlanVia
   tookMs: number
   costUsd: number
 }

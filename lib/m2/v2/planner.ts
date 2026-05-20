@@ -65,6 +65,8 @@ const llmOutputSchema = z.object({
     .nullable()
     .default(null),
   heroPrompt: z.string().max(600).nullable().default(null),
+  // V2.0.3: rótulo "CTA:" do briefing vira ctaText (sobrescreve botão CTA-FINAL).
+  ctaText: z.string().max(140).nullable().default(null),
 })
 
 type LlmOutput = z.infer<typeof llmOutputSchema>
@@ -134,6 +136,8 @@ Quando NÃO usar badge (deixar null):
 - cardInferior: { numero, titulo, bullets } OU null. Use quando o brief tem uma "conclusão" ou "destaque numerado". numero: "1", "2"... ou null. titulo: frase do destaque. bullets: 0-3 sub-pontos curtos.
 
 - cardInferiorLonga: { textoLongo, destaque, icone } OU null. Use APENAS quando o brief tem fechamento emocional em 2 partes: texto reflexivo + chamada curta destaque (ex: "Cuidar da casa é trabalho que não se vê / VOCÊ TAMBÉM MERECE SER CUIDADO!").
+
+- ctaText: string OU null. APENAS quando o briefing tem rótulo "CTA:" explícito. texto = literal pós-rótulo, sem modificação (REGRA #0.1). null caso contrário (CTA-FINAL usa texto brand default).
 
 - heroPrompt: string em INGLÊS OU null. Descrição visual do hero (produto/cena) pra gpt-image-1.
   IMPORTANTE V2.0.1: o gradient brand vem da BASE do template (não da IA). O hero é o produto/cena ISOLADO em fundo transparente.
@@ -206,9 +210,16 @@ OUTPUT:
 
 Retorne APENAS o JSON. Sem markdown. Sem fences. Sem explicação.`
 
-// ─── Chamada LLM ────────────────────────────────────────────────────────────
+// ─── Chamada LLM (V2.0.3: retry 1× antes do fallback) ──────────────────────
 
-async function callLlm(brief: string): Promise<{ raw: string; parsed: LlmOutput }> {
+const RETRY_DELAY_MS = 2_000
+
+async function callLlmOnce(brief: string): Promise<{ raw: string; parsed: LlmOutput }> {
+  // BUG-V2-009: flag de teste — força fallback path pra smoke E
+  if (process.env.V2_FORCE_FALLBACK === 'true') {
+    throw new Error('LLM forcibly disabled via V2_FORCE_FALLBACK env')
+  }
+
   type LlmResponse = { output?: string }
   const subscribePromise = fal.subscribe('fal-ai/any-llm', {
     input: {
@@ -227,7 +238,6 @@ async function callLlm(brief: string): Promise<{ raw: string; parsed: LlmOutput 
   const raw = (data?.output ?? '').trim()
   if (!raw) throw new Error('LLM retornou output vazio')
 
-  // Limpa markdown fences caso LLM ignore instrução.
   const cleaned = raw
     .replace(/^```json\s*/i, '')
     .replace(/^```\s*/i, '')
@@ -245,30 +255,172 @@ async function callLlm(brief: string): Promise<{ raw: string; parsed: LlmOutput 
   return { raw: cleaned, parsed }
 }
 
-// ─── Fallback regex ─────────────────────────────────────────────────────────
+interface LlmCallResult {
+  raw: string
+  parsed: LlmOutput
+  via: 'llm_primary' | 'llm_retry'
+}
+
+/** Tenta LLM 2× (primary + retry 1× após 2s). Lança erro se ambas falharem. */
+async function callLlmWithRetry(brief: string): Promise<LlmCallResult> {
+  try {
+    const res = await callLlmOnce(brief)
+    return { ...res, via: 'llm_primary' }
+  } catch (primaryErr) {
+    console.warn(`[V2 planner] LLM primary falhou: ${(primaryErr as Error).message} — retry em ${RETRY_DELAY_MS}ms`)
+    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS))
+    try {
+      const res = await callLlmOnce(brief)
+      console.log('[V2 planner] LLM retry OK')
+      return { ...res, via: 'llm_retry' }
+    } catch (retryErr) {
+      throw new Error(
+        `LLM falhou após retry: primary=${(primaryErr as Error).message}; retry=${(retryErr as Error).message}`,
+      )
+    }
+  }
+}
+
+// ─── Fallback regex (V2.0.3 — BUG-V2-009 P2) ────────────────────────────────
+//
+// Invariante: ZERO caracteres do briefing podem ser descartados.
+// Estratégia: tokeniza linhas → categoriza por rótulo conhecido → fallback
+// pra cardInferior pra qualquer texto remanescente. Validação pós-extração
+// confirma que tudo foi mapeado.
+
+const LABELED_PATTERNS = {
+  fechamento: /^(fechamento|fechando|conclus[aã]o|cta final|final)\s*:\s*(.+)$/i,
+  destaque: /^(destaque|bloco final|card final|bloco)\s*:\s*(.+)$/i,
+  bonus: /^(b[oô]nus|extra|plus)\s*:\s*(.+)$/i,
+  cta: /^cta\s*:\s*(.+)$/i,
+  bullet: /^\s*[•\-*]\s*(.+)$/,
+}
+
+/** Detecta separador " / " ou " | " dentro do texto pra split texto+destaque. */
+function splitTextoDestaque(raw: string): { textoLongo: string; destaque: string | null } {
+  // Padrões comuns: "texto / DESTAQUE EM CAIXA" ou "texto | DESTAQUE"
+  const m = raw.match(/^(.+?)\s+[/|]\s+(.+)$/)
+  if (m) return { textoLongo: m[1].trim(), destaque: m[2].trim() }
+  return { textoLongo: raw, destaque: null }
+}
 
 function fallbackExtract(brief: string): LlmOutput {
   const lines = brief
     .split(/\n+/)
     .map((l) => l.trim())
     .filter(Boolean)
-  const titulo = lines[0] ?? 'Título'
-  const bullets = lines
-    .slice(1)
-    .filter((l) => /^[•\-*]/.test(l))
-    .map((l) => ({
-      texto: l.replace(/^[•\-*]\s*/, ''),
-      icone: 'sparkle' as string,
-    }))
-    .slice(0, 4)
+
+  if (lines.length === 0) {
+    return {
+      titulo: 'Título',
+      bullets: [],
+      badgeSubtema: null,
+      iconeTopo: null,
+      cardInferior: null,
+      cardInferiorLonga: null,
+      heroPrompt: null,
+      ctaText: null,
+    }
+  }
+
+  const titulo = lines[0]
+  const consumed = new Set<number>([0]) // índice 0 = título
+
+  const bullets: Array<{ texto: string; icone: string }> = []
+  let fechamentoRaw: string | null = null
+  let destaqueRaw: string | null = null
+  let bonusRaw: string | null = null
+  let ctaRaw: string | null = null
+
+  lines.forEach((line, idx) => {
+    if (consumed.has(idx)) return
+    let m: RegExpMatchArray | null
+
+    if ((m = line.match(LABELED_PATTERNS.fechamento))) {
+      fechamentoRaw = m[2].trim()
+      consumed.add(idx)
+      return
+    }
+    if ((m = line.match(LABELED_PATTERNS.destaque))) {
+      destaqueRaw = m[2].trim()
+      consumed.add(idx)
+      return
+    }
+    if ((m = line.match(LABELED_PATTERNS.bonus))) {
+      bonusRaw = m[2].trim()
+      consumed.add(idx)
+      return
+    }
+    if ((m = line.match(LABELED_PATTERNS.cta))) {
+      ctaRaw = m[1].trim()
+      consumed.add(idx)
+      return
+    }
+    if ((m = line.match(LABELED_PATTERNS.bullet))) {
+      if (bullets.length < 4) {
+        bullets.push({ texto: m[1].trim(), icone: 'sparkle' })
+      }
+      consumed.add(idx)
+      return
+    }
+  })
+
+  // Texto remanescente (sem rótulo, sem bullet) → vai pro fallback card
+  const remainingTexts = lines.filter((_, idx) => !consumed.has(idx))
+
+  // Decide cardInferior vs cardInferiorLonga baseado nos campos detectados:
+  // - fechamento presente → cardInferiorLonga (texto + destaque opcional)
+  // - destaque/bonus → cardInferior simples
+  // - texto remanescente → cardInferior fallback
+  let cardInferior: LlmOutput['cardInferior'] = null
+  let cardInferiorLonga: LlmOutput['cardInferiorLonga'] = null
+
+  if (fechamentoRaw) {
+    const split = splitTextoDestaque(fechamentoRaw)
+    cardInferiorLonga = {
+      textoLongo: split.textoLongo,
+      destaque: split.destaque ?? 'VEJA MAIS',
+      icone: 'coracao',
+    }
+  } else if (destaqueRaw || bonusRaw || remainingTexts.length > 0) {
+    const titulo = destaqueRaw ?? bonusRaw ?? remainingTexts.join(' · ')
+    cardInferior = {
+      numero: null,
+      titulo,
+      bullets: remainingTexts.length > 0 && !destaqueRaw && !bonusRaw ? [] : remainingTexts.slice(0, 3),
+    }
+  }
+
+  // Sanity check: marca remaining como consumed agora (foram pro card)
+  if (remainingTexts.length > 0 && (cardInferior || cardInferiorLonga)) {
+    lines.forEach((line, idx) => {
+      if (remainingTexts.includes(line)) consumed.add(idx)
+    })
+  }
+
+  // Validação anti-descarte: log warning se algum texto não-trivial não foi mapeado
+  const unmapped = lines.filter((_, idx) => !consumed.has(idx))
+  if (unmapped.length > 0) {
+    console.warn(`[V2 fallback] ATENÇÃO: ${unmapped.length} linhas não mapeadas:`, unmapped)
+    // Hardening: força ir pro card como hardening
+    if (!cardInferior && !cardInferiorLonga) {
+      cardInferior = {
+        numero: null,
+        titulo: unmapped.join(' · '),
+        bullets: [],
+      }
+    }
+  }
+
   return {
     titulo,
     bullets,
     badgeSubtema: null,
     iconeTopo: null,
-    cardInferior: null,
-    cardInferiorLonga: null,
+    cardInferior,
+    cardInferiorLonga,
     heroPrompt: null,
+    ctaText: ctaRaw,
   }
 }
 
@@ -324,9 +476,11 @@ export const V2_CTA_FINAL_BUTTON_TEXT = 'Gostou? Compartilha para informar as am
 
 // ─── Public API ─────────────────────────────────────────────────────────────
 
+export type PlanVia = 'llm_primary' | 'llm_retry' | 'regex_fallback'
+
 export interface PlanResult {
   plan: V2PlanParsed
-  via: 'llm' | 'fallback'
+  via: PlanVia
   durationMs: number
   rawLlmOutput?: string
   errorReason?: string
@@ -336,17 +490,19 @@ export async function planV2(input: V2Input): Promise<PlanResult> {
   const t0 = Date.now()
 
   let llmOut: LlmOutput
-  let via: 'llm' | 'fallback' = 'llm'
+  let via: PlanVia = 'llm_primary'
   let raw: string | undefined
   let errorReason: string | undefined
 
   try {
-    const res = await callLlm(input.brief)
+    const res = await callLlmWithRetry(input.brief)
     llmOut = res.parsed
     raw = res.raw
+    via = res.via
   } catch (err) {
-    via = 'fallback'
+    via = 'regex_fallback'
     errorReason = (err as Error).message
+    console.warn(`[V2 planner] caindo pra regex_fallback: ${errorReason}`)
     llmOut = fallbackExtract(input.brief)
   }
 
@@ -364,8 +520,11 @@ export async function planV2(input: V2Input): Promise<PlanResult> {
     bulletsTextos,
   )
 
-  // CTA-FINAL: força texto literal do botão (invariante REGRA #0.1)
-  const ctaButtonTexto = input.templateType === 'cta-final' ? V2_CTA_FINAL_BUTTON_TEXT : undefined
+  // CTA-FINAL: usa ctaText literal do briefing (REGRA #0.1) ou default brand.
+  const ctaButtonTexto =
+    input.templateType === 'cta-final'
+      ? llmOut.ctaText ?? V2_CTA_FINAL_BUTTON_TEXT
+      : undefined
 
   const planDraft: V2Plan = {
     templateType: input.templateType,

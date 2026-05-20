@@ -19,7 +19,7 @@ interface RenderV2Response {
   url: string
   plan: V2Plan
   qc: { pass: boolean; issues: Array<{ code: string; severity: string; message: string }> }
-  via: 'llm' | 'fallback'
+  via: 'llm_primary' | 'llm_retry' | 'regex_fallback'
   tookMs: number
   costUsd: number
   error?: string

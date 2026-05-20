@@ -38,7 +38,8 @@ const ICON_SIZE = 96
 const TITLE_MAX_W = 960
 const TITLE_MAX_H = 320
 
-// Coordenadas FIXAS dos 4 cantos (acima/abaixo do hero, fora da zona Y 480-860).
+// BUG-V2-008: hero ampliado Y 430-970 (540px). Bullets BL/BR ficam DENTRO do hero
+// com text-shadow forte (BUG-V2-002 estratégia). TL/TR ficam acima (Y 460 = topo hero).
 const CORNERS: Array<{
   iconLeft: number
   iconTop: number
@@ -52,18 +53,18 @@ const CORNERS: Array<{
   connectorWidth: number
   connectorHeight: number
 }> = [
-  // TL — ícone topo-esq, conector vai pra anchor TL do hero
-  { iconLeft: 40, iconTop: 440, textLeft: 150, textTop: 440, textWidth: 320, textAlign: 'left',
-    connector: 'curve-tl', connectorTop: 480, connectorLeft: 130, connectorWidth: 260, connectorHeight: 140 },
+  // TL — ícone topo-esq do hero
+  { iconLeft: 40, iconTop: 460, textLeft: 150, textTop: 460, textWidth: 320, textAlign: 'left',
+    connector: 'curve-tl', connectorTop: 510, connectorLeft: 130, connectorWidth: 240, connectorHeight: 140 },
   // TR
-  { iconLeft: 944, iconTop: 440, textLeft: 610, textTop: 440, textWidth: 320, textAlign: 'right',
-    connector: 'curve-tr', connectorTop: 480, connectorLeft: 690, connectorWidth: 260, connectorHeight: 140 },
-  // BL
-  { iconLeft: 40, iconTop: 880, textLeft: 150, textTop: 880, textWidth: 320, textAlign: 'left',
-    connector: 'curve-bl', connectorTop: 720, connectorLeft: 130, connectorWidth: 260, connectorHeight: 140 },
+  { iconLeft: 944, iconTop: 460, textLeft: 610, textTop: 460, textWidth: 320, textAlign: 'right',
+    connector: 'curve-tr', connectorTop: 510, connectorLeft: 710, connectorWidth: 240, connectorHeight: 140 },
+  // BL — ícone baixo-esq do hero (dentro zona, com text-shadow forte)
+  { iconLeft: 40, iconTop: 870, textLeft: 150, textTop: 870, textWidth: 320, textAlign: 'left',
+    connector: 'curve-bl', connectorTop: 750, connectorLeft: 130, connectorWidth: 240, connectorHeight: 130 },
   // BR
-  { iconLeft: 944, iconTop: 880, textLeft: 610, textTop: 880, textWidth: 320, textAlign: 'right',
-    connector: 'curve-br', connectorTop: 720, connectorLeft: 690, connectorWidth: 260, connectorHeight: 140 },
+  { iconLeft: 944, iconTop: 870, textLeft: 610, textTop: 870, textWidth: 320, textAlign: 'right',
+    connector: 'curve-br', connectorTop: 750, connectorLeft: 710, connectorWidth: 240, connectorHeight: 130 },
 ]
 
 export function renderCapaCurta(args: RenderCapaCurtaArgs): React.ReactElement {
@@ -163,22 +164,22 @@ export function renderCapaCurta(args: RenderCapaCurtaArgs): React.ReactElement {
         )
       })}
 
-      {/* Card inferior opcional */}
+      {/* Card inferior opcional — V2.0.3: Y 1000 (após hero ampliado até 970) */}
       {plan.cardInferior && (
         <div
           style={{
             position: 'absolute',
-            top: 1010,
+            top: 1000,
             left: 60,
             width: 960,
             minHeight: 230,
-            padding: 28,
+            padding: 24,
             borderRadius: 24,
             border: `2px solid ${BRAND_CYAN}`,
-            background: 'rgba(20, 16, 60, 0.7)',
+            background: 'rgba(20, 16, 60, 0.75)',
             display: 'flex',
             flexDirection: 'column',
-            gap: 12,
+            gap: 10,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>

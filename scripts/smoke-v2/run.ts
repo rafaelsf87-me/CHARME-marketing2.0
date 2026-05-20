@@ -25,7 +25,7 @@ const UPLOAD_PLACEHOLDER_URL =
   process.env.SMOKE_V2_UPLOAD_URL ??
   `file://${path.join(process.cwd(), 'public', 'brand', 'm2', 'placeholders', 'neutral-1.png')}`
 
-const CENARIOS: Array<{ nome: string; input: V2Input; expectedVariant?: string }> = [
+const CENARIOS: Array<{ nome: string; input: V2Input; expectedVariant?: string; forceFallback?: boolean }> = [
   // ─── A) CAPA-CURTA via auto ─────────────────────────────────────────────
   {
     nome: 'A-capa-curta-auto',
@@ -97,6 +97,27 @@ Compartilhe com quem ama cuidar do lar`,
     },
     expectedVariant: 'capa-curta',
   },
+
+  // ─── E) BUG-V2-009: força fallback regex pra validar preservação do texto B ──
+  // Roda mesmo briefing B mas com V2_FORCE_FALLBACK=true → LLM desabilitado
+  // → regex fallback DEVE preservar "Fechamento:" no cardInferiorLonga.
+  {
+    nome: 'E-force-fallback-preserva-texto',
+    input: {
+      templateType: 'capa',
+      brief: `O cansaço invisível de quem cuida da casa todos os dias sem reconhecimento
+• Não é só a bagunça que cansa, é a constante atenção que pesa
+• O esforço de manter tudo funcionando também consome energia mental
+Fechamento: Cuidar da casa é um trabalho que muitas vezes não se vê, mas faz toda a diferença / VOCÊ TAMBÉM MERECE SER CUIDADO!`,
+      variantOverride: 'forcar-longa', // força capa-longa pra renderizar card
+      modoGeracao: 'upload',
+      imageUploadUrl: UPLOAD_PLACEHOLDER_URL,
+      logo: 'casinha',
+      keyword: 'fallback-test',
+    },
+    expectedVariant: 'capa-longa',
+    forceFallback: true,
+  },
 ]
 
 async function main() {
@@ -120,6 +141,12 @@ async function main() {
 
   for (const c of CENARIOS) {
     console.log(`\n─── [${c.nome}] ───`)
+    // BUG-V2-009: cenário E força fallback via env var temporária
+    const prevFlag = process.env.V2_FORCE_FALLBACK
+    if (c.forceFallback) {
+      process.env.V2_FORCE_FALLBACK = 'true'
+      console.log('  [smoke] V2_FORCE_FALLBACK=true ativado')
+    }
     try {
       const result = await renderV2ToBuffer(c.input)
       const filename = `${c.nome}.png`
@@ -153,6 +180,12 @@ async function main() {
     } catch (err) {
       report.push({ nome: c.nome, ok: false, error: (err as Error).message })
       console.error(`  ✗ ERROR: ${(err as Error).message}`)
+    } finally {
+      // Restaura flag pra próximo cenário
+      if (c.forceFallback) {
+        if (prevFlag === undefined) delete process.env.V2_FORCE_FALLBACK
+        else process.env.V2_FORCE_FALLBACK = prevFlag
+      }
     }
   }
 

@@ -47,13 +47,14 @@ const TITLE_MAX_H = 280
 const CTA_BG = BRAND_DEEP_PURPLE
 const CTA_TEXT_COLOR = '#FFFFFF'
 
+// V2.0.3: hero CTA-FINAL Y 380-840 (460px). Bullets dentro hero topo com shadow.
 const TOP_CORNERS = [
-  { iconLeft: 40, iconTop: 440, textLeft: 150, textTop: 440, textWidth: 320,
+  { iconLeft: 40, iconTop: 410, textLeft: 150, textTop: 410, textWidth: 320,
     textAlign: 'left' as const, connector: 'curve-tl' as const,
-    connectorTop: 480, connectorLeft: 130, connectorWidth: 260, connectorHeight: 140 },
-  { iconLeft: 944, iconTop: 440, textLeft: 610, textTop: 440, textWidth: 320,
+    connectorTop: 460, connectorLeft: 130, connectorWidth: 240, connectorHeight: 130 },
+  { iconLeft: 944, iconTop: 410, textLeft: 610, textTop: 410, textWidth: 320,
     textAlign: 'right' as const, connector: 'curve-tr' as const,
-    connectorTop: 480, connectorLeft: 690, connectorWidth: 260, connectorHeight: 140 },
+    connectorTop: 460, connectorLeft: 710, connectorWidth: 240, connectorHeight: 130 },
 ]
 
 export function renderCtaFinal(args: RenderCtaFinalArgs): React.ReactElement {
@@ -138,11 +139,11 @@ export function renderCtaFinal(args: RenderCtaFinalArgs): React.ReactElement {
         )
       })}
 
-      {/* Botão CTA central — BUG-V2-005: bg #1E1B4B + texto branco */}
+      {/* Botão CTA central — V2.0.3: Y 880 (após hero CTA-FINAL até 840) */}
       <div
         style={{
           position: 'absolute',
-          top: 940,
+          top: 880,
           left: 60,
           width: 960,
           display: 'flex',
