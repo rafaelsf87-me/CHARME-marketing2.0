@@ -85,6 +85,31 @@ REGRA #0 — PRESERVAÇÃO LITERAL ABSOLUTA (IRRENUNCIÁVEL)
 - Se o brief diz "Como renovar a sala gastando pouco", titulo = "COMO RENOVAR A SALA" e badge = "GASTANDO POUCO" (caixa-alta visual será aplicada pelo render — preserve a capitalização natural).
 
 ═══════════════════════════════════════════════════════════
+REGRA #0.3 — VOCÊ NUNCA ENCURTA O TÍTULO (BUG-V2-011)
+═══════════════════════════════════════════════════════════
+PROIBIDO TERMINANTEMENTE:
+- Cortar palavras finais do título original (ex: briefing diz "...todos os dias sem reconhecimento" e você devolve só "...quem cuida da casa")
+- Truncar pra "ficar mais limpo visual"
+- Resumir pra caber em 1 linha
+- Omitir palavras "menos importantes" do título
+- Substituir palavras por sinônimos mais curtos
+
+OBRIGATÓRIO:
+- TODAS as palavras do título original aparecem em titulo + badgeSubtema.texto (juntos)
+- Se título não cabe no layout, NÃO É PROBLEMA SEU — devolva LITERAL completo
+- O sistema ajusta tipografia (auto-fit fontSize) e quebra de linha pra acomodar
+- O sistema valida word-by-word após você retornar — se faltar 1 palavra, sua resposta é REJEITADA e o sistema cai pro extractor regex (que vai preservar tudo)
+
+EXEMPLO PROIBIDO:
+INPUT: "O cansaço invisível de quem cuida da casa todos os dias sem reconhecimento"
+❌ OUTPUT REJEITADO: titulo="O CANSAÇO INVISÍVEL DE QUEM CUIDA DA CASA" (faltou "todos os dias sem reconhecimento")
+✅ OUTPUT CORRETO: titulo="O CANSAÇO INVISÍVEL DE QUEM CUIDA DA CASA TODOS OS DIAS SEM RECONHECIMENTO" (literal completo)
+
+INPUT: "5 dicas pra renovar a sala em 10 minutos sem reforma"
+❌ titulo="5 DICAS PRA RENOVAR A SALA" (faltou tudo após "sala")
+✅ titulo="5 DICAS PRA RENOVAR A SALA" + badgeSubtema={texto:"EM 10 MINUTOS SEM REFORMA", icone:"relogio"}  (separa qualifier no badge — válido pois palavras estão no output total)
+
+═══════════════════════════════════════════════════════════
 ÍCONES DISPONÍVEIS (escolha por semântica do texto do bullet)
 ═══════════════════════════════════════════════════════════
 ${iconsSemanticBlockForLLM()}
@@ -183,16 +208,16 @@ OUTPUT:
   "heroPrompt": "modern gray sofa with stretchable patterned cover, realistic photograph, soft natural lighting, side view, product photography style, isolated on transparent background, no background scene, no text, no logo"
 }
 
-EXEMPLO 2 (emocional, longo):
+EXEMPLO 2 (emocional, longo — preserva TÍTULO INTEIRO mesmo se longo):
 INPUT: """
-O cansaço invisível de quem cuida da casa
+O cansaço invisível de quem cuida da casa todos os dias sem reconhecimento
 • Não é só a bagunça que cansa
 • O esforço de manter tudo funcionando também pesa.
 Fechamento: Cuidar da casa é um trabalho que muitas vezes não se vê, mas que faz toda a diferença todos os dias. / VOCÊ TAMBÉM MERECE SER CUIDADO!
 """
 OUTPUT:
 {
-  "titulo": "O CANSAÇO INVISÍVEL DE QUEM CUIDA DA CASA",
+  "titulo": "O CANSAÇO INVISÍVEL DE QUEM CUIDA DA CASA TODOS OS DIAS SEM RECONHECIMENTO",
   "badgeSubtema": null,
   "iconeTopo": "casa-coracao",
   "bullets": [
@@ -209,6 +234,42 @@ OUTPUT:
 }
 
 Retorne APENAS o JSON. Sem markdown. Sem fences. Sem explicação.`
+
+// ─── BUG-V2-011: validação anti-encurtamento do LLM ────────────────────────
+//
+// Compara palavras (≥3 chars, lowercased, sem acentos) do TÍTULO original
+// (1ª linha do briefing) com titulo + badgeSubtema.texto do LLM output.
+// Se faltar 1 palavra → LLM truncou → lança erro → retry/fallback assume.
+
+function tokenizeContentWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '') // remove acentos (Unicode combining marks)
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length >= 3) // ignora stopwords curtas (a, o, é, de, da, do, em, no, na, e)
+}
+
+function validateLiteralPreservation(brief: string, out: LlmOutput): void {
+  const firstLine = brief.split(/\n/)[0]?.trim() ?? ''
+  if (!firstLine) return
+  const originalWords = tokenizeContentWords(firstLine)
+  if (originalWords.length === 0) return
+  // Junta TODO texto extraído pelo LLM que poderia conter palavras do título original.
+  const allOutputText = [
+    out.titulo,
+    out.badgeSubtema?.texto ?? '',
+  ].join(' ')
+  const outputWordSet = new Set(tokenizeContentWords(allOutputText))
+  const missing = originalWords.filter((w) => !outputWordSet.has(w))
+  if (missing.length > 0) {
+    throw new Error(
+      `LLM violou REGRA #0 — palavras do título original descartadas: [${missing.join(', ')}]. ` +
+        `Original: "${firstLine}". LLM titulo: "${out.titulo}". badge: "${out.badgeSubtema?.texto ?? '(null)'}"`,
+    )
+  }
+}
 
 // ─── Chamada LLM (V2.0.3: retry 1× antes do fallback) ──────────────────────
 
@@ -252,6 +313,8 @@ async function callLlmOnce(brief: string): Promise<{ raw: string; parsed: LlmOut
   }
 
   const parsed = llmOutputSchema.parse(json)
+  // BUG-V2-011: rejeita LLM se encurtou título → retry/fallback resgata texto literal
+  validateLiteralPreservation(brief, parsed)
   return { raw: cleaned, parsed }
 }
 

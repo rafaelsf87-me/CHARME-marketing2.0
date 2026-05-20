@@ -123,7 +123,14 @@ Fechamento: Cuidar da casa é um trabalho que muitas vezes não se vê, mas faz 
 async function main() {
   const t0 = Date.now()
   await fs.mkdir(OUT_DIR, { recursive: true })
-  console.log(`[smoke-v2] iniciando · ${CENARIOS.length} cenários\n`)
+
+  // V2.0.4: CENARIOS_FILTER=A,B,E roda apenas esses cenários (foco cirúrgico).
+  const filter = (process.env.CENARIOS_FILTER ?? '').trim()
+  const filterSet = filter ? new Set(filter.split(',').map((s) => s.trim().toUpperCase())) : null
+  const selected = filterSet
+    ? CENARIOS.filter((c) => filterSet.has(c.nome.charAt(0).toUpperCase()))
+    : CENARIOS
+  console.log(`[smoke-v2] iniciando · ${selected.length} cenários${filter ? ` (filter=${filter})` : ''}\n`)
 
   let totalCost = 0
   const report: Array<{
@@ -139,7 +146,7 @@ async function main() {
     error?: string
   }> = []
 
-  for (const c of CENARIOS) {
+  for (const c of selected) {
     console.log(`\n─── [${c.nome}] ───`)
     // BUG-V2-009: cenário E força fallback via env var temporária
     const prevFlag = process.env.V2_FORCE_FALLBACK
