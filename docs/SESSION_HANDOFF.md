@@ -9,9 +9,26 @@
 
 ## 📍 Estado Atual
 
-**Fase:** Implementação — Base + M4 + M1 (parcial, com arquitetura final definida) no ar; M1 aguarda assets/keys
-**Última atualização:** 14/05/2026
-**Próxima tarefa:** Rafael adiciona os 11 PNGs, `FAL_KEY` e confirma Vercel Pro pra rodar `pnpm m1:generate-masks` e testar end-to-end. DEC-006 resolvida (Step 2 em `fal-ai/flux-kontext-lora/inpaint`).
+**Fase:** M2 V2.0 Templates Fixos PROD-READY (merged em main 20/05/2026, HEAD `5dd76c0`)
+**Última atualização:** 20/05/2026
+**Próxima tarefa:** Aguardando Rafael gerar 2-3 carrosseis reais V2 em prod (https://charme-marketing2-0.vercel.app) antes de qualquer discussão de sunset T2. T2 V1 (HEAD `0273456`) coexiste intacto como "Template 1".
+
+### Marco V2.0 (ciclo 20/05/2026)
+
+| Item | Status |
+|---|---|
+| Branch `feat/v2-templates` | ✅ merged em main (--no-ff) |
+| Custo total V2.0.0 → V2.0.4 | ~$0.73 (LLM + gpt-image-1 + smokes) |
+| Bugs resolvidos no ciclo | 11 (V2-001 a V2-011) — todos em DIVIDAS_PROJETO.md |
+| Anti-invenção REGRA #0 | ✅ defesa em 4 camadas (prompt + validate + retry + fallback regex) |
+| Registry M2 ativo | "Template 1" (T2 V1) + "Template 2 — Fixos" (V2.0) |
+| Deploy Vercel | ✅ verde — `/brand/icons-v2/icon-sparkle.svg` HTTP 200 confirmado |
+| V2.1 backlog | 7 itens estéticos registrados em DIVIDAS_PROJETO.md |
+
+**Próximas decisões esperadas Rafael:**
+- Validar V2 em prod com briefings reais (3-5 carrosseis em uso)
+- Decidir sunset T2 (somente após V2 amadurecer em uso real)
+- Priorizar V2.1 estética (7 itens backlog) vs próximos módulos (M3 já entregue, falta M5)
 
 ### Status por componente
 

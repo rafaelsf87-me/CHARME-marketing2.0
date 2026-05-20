@@ -9,6 +9,70 @@
 
 ---
 
+## 🎨 V2.1 Backlog Estético (registrado pós-merge V2.0 20/05/2026)
+
+Itens NÃO-bloqueantes deferidos da V2.0 — agrupados em fase dedicada de polish estético.
+Reavaliar prioridade após Rafael gerar 2-3 carrosseis reais V2 em prod.
+
+### [MEL-V2-101] Fade hero direcional (não-simétrico)
+- Atual: `softenHeroEdges` aplica feather radial simétrico (5% bordas + blur alpha 6px).
+- Esperado: fade direcional — capa-longa mais forte na borda esquerda (onde encontra texto), capa-curta mais forte topo+bottom.
+- **Onde:** `lib/m2/v2/hero-effects.ts`
+
+### [MEL-V2-102] "RECONHECIMENTO" overflow visual em títulos longos XXG
+- Cenário B (74 chars título) renderizou em 7 linhas com auto-fit, última palavra "RECONHECIMENTO" sangra fora do canvas em alguns casos.
+- Solução: melhorar `bucketForTitulo` + `wrapText` pra cap fontSize mais agressivo quando 6+ linhas.
+- **Onde:** `lib/m2/v2/text-buckets.ts` + `lib/m2/v2/text-renderer.ts`
+
+### [MEL-V2-103] Card inferior altura dinâmica hardening
+- Atual: card capa-longa tem altura fixa 270px (V2.0.2), conteúdo > 220 chars pode visualmente truncar.
+- Solução: medir conteúdo real via Satori internals OU shrink fontSize ainda mais agressivo OU permitir extender pra 320px.
+- **Onde:** `lib/m2/v2/subtemplates/capa-longa.tsx:140-200`
+
+### [MEL-V2-104] Mapping semântico bullet→ícone mais fino
+- Atual: LLM escolhe ícone por descrição semântica vaga ("qualidade, premium, top" → estrela). Cobertura ~70% nos smokes.
+- Solução: tabela explícita keyword→ícone PT-BR no prompt (ex: "premium|top|melhor|qualidade" → estrela).
+- **Onde:** `lib/m2/v2/icons.ts` + prompt em `lib/m2/v2/planner.ts`
+
+### [MEL-V2-105] Espaço vazio capa-curta com briefings minimalistas
+- Quando briefing tem só título + 0-1 bullet, layout fica com muito gradient vazio.
+- Solução: variante "minimal" sem 4 bullets nos cantos, hero ocupa zona maior, badge mais central.
+- **Onde:** `lib/m2/v2/subtemplates/capa-curta.tsx` + `lib/m2/v2/zones.ts`
+
+### [MEL-V2-106] Fonte bullets maior em casos específicos
+- Bullets curtos (<15 chars) em capa-curta ficam pequenos. Bucket atual: 42px Curto. Poderia 52px se bullets <10 chars.
+- **Onde:** `lib/m2/v2/text-buckets.ts`
+
+### [MEL-V2-107] Validação visual extra dos conectores em variants edge
+- Quando hero IA gera produto descentralizado, conectores ficam apontando pra área vazia.
+- Solução: detectar bbox do conteúdo via Sharp + reposicionar âncoras dos conectores.
+- **Onde:** `lib/m2/v2/compose.ts` (build hero layer) + `lib/m2/v2/zones.ts` (anchors)
+
+---
+
+## ✅ Resolvidos V2.0 cycle (20/05/2026)
+
+### [BUG-V2-001..009 + 011] V2.0 ciclo completo PROD-READY
+- **Histórico:** ciclo V2.0.0 → V2.0.4 (5 commits) entregou Template 2 — Fixos.
+- **Bugs resolvidos:**
+  - V2-001 (gradient brand base ausente — arquitetura compose invertida)
+  - V2-002 (sobreposições texto/hero — zonas exclusão)
+  - V2-003 (conectores semânticos — pontos âncora)
+  - V2-004 (modo upload quebrado — pipeline bypass)
+  - V2-005 (cor botão CTA-FINAL #1E1B4B)
+  - V2-006 (card capa-longa overflow — altura+shrink)
+  - V2-007 (variant detection — badge separation)
+  - V2-008 (hero capa-curta pequeno — 380→540px)
+  - V2-009 P1+P2 (retry LLM + fallback regex preserva texto literal)
+  - V2-011 (LLM primary encurtava título — validateLiteralPreservation)
+- **Não foi bug V2-010** (saltado no naming durante reporte).
+- **MEL entregue:** MEL-V2-001 (feather/soft-edge hero).
+- **Anti-invenção REGRA #0:** defesa em 4 camadas implementada (prompt + validate + retry + fallback regex robusto).
+- **Custo:** ~$0.73. Tempo dev: ~5h. PNGs smoke V2.0.4 validados visualmente pelo Rafael.
+- **Commit merge:** `5dd76c0` (--no-ff de feat/v2-templates).
+
+---
+
 ## ✅ Resolvidos / Não-bugs
 
 ### [MEL-M2-015] Footer em todos os subtemplates — REVERTIDO PARCIALMENTE em 19/05/2026
